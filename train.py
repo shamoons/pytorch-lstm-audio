@@ -23,11 +23,15 @@ def main():
         for i, data in enumerate(train_loader):
             inputs = data[0]
             outputs = data[1]
+
+            print('inputs', inputs, inputs.size())
+            print('outputs', outputs, outputs.size())
             optimizer.zero_grad()
 
-            pred = model(inputs.unsqueeze(0))
+            # pred = model(inputs.unsqueeze(0))
+            pred = model(inputs)
 
-            loss = loss_fn(pred[0], outputs.unsqueeze(0))
+            loss = loss_fn(pred[0], outputs)
 
             model.zero_grad()
 
