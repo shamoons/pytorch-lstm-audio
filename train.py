@@ -23,10 +23,7 @@ def main():
         for inputs, outputs in train_loader:
             optimizer.zero_grad()
 
-            print('inputs', inputs.size(), inputs.unsqueeze(1).size())
-            print('outputs', outputs.size(), outputs.unsqueeze(0).size())
-
-            pred = model(inputs.unsqueeze(1))
+            pred = model(inputs.unsqueeze(0))
 
             loss = loss_fn(pred[0], outputs.unsqueeze(0))
 
@@ -35,7 +32,7 @@ def main():
             loss.backward()
             optimizer.step()
 
-            print('loss', loss)
+            print('Loss: ', loss)
 
             print('\n')
 

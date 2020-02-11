@@ -24,19 +24,6 @@ class AudioDataset(Dataset):
         return len(self.file_paths)
 
     def __getitem__(self, index):
-        # print('self.file_paths', len(self.file_paths))
-
-        # corrupted_signal = torchaudio.load(
-        #     self.file_paths[index], out=None, normalization=True)
-        # corrupted_sound_data = corrupted_signal[0].permute(1, 0)
-
-        # clean_signal = torchaudio.load(
-        #     self.file_paths[index], out=None, normalization=True)
-        # clean_sound_data = clean_signal[0].permute(1, 0)
-
-        # corrupted_sound_data = corrupted_sound_data[0:100]
-        # clean_sound_data = clean_sound_data[0:100]
-        # print(corrupted_sound_data.size(), clean_sound_data.size(), '\n')
         random_tensor = torch.rand(4000) * 2
         random_tensor = random_tensor - 1
 
