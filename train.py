@@ -20,7 +20,9 @@ def main():
     loss_fn = torch.nn.MSELoss(reduction='sum')
 
     for epoch in range(300):
-        for inputs, outputs in train_loader:
+        for i, data in enumerate(train_loader):
+            inputs = data[0]
+            outputs = data[1]
             optimizer.zero_grad()
 
             pred = model(inputs.unsqueeze(0))
@@ -32,7 +34,7 @@ def main():
             loss.backward()
             optimizer.step()
 
-            print('Loss: ', loss)
+            print('i: ', i, '\tLoss: ', loss)
 
             print('\n')
 
