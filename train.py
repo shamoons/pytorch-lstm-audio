@@ -17,7 +17,7 @@ def main():
 
     model = MyLSTM()
     optimizer = optim.Adam(model.parameters(), lr=0.01, weight_decay=0.0001)
-    loss_fn = torch.nn.MSELoss(reduction='sum')
+    loss_fn = torch.nn.MSELoss(reduction='mean')
 
     for epoch in range(300):
         for i, data in enumerate(train_loader):
@@ -28,8 +28,8 @@ def main():
             print('outputs', outputs, outputs.size())
             optimizer.zero_grad()
 
-            # pred = model(inputs.unsqueeze(0))
             pred = model(inputs)
+            print('pred', pred[0], pred[0].size())
 
             loss = loss_fn(pred[0], outputs)
 
@@ -38,7 +38,7 @@ def main():
             loss.backward()
             optimizer.step()
 
-            print('i: ', i, '\tLoss: ', loss)
+            print('Epoch: ', epoch, '\ti: ', i, '\tLoss: ', loss)
 
             print('\n')
 
