@@ -13,7 +13,7 @@ class AudioDataset(Dataset):
         audio_file_paths = list(
             sorted(glob.iglob(corrupted_path + '**/*.flac', recursive=True)))
 
-        cutoff_index = int(len(audio_file_paths) * 0.05)
+        cutoff_index = int(len(audio_file_paths) * 0.01)
 
         if train_set == True:
             self.file_paths = audio_file_paths[0: cutoff_index]
@@ -25,7 +25,7 @@ class AudioDataset(Dataset):
         return len(self.file_paths)
 
     def __getitem__(self, index):
-        random_tensor = torch.rand(1, 4000) * 2
+        random_tensor = torch.rand(1, 5) * 2
         random_tensor = random_tensor - 1
 
         return random_tensor, random_tensor * 2
