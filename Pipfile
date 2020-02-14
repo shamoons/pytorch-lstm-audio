@@ -12,6 +12,9 @@ torch = "*"
 numpy = "*"
 torchaudio = "*"
 six = "*"
+tensorflow = "==2.1.0"
+pandas = "*"
+matplotlib = "*"
 
 [requires]
-python_version = "3.7"
+python_version = "3.6"
