@@ -1,10 +1,22 @@
 from keras.models import Sequential
-from keras.layers import Input, SimpleRNN, Dense
+from keras.layers import Input, LSTM, Dense, TimeDistributed, Activation
+from keras.callbacks import EarlyStopping
 
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 import matplotlib.pyplot as plt
+
+
+def get_test_data():
+    inputs = tf.random.uniform(
+        shape=(1, 100),
+        minval=-1,
+        maxval=1
+    )
+
+    outputs = inputs * 2
+    return inputs, outputs
 
 
 def get_training_data():
@@ -14,22 +26,11 @@ def get_training_data():
         maxval=1
     )
 
-    inputs = tf.constant([[1, 2, 3], [4, 5, 6]])
-
     outputs = inputs * 2
     return inputs, outputs
 
 
-def convertToMatrix(data, step):
-    X, Y = [], []
-    for i in range(len(data) - step):
-        d = i + step
-        X.append(data[i:d, ])
-        Y.append(data[d, ])
-    return np.asarray(X), np.asarray(Y)
-
-
-def main():
+def main2():
     N = 1000
     Tp = 800
     t = np.arange(0, N)
@@ -73,25 +74,38 @@ def main():
     print('trainScore', trainScore)
 
 
-def main2():
+def main():
     tf.random.set_seed(0)
 
     training_data = get_training_data()
 
-    hidden_size = 100
+    trainX, trainY = training_data
 
-    encoder_inputs = Input(shape=(None, 200))
-    encoder = LSTM(100, return_state=True)
-    encoder_outputs, state_h, state_c = encoder(encoder_inputs)
-    encoder_states = [state_h, state_c]
+    trainX = np.expand_dims(trainX, 0)
+    trainY = np.expand_dims(trainY, 0)
+
+    print('trainX.shape', trainX.shape)
+    print('trainY.shape', trainY.shape)
 
     model = Sequential()
-    model.add(LSTM(hidden_size, input_shape=(1, 100)))
+    model.add(LSTM(100, input_shape=(1, 100), return_sequences=True))
+    model.add(TimeDistributed(Dense(100, activation='linear')))
+    model.compile(loss='mean_squared_error', optimizer='rmsprop')
 
     print(model.summary())
-    # model.add(LSTM(20, batch_input_shape=(7, 5, 100), return_sequences=True, stateful=True))
-    # print(training_data[0].eval())
-    # print(training_data[1].eval())
+    callbacks = [EarlyStopping(monitor='loss', patience=2)]
+    model.fit(trainX, trainY, epochs=100, batch_size=1,
+              verbose=2, callbacks=callbacks)
+
+    testX, testY = get_test_data()
+    testX = np.expand_dims(testX, 0)
+    testY = np.expand_dims(testY, 0)
+    print('trainX', trainX)
+    scores = model.evaluate(trainX, trainY, verbose=1, batch_size=1)
+    print('scores', scores)
+    predicted = model.predict(trainX, batch_size=1, verbose=1)
+    print('predicted', predicted)
+    print('trainY', trainY)
 
 
 if __name__ == '__main__':
