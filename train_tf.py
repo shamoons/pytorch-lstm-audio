@@ -1,16 +1,22 @@
-from keras.models import Sequential
-from keras.layers import Input, LSTM, Dense, TimeDistributed, Activation
-from keras.callbacks import EarlyStopping
-
-import numpy as np
-import pandas as pd
-import tensorflow as tf
 import matplotlib.pyplot as plt
+import tensorflow as tf
+import pandas as pd
+import numpy as np
+from keras.callbacks import EarlyStopping
+from keras.layers import Input, LSTM, Dense, TimeDistributed, Activation
+from keras.models import Sequential
+import wandb
+from wandb.keras import WandbCallback
+wandb.init(project="pytorch-lstm-audio")
 
 
-def get_test_data():
+VECTOR_SIZE = 100
+BATCH_SIZE = 5000
+
+
+def get_test_data(batches=1):
     inputs = tf.random.uniform(
-        shape=(1, 100),
+        shape=(batches, 10, VECTOR_SIZE),
         minval=-1,
         maxval=1
     )
@@ -19,9 +25,9 @@ def get_test_data():
     return inputs, outputs
 
 
-def get_training_data():
+def get_training_data(batches=1):
     inputs = tf.random.uniform(
-        shape=(1, 100),
+        shape=(batches, 10, VECTOR_SIZE),
         minval=-1,
         maxval=1
     )
@@ -77,35 +83,30 @@ def main2():
 def main():
     tf.random.set_seed(0)
 
-    training_data = get_training_data()
-
-    trainX, trainY = training_data
-
-    trainX = np.expand_dims(trainX, 0)
-    trainY = np.expand_dims(trainY, 0)
-
-    print('trainX.shape', trainX.shape)
-    print('trainY.shape', trainY.shape)
-
     model = Sequential()
-    model.add(LSTM(100, input_shape=(1, 100), return_sequences=True))
-    model.add(TimeDistributed(Dense(100, activation='linear')))
+    model.add(LSTM(256, input_shape=(10, VECTOR_SIZE), return_sequences=True))
+    model.add(LSTM(256, return_sequences=True))
+    model.add(LSTM(256, return_sequences=True))
+    model.add(TimeDistributed(Dense(VECTOR_SIZE, activation='linear')))
     model.compile(loss='mean_squared_error', optimizer='rmsprop')
 
     print(model.summary())
-    callbacks = [EarlyStopping(monitor='loss', patience=2)]
-    model.fit(trainX, trainY, epochs=100, batch_size=1,
-              verbose=2, callbacks=callbacks)
+    callbacks = [WandbCallback(), EarlyStopping(
+        monitor='val_loss', patience=10)]
 
-    testX, testY = get_test_data()
-    testX = np.expand_dims(testX, 0)
-    testY = np.expand_dims(testY, 0)
-    print('trainX', trainX)
-    scores = model.evaluate(trainX, trainY, verbose=1, batch_size=1)
+    trainX, trainY = get_training_data(BATCH_SIZE)
+
+    model.fit(trainX.numpy(), trainY.numpy(), epochs=250, batch_size=32,
+              verbose=1, callbacks=callbacks, validation_split=0.1)
+
+    testX, testY = get_test_data(BATCH_SIZE)
+
+    # print('testX', testX)
+    scores = model.evaluate(testX.numpy(), testY.numpy(), verbose=1)
     print('scores', scores)
-    predicted = model.predict(trainX, batch_size=1, verbose=1)
-    print('predicted', predicted)
-    print('trainY', trainY)
+    # predicted = model.predict(testX.numpy(), verbose=1)
+    # print('predicted', predicted)
+    # print('testY', testY)
 
 
 if __name__ == '__main__':
