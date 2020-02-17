@@ -9,12 +9,16 @@ parameters:
     value: 10
   LSTM_1_SIZE:
     distribution: int_uniform
-    min: 32
-    max: 256
+    min: 8
+    max: 128
   LSTM_2_SIZE:
     distribution: int_uniform
-    min: 32
-    max: 256
+    min: 8
+    max: 128
+  LSTM_3_SIZE:
+    distribution: int_uniform
+    min: 8
+    max: 128
 early_terminate:
   type: hyperband
   max_iter: 250

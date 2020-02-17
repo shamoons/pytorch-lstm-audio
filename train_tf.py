@@ -111,10 +111,13 @@ def parse_args():
         "--LSTM_1_SIZE", help="Hidden size for the first LSTM Layer", type=int, default=256)
 
     parser.add_argument(
-        "--LSTM_2_SIZE", help="Hidden size for the second LSTM Layer", type=int, default=128)
+        "--LSTM_2_SIZE", help="Hidden size for the second LSTM Layer", type=int, default=256)
 
     parser.add_argument(
-        "--LSTM_3_SIZE", help="Hidden size for the third LSTM Layer", type=int, default=64)
+        "--LSTM_3_SIZE", help="Hidden size for the third LSTM Layer", type=int, default=256)
+
+    parser.add_argument(
+        "--LSTM_4_SIZE", help="Hidden size for the fourth LSTM Layer", type=int, default=256)
 
     parser.add_argument('--learning_rate', help='Learning rate for optimizer',
                         type=float, default=0.01)
@@ -129,7 +132,7 @@ def parse_args():
                         type=int, default=multiprocessing.cpu_count())
 
     parser.add_argument('--max_queue_size', help='Max queue size for fit_generator',
-                        type=int, default=32 * 4)
+                        type=int, default=32 * 8)
 
     parser.add_argument('--use_multiprocessing', help='Use multiprocessing for fit_generator',
                         type=bool, default=False)
@@ -153,10 +156,12 @@ def main():
     model = Sequential()
     model.add(LSTM(args.LSTM_1_SIZE, input_shape=(
         SEQ_LENGTH, VECTOR_SIZE), return_sequences=True))
-    model.add(Dropout(0.2))
+    # model.add(Dropout(0.2))
     model.add(LSTM(args.LSTM_2_SIZE, return_sequences=True))
     # model.add(Dropout(0.2))
     model.add(LSTM(args.LSTM_3_SIZE, return_sequences=True))
+    # model.add(Dropout(0.2))
+    # model.add(LSTM(args.LSTM_4_SIZE, return_sequences=True))
     # model.add(Dropout(0.2))
     model.add(TimeDistributed(Dense(VECTOR_SIZE, activation='relu')))
 
