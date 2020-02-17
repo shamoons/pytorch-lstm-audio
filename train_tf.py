@@ -10,7 +10,7 @@ from datagenerator import DataGenerator
 from model import SpeechBaselineModel
 
 TOTAL_SAMPLES = 2676
-VECTOR_SIZE = 129
+VECTOR_SIZE = 161
 
 
 def parse_args():
@@ -32,7 +32,7 @@ def parse_args():
                         type=float, default=0.01)
 
     parser.add_argument('--seq_length', help='Length of sequences of the spectrogram',
-                        type=int, default=200)
+                        type=int, default=100)
 
     parser.add_argument('--epochs', help='Epochs to run',
                         type=int, default=250)

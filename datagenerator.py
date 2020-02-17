@@ -42,17 +42,20 @@ class DataGenerator(Sequence):
     def __getitem__(self, index):
         batch_index = index * self.batch_size
 
-        corrupted_samples, corrupted_sample_rate = sf.read(
+        corrupted_samples, sample_rate = sf.read(
             self.corrupted_file_paths[batch_index])
 
-        clean_samples, clean_sample_rate = sf.read(
+        clean_samples, sample_rate = sf.read(
             self.clean_file_paths[batch_index])
 
+        # Taken from https://github.com/PaddlePaddle/DeepSpeech/blob/766e96e600795cea4187123b9ed76dcd250f2d04/data_utils/featurizer/audio_featurizer.py#L121
+        nperseg = int(sample_rate * 0.001 * 20)  # 20ms
+
         _, _, corrupted_spectrogram = signal.spectrogram(
-            corrupted_samples, corrupted_sample_rate)
+            corrupted_samples, fs=sample_rate, nperseg=nperseg, noverlap=nperseg // 2, window=signal.hann(nperseg))
 
         _, _, clean_spectrogram = signal.spectrogram(
-            clean_samples, clean_sample_rate)
+            clean_samples, fs=sample_rate, nperseg=nperseg, noverlap=nperseg // 2, window=signal.hann(nperseg))
 
         # By default, the first axis is frequencies and the second is time.
         # We swap them here.

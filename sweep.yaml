@@ -11,9 +11,9 @@ parameters:
     q: 0.01
   seq_length:
     distribution: q_uniform
-    min: 100
-    max: 1000
-    q: 50
+    min: 10
+    max: 150
+    q: 10
   use_multiprocessing:
     distribution: constant
     value: True
