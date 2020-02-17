@@ -9,12 +9,12 @@ parameters:
     min: 0.001
     max: 0.1
     q: 0.001
-  epochs:
-    distribution: constant
-    value: 10
   use_multiprocessing:
     distribution: constant
     value: True
+  max_queue_size:
+    distribution: constant
+    value: 2048
   LSTM_1_SIZE:
     distribution: categorical
     values:

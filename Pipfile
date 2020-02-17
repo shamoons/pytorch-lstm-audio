@@ -17,7 +17,6 @@ matplotlib = "*"
 wandb = "*"
 scipy = "*"
 soundfile = "*"
-sklearn = "*"
 keras = "*"
 
 [requires]
