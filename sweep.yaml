@@ -13,17 +13,41 @@ parameters:
     distribution: constant
     value: 10
   LSTM_1_SIZE:
-    distribution: int_uniform
-    min: 8
-    max: 128
+    distribution: categorical
+    values:
+      - 8
+      - 16
+      - 32
+      - 64
+      - 128
+      - 256
   LSTM_2_SIZE:
-    distribution: int_uniform
-    min: 8
-    max: 128
+    distribution: categorical
+    values:
+      - 8
+      - 16
+      - 32
+      - 64
+      - 128
+      - 256
   LSTM_3_SIZE:
-    distribution: int_uniform
-    min: 8
-    max: 128
+    distribution: categorical
+    values:
+      - 8
+      - 16
+      - 32
+      - 64
+      - 128
+      - 256
+  LSTM_4_SIZE:
+    distribution: categorical
+    values:
+      - 8
+      - 16
+      - 32
+      - 64
+      - 128
+      - 256
 early_terminate:
   type: hyperband
   max_iter: 250
