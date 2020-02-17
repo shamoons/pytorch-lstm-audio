@@ -10,12 +10,14 @@ pylint = "*"
 [packages]
 torch = "*"
 numpy = "*"
-torchaudio = "*"
 six = "*"
 tensorflow = "==2.1.0"
 pandas = "*"
 matplotlib = "*"
 wandb = "*"
+scipy = "*"
+soundfile = "*"
+sklearn = "*"
 
 [requires]
 python_version = "3.6"

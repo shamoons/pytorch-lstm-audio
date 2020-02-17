@@ -1,17 +1,32 @@
+import glob
+import wandb
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import pandas as pd
 import numpy as np
+import math
+import random
+import os
+import multiprocessing
+import os.path as path
+import soundfile as sf
+
+from scipy import signal
+
+from sklearn.preprocessing import normalize
 from keras.callbacks import EarlyStopping
-from keras.layers import Input, LSTM, Dense, TimeDistributed, Activation
+from keras.layers import Input, LSTM, Dense, TimeDistributed, Activation, BatchNormalization
 from keras.models import Sequential
-import wandb
+from keras.utils import Sequence
+from keras import optimizers
 from wandb.keras import WandbCallback
+
 wandb.init(project="pytorch-lstm-audio")
 
-
-VECTOR_SIZE = 100
-BATCH_SIZE = 5000
+TOTAL_SAMPLES = 2676
+SEQ_LENGTH = 100
+VECTOR_SIZE = 129
+BATCH_SIZE = 32
 
 
 def get_test_data(batches=1):
@@ -36,77 +51,137 @@ def get_training_data(batches=1):
     return inputs, outputs
 
 
-def main2():
-    N = 1000
-    Tp = 800
-    t = np.arange(0, N)
-    x = np.sin(0.2 * t) + 2 * np.random.rand(N)
-    df = pd.DataFrame(x)
+class DataGenerator(Sequence):
+    def __init__(self, corrupted_path, seq_length=10, batch_size=20, train_set=False, test_set=False):
+        corrupted_base_path = path.abspath(corrupted_path)
+        corrupted_base_path_parts = corrupted_base_path.split('/')
+        clean_base_path = corrupted_base_path_parts.copy()
+        clean_base_path[-1] = 'dev-clean'
+        clean_base_path = '/'.join(clean_base_path)
 
-    values = df.values
-    train, test = values[0: Tp, :], values[Tp:N, :]
+        corrupted_audio_file_paths = list(
+            sorted(glob.iglob(corrupted_base_path + '/**/*.flac', recursive=True)))
 
-    step = 20
-    train = np.append(train, np.repeat(train[-1, ], step))
-    test = np.append(test, np.repeat(test[-1, ], step))
+        clean_audio_file_paths = list(
+            sorted(glob.iglob(clean_base_path + '/**/*.flac', recursive=True)))
 
-    print('train.shape', train.shape)
-    print('test.shape', test.shape)
+        cutoff_index = int(len(corrupted_audio_file_paths) * 0.9)
 
-    trainX, trainY = convertToMatrix(train, step)
-    testX, testY = convertToMatrix(test, step)
+        if train_set == True:
+            self.clean_file_paths = clean_audio_file_paths[0: cutoff_index]
+            self.corrupted_file_paths = corrupted_audio_file_paths[0: cutoff_index]
+        if test_set == True:
+            self.clean_file_paths = clean_audio_file_paths[cutoff_index:]
+            self.corrupted_file_paths = corrupted_audio_file_paths[cutoff_index:]
 
-    print('trainX.shape', trainX.shape, 'trainY.shape', trainY.shape)
-    print('testX.shape', testX.shape, 'testY.shape', testY.shape)
+        self.seq_length = seq_length
+        self.batch_size = batch_size
+        return
 
-    trainX = np.reshape(trainX, (trainX.shape[0], 1, trainX.shape[1]))
-    testX = np.reshape(testX, (testX.shape[0], 1, testX.shape[1]))
+    def __len__(self):
+        return math.ceil(len(self.clean_file_paths) / self.batch_size)
 
-    model = Sequential()
-    model.add(SimpleRNN(units=32, input_shape=(1, step), activation='relu'))
-    model.add(Dense(8, activation='relu'))
-    model.add(Dense(1))
-    model.compile(loss='mean_squared_error', optimizer='rmsprop')
-    print(model.summary())
+    def __getitem__(self, index):
+        batch_index = index * self.batch_size
 
-    model.fit(trainX, trainY, epochs=100, batch_size=16, verbose=1)
+        corrupted_samples, corrupted_sample_rate = sf.read(
+            self.corrupted_file_paths[batch_index])
 
-    trainPredict = model.predict(trainX)
-    testPredict = model.predict(testX)
+        clean_samples, clean_sample_rate = sf.read(
+            self.clean_file_paths[batch_index])
 
-    predicted = np.concatenate((trainPredict, testPredict), axis=0)
-    trainScore = model.evaluate(trainX, trainY, verbose=1)
+        _, _, corrupted_spectrogram = signal.spectrogram(
+            corrupted_samples, corrupted_sample_rate)
 
-    print('trainScore', trainScore)
+        _, _, clean_spectrogram = signal.spectrogram(
+            clean_samples, clean_sample_rate)
+
+        # By default, the first axis is frequencies and the second is time.
+        # We swap them here.
+        input_spectrogram = np.swapaxes(corrupted_spectrogram, 0, 1)
+        output_spectrogram = np.swapaxes(clean_spectrogram, 0, 1)
+        # output_spectrogram = np.flip(output_spectrogram, 0)
+
+        inputs = []
+        outputs = []
+
+        while len(inputs) < self.batch_size:
+            input_sliced = self.__get_random_slice(
+                input_spectrogram, self.seq_length)
+
+            output_sliced = self.__get_random_slice(
+                output_spectrogram, self.seq_length)
+
+            inputs.append(input_sliced)
+            outputs.append(output_sliced)
+
+        inputs_array = np.array(inputs)
+        outputs_array = np.array(outputs)
+
+        normalized_inputs = (
+            inputs_array - inputs_array.mean()) / inputs_array.std()
+
+        normalized_outputs = (
+            outputs_array - outputs_array.mean()) / outputs_array.std()
+
+        return normalized_inputs, normalized_outputs
+
+    def __getitem__2(self, index):
+        inputs = []
+        outputs = []
+
+        while len(inputs) < self.batch_size:
+            inp = tf.random.uniform(
+                shape=(self.seq_length, VECTOR_SIZE),
+                minval=-1,
+                maxval=1
+            )
+
+            outp = inp * 2
+
+            inputs.append(inp)
+            outputs.append(outp)
+
+        return np.array(inputs), np.array(outputs)
+
+    def __get_random_slice(self, data, slice_length):
+        start_index = random.randint(0, len(data) - slice_length)
+        end_index = start_index + slice_length
+
+        return data[start_index:end_index]
 
 
 def main():
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
     tf.random.set_seed(0)
+    np.random.seed(0)
 
     model = Sequential()
-    model.add(LSTM(256, input_shape=(10, VECTOR_SIZE), return_sequences=True))
-    model.add(LSTM(256, return_sequences=True))
-    model.add(LSTM(256, return_sequences=True))
-    model.add(TimeDistributed(Dense(VECTOR_SIZE, activation='linear')))
-    model.compile(loss='mean_squared_error', optimizer='rmsprop')
+    model.add(BatchNormalization(input_shape=(SEQ_LENGTH, VECTOR_SIZE)))
+    model.add(LSTM(32, input_shape=(
+        SEQ_LENGTH, VECTOR_SIZE), return_sequences=True))
+    model.add(TimeDistributed(Dense(VECTOR_SIZE, activation='relu')))
+
+    adam_optimizer = optimizers.Adam(
+        learning_rate=0.1, beta_1=0.9, beta_2=0.999, amsgrad=False)
+    model.compile(loss='mean_squared_error',
+                  optimizer=adam_optimizer)
 
     print(model.summary())
     callbacks = [WandbCallback(), EarlyStopping(
         monitor='val_loss', patience=10)]
 
-    trainX, trainY = get_training_data(BATCH_SIZE)
+    trainGen = DataGenerator(
+        'data/dev-noise-subtractive-250ms-1', seq_length=SEQ_LENGTH, batch_size=BATCH_SIZE, train_set=True)
+    valGen = DataGenerator(
+        'data/dev-noise-subtractive-250ms-1', seq_length=SEQ_LENGTH, batch_size=BATCH_SIZE, test_set=True)
 
-    model.fit(trainX.numpy(), trainY.numpy(), epochs=250, batch_size=32,
-              verbose=1, callbacks=callbacks, validation_split=0.1)
-
-    testX, testY = get_test_data(BATCH_SIZE)
-
-    # print('testX', testX)
-    scores = model.evaluate(testX.numpy(), testY.numpy(), verbose=1)
-    print('scores', scores)
-    # predicted = model.predict(testX.numpy(), verbose=1)
-    # print('predicted', predicted)
-    # print('testY', testY)
+    worker_count = multiprocessing.cpu_count()
+    max_queue_size = BATCH_SIZE * 4
+    use_multiprocessing = True
+    model.fit_generator(
+        trainGen, steps_per_epoch=math.ceil(TOTAL_SAMPLES / BATCH_SIZE), callbacks=callbacks, epochs=250, workers=worker_count, max_queue_size=max_queue_size, use_multiprocessing=use_multiprocessing, validation_data=valGen)
 
 
 if __name__ == '__main__':
