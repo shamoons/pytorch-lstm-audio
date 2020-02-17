@@ -1,4 +1,3 @@
-
 import matplotlib.pyplot as plt
 from scipy import signal
 import soundfile as sf
