@@ -99,7 +99,6 @@ class DataGenerator(Sequence):
         # We swap them here.
         input_spectrogram = np.swapaxes(corrupted_spectrogram, 0, 1)
         output_spectrogram = np.swapaxes(clean_spectrogram, 0, 1)
-        # output_spectrogram = np.flip(output_spectrogram, 0)
 
         inputs = []
         outputs = []
@@ -175,7 +174,6 @@ def main():
     args = parse_args()
 
     model = Sequential()
-    model.add(BatchNormalization(input_shape=(SEQ_LENGTH, VECTOR_SIZE)))
     model.add(LSTM(args.LSTM_1_SIZE, input_shape=(
         SEQ_LENGTH, VECTOR_SIZE), return_sequences=True))
     model.add(LSTM(args.LSTM_2_SIZE, return_sequences=True))
