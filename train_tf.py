@@ -134,7 +134,9 @@ def parse_args():
 
 
 def main():
-    wandb.init(project="pytorch-lstm-audio", tags=[os.environ.get('HOSTNAME')])
+    wandb_tags = []
+    wandb_tags.append(os.environ.get('HOSTNAME'))
+    wandb.init(project="pytorch-lstm-audio", tags=','.join(wandb_tags))
 
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
