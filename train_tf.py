@@ -26,7 +26,6 @@ from wandb.keras import WandbCallback
 TOTAL_SAMPLES = 2676
 SEQ_LENGTH = 100
 VECTOR_SIZE = 129
-BATCH_SIZE = 32
 
 
 class DataGenerator(Sequence):
@@ -157,12 +156,11 @@ def main():
     model.add(Dropout(0.2))
     model.add(LSTM(args.LSTM_2_SIZE, return_sequences=True))
     # model.add(Dropout(0.2))
-    # model.add(LSTM(args.LSTM_3_SIZE, return_sequences=True))
+    model.add(LSTM(args.LSTM_3_SIZE, return_sequences=True))
     # model.add(Dropout(0.2))
     model.add(TimeDistributed(Dense(VECTOR_SIZE, activation='relu')))
 
-    adam_optimizer = optimizers.Adam(
-        learning_rate=args.learning_rate, beta_1=0.9, beta_2=0.999, amsgrad=False)
+    adam_optimizer = optimizers.Adam(learning_rate=args.learning_rate)
     model.compile(loss='mean_squared_error',
                   optimizer=adam_optimizer)
 

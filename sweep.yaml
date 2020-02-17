@@ -4,6 +4,9 @@ metric:
   name: val_loss
   goal: minimize
 parameters:
+  epochs:
+    distribution: constant
+    value: 10
   LSTM_1_SIZE:
     distribution: int_uniform
     min: 32
@@ -14,4 +17,5 @@ parameters:
     max: 256
 early_terminate:
   type: hyperband
-  min_iter: 3
+  max_iter: 250
+  s: 3
