@@ -113,6 +113,9 @@ def parse_args():
     parser.add_argument(
         "--LSTM_2_SIZE", help="Hidden size for the second LSTM Layer", type=int, default=128)
 
+    parser.add_argument('--batch_size', help='Batch size',
+                        type=int, default=32)
+
     args = parser.parse_args()
 
     return args
@@ -145,15 +148,15 @@ def main():
         monitor='val_loss', patience=10), ModelCheckpoint(filepath='saved_models/' + 'model' + '.hdf5', monitor='val_loss', save_best_only=True)]
 
     trainGen = DataGenerator(
-        'data/dev-noise-subtractive-250ms-1', seq_length=SEQ_LENGTH, batch_size=BATCH_SIZE, train_set=True)
+        'data/dev-noise-subtractive-250ms-1', seq_length=SEQ_LENGTH, batch_size=args.batch_size, train_set=True)
     valGen = DataGenerator(
-        'data/dev-noise-subtractive-250ms-1', seq_length=SEQ_LENGTH, batch_size=BATCH_SIZE, test_set=True)
+        'data/dev-noise-subtractive-250ms-1', seq_length=SEQ_LENGTH, batch_size=args.batch_size, test_set=True)
 
     worker_count = multiprocessing.cpu_count()
-    max_queue_size = BATCH_SIZE * 4
+    max_queue_size = args.batch_size * 4
     use_multiprocessing = True
     model.fit_generator(
-        trainGen, steps_per_epoch=math.ceil(TOTAL_SAMPLES / BATCH_SIZE), callbacks=callbacks, epochs=250, workers=worker_count, max_queue_size=max_queue_size, use_multiprocessing=use_multiprocessing, validation_data=valGen)
+        trainGen, steps_per_epoch=math.ceil(TOTAL_SAMPLES / args.batch_size), callbacks=callbacks, epochs=250, workers=worker_count, max_queue_size=max_queue_size, use_multiprocessing=use_multiprocessing, validation_data=valGen)
 
 
 if __name__ == '__main__':
