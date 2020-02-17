@@ -14,7 +14,7 @@ parameters:
     value: True
   max_queue_size:
     distribution: constant
-    value: 2048
+    value: 4096
   LSTM_1_SIZE:
     distribution: categorical
     values:
