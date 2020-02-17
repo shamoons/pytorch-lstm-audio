@@ -17,7 +17,7 @@ from scipy import signal
 
 from sklearn.preprocessing import normalize
 from keras.callbacks import EarlyStopping, ModelCheckpoint
-from keras.layers import Input, LSTM, Dense, TimeDistributed, Activation, BatchNormalization
+from keras.layers import Input, LSTM, Dense, TimeDistributed, Activation, BatchNormalization, Dropout
 from keras.models import Sequential
 from keras.utils import Sequence
 from keras import optimizers
@@ -148,8 +148,11 @@ def main():
     model = Sequential()
     model.add(LSTM(args.LSTM_1_SIZE, input_shape=(
         SEQ_LENGTH, VECTOR_SIZE), return_sequences=True))
+    model.add(Dropout(0.2))
     model.add(LSTM(args.LSTM_2_SIZE, return_sequences=True))
-    model.add(LSTM(args.LSTM_3_SIZE, return_sequences=True))
+    model.add(Dropout(0.2))
+    # model.add(LSTM(args.LSTM_3_SIZE, return_sequences=True))
+    # model.add(Dropout(0.2))
     model.add(TimeDistributed(Dense(VECTOR_SIZE, activation='relu')))
 
     adam_optimizer = optimizers.Adam(
