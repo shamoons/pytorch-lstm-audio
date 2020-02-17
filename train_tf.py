@@ -104,11 +104,12 @@ class DataGenerator(Sequence):
         outputs = []
 
         while len(inputs) < self.batch_size:
-            input_sliced = self.__get_random_slice(
-                input_spectrogram, self.seq_length)
+            start_index = random.randint(
+                0, len(input_spectrogram) - self.seq_length)
+            end_index = start_index + self.seq_length
 
-            output_sliced = self.__get_random_slice(
-                output_spectrogram, self.seq_length)
+            input_sliced = input_spectrogram[start_index:end_index]
+            output_sliced = output_spectrogram[start_index:end_index]
 
             inputs.append(input_sliced)
             outputs.append(output_sliced)
@@ -141,12 +142,6 @@ class DataGenerator(Sequence):
             outputs.append(outp)
 
         return np.array(inputs), np.array(outputs)
-
-    def __get_random_slice(self, data, slice_length):
-        start_index = random.randint(0, len(data) - slice_length)
-        end_index = start_index + slice_length
-
-        return data[start_index:end_index]
 
 
 def parse_args():
