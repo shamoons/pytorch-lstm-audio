@@ -117,6 +117,12 @@ def parse_args():
     parser.add_argument(
         "--LSTM_3_SIZE", help="Hidden size for the third LSTM Layer", type=int, default=64)
 
+    parser.add_argument('--learning_rate', help='Learning rate for optimizer',
+                        type=float, default=0.01)
+
+    parser.add_argument('--epochs', help='Epochs to run',
+                        type=int, default=250)
+
     parser.add_argument('--batch_size', help='Batch size',
                         type=int, default=32)
 
@@ -150,13 +156,13 @@ def main():
         SEQ_LENGTH, VECTOR_SIZE), return_sequences=True))
     model.add(Dropout(0.2))
     model.add(LSTM(args.LSTM_2_SIZE, return_sequences=True))
-    model.add(Dropout(0.2))
+    # model.add(Dropout(0.2))
     # model.add(LSTM(args.LSTM_3_SIZE, return_sequences=True))
     # model.add(Dropout(0.2))
     model.add(TimeDistributed(Dense(VECTOR_SIZE, activation='relu')))
 
     adam_optimizer = optimizers.Adam(
-        learning_rate=0.1, beta_1=0.9, beta_2=0.999, amsgrad=False)
+        learning_rate=args.learning_rate, beta_1=0.9, beta_2=0.999, amsgrad=False)
     model.compile(loss='mean_squared_error',
                   optimizer=adam_optimizer)
 
@@ -171,7 +177,7 @@ def main():
         'data/dev-noise-subtractive-250ms-1', seq_length=SEQ_LENGTH, batch_size=args.batch_size, test_set=True)
 
     model.fit_generator(
-        trainGen, steps_per_epoch=math.ceil(TOTAL_SAMPLES / args.batch_size), callbacks=callbacks, epochs=250, workers=args.worker_count, max_queue_size=args.max_queue_size, use_multiprocessing=args.use_multiprocessing, validation_data=valGen)
+        trainGen, steps_per_epoch=math.ceil(TOTAL_SAMPLES / args.batch_size), callbacks=callbacks, epochs=args.epochs, workers=args.worker_count, max_queue_size=args.max_queue_size, use_multiprocessing=args.use_multiprocessing, validation_data=valGen)
 
 
 if __name__ == '__main__':
