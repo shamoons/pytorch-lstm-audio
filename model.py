@@ -2,7 +2,7 @@ import math
 
 from keras import optimizers
 from keras.callbacks import EarlyStopping
-from keras.layers import Input, LSTM, Dense, TimeDistributed, Activation, BatchNormalization, Dropout
+from keras.layers import Input, LSTM, Dense, TimeDistributed, Activation, BatchNormalization, Dropout, Bidirectional
 from keras.models import Sequential
 from keras.utils import Sequence
 from keras.utils import multi_gpu_model
@@ -17,8 +17,8 @@ class SpeechBaselineModel():
 
     def build(self, seq_length, feature_dim, lstm1_size, lstm2_size, lstm3_size, lstm4_size):
 
-        self.model.add(LSTM(lstm1_size, input_shape=(
-            seq_length, feature_dim), return_sequences=True))
+        self.model.add(Bidirectional(LSTM(lstm1_size, input_shape=(
+            seq_length, feature_dim), return_sequences=True)))
         self.model.add(Dropout(0.2))
         self.model.add(LSTM(lstm2_size, return_sequences=True))
         self.model.add(Dropout(0.2))
@@ -29,10 +29,12 @@ class SpeechBaselineModel():
         self.model.add(TimeDistributed(Dense(feature_dim, activation='relu')))
 
     def compile(self, learning_rate):
-        try:
-            self.model = multi_gpu_model(self.model)
-        except:
-            pass
+        # try:
+        #     self.model = multi_gpu_model(self.model)
+        # except:
+        #     self.model = self.model
+        #     pass
+        # self.model = model
 
         adam_optimizer = optimizers.Adam(learning_rate=learning_rate)
         self.model.compile(loss='mean_squared_error', optimizer=adam_optimizer)

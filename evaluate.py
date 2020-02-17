@@ -42,7 +42,7 @@ def main():
         start_index = end_index + 1
         end_index = start_index + 100
 
-    # print(input_spectrogram[current_start_index].shape)
+    print(np.array(output_spectrogram).shape)
 
     plt.pcolormesh(times, frequencies, output_spectrogram)
     plt.imshow(output_spectrogram)
