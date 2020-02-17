@@ -1,0 +1,13 @@
+method: bayes
+metric:
+  name: val_loss
+  goal: minimize
+parameters:
+  LSTM_1_SIZE:
+    distribution: int_uniform
+    min: 32
+    max: 256
+  LSTM_2_SIZE:
+    distribution: int_uniform
+    min: 32
+    max: 256

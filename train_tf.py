@@ -10,6 +10,7 @@ import os
 import multiprocessing
 import os.path as path
 import soundfile as sf
+import argparse
 
 from scipy import signal
 
@@ -20,8 +21,6 @@ from keras.models import Sequential
 from keras.utils import Sequence
 from keras import optimizers
 from wandb.keras import WandbCallback
-
-wandb.init(project="pytorch-lstm-audio")
 
 TOTAL_SAMPLES = 2676
 SEQ_LENGTH = 100
@@ -151,16 +150,35 @@ class DataGenerator(Sequence):
         return data[start_index:end_index]
 
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--LSTM_1_SIZE", help="Hidden size for the first LSTM Layer", type=int, default=256)
+
+    parser.add_argument(
+        "--LSTM_2_SIZE", help="Hidden size for the second LSTM Layer", type=int, default=128)
+
+    args = parser.parse_args()
+
+    return args
+
+
 def main():
+    wandb.init(project="pytorch-lstm-audio")
+
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
     tf.random.set_seed(0)
     np.random.seed(0)
 
+    args = parse_args()
+
     model = Sequential()
     model.add(BatchNormalization(input_shape=(SEQ_LENGTH, VECTOR_SIZE)))
-    model.add(LSTM(32, input_shape=(
+    model.add(LSTM(args.LSTM_1_SIZE, input_shape=(
         SEQ_LENGTH, VECTOR_SIZE), return_sequences=True))
+    model.add(LSTM(args.LSTM_2_SIZE, return_sequences=True))
     model.add(TimeDistributed(Dense(VECTOR_SIZE, activation='relu')))
 
     adam_optimizer = optimizers.Adam(
@@ -169,8 +187,9 @@ def main():
                   optimizer=adam_optimizer)
 
     print(model.summary())
+
     callbacks = [WandbCallback(), EarlyStopping(
-        monitor='val_loss', patience=10), ModelCheckpoint(filepath='saved_models', monitor='val_loss', save_best_only=True)]
+        monitor='val_loss', patience=10), ModelCheckpoint(filepath='saved_models/' + 'model' + '.hdf5', monitor='val_loss', save_best_only=True)]
 
     trainGen = DataGenerator(
         'data/dev-noise-subtractive-250ms-1', seq_length=SEQ_LENGTH, batch_size=BATCH_SIZE, train_set=True)
