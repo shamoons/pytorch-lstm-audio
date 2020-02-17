@@ -170,7 +170,7 @@ def main():
 
     print(model.summary())
     callbacks = [WandbCallback(), EarlyStopping(
-        monitor='val_loss', patience=10)]
+        monitor='val_loss', patience=10), ModelCheckpoint(filepath='saved_models', monitor='val_loss', save_best_only=True)]
 
     trainGen = DataGenerator(
         'data/dev-noise-subtractive-250ms-1', seq_length=SEQ_LENGTH, batch_size=BATCH_SIZE, train_set=True)
