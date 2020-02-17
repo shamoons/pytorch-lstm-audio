@@ -1,9 +1,11 @@
 import math
 
 from keras import optimizers
+from keras.callbacks import EarlyStopping
 from keras.layers import Input, LSTM, Dense, TimeDistributed, Activation, BatchNormalization, Dropout
 from keras.models import Sequential
-from keras.callbacks import EarlyStopping
+from keras.utils import Sequence
+from keras.utils import multi_gpu_model
 from wandb.keras import WandbCallback
 
 
@@ -29,6 +31,11 @@ class SpeechBaselineModel():
     def compile(self, learning_rate):
         adam_optimizer = optimizers.Adam(learning_rate=learning_rate)
         self.model.compile(loss='mean_squared_error', optimizer=adam_optimizer)
+
+        try:
+            self.model = multi_gpu_model(self.model)
+        except:
+            pass
 
     def train(self, train_gen, val_gen, batch_size, epochs, worker_count, max_queue_size, use_multiprocessing):
 

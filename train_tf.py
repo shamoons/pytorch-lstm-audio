@@ -10,7 +10,6 @@ from datagenerator import DataGenerator
 from model import SpeechBaselineModel
 
 TOTAL_SAMPLES = 2676
-SEQ_LENGTH = 100
 VECTOR_SIZE = 129
 
 
@@ -31,6 +30,9 @@ def parse_args():
 
     parser.add_argument('--learning_rate', help='Learning rate for optimizer',
                         type=float, default=0.01)
+
+    parser.add_argument('--seq_length', help='Length of sequences of the spectrogram',
+                        type=int, default=200)
 
     parser.add_argument('--epochs', help='Epochs to run',
                         type=int, default=250)
@@ -64,14 +66,14 @@ def main():
     args = parse_args()
 
     model = SpeechBaselineModel(total_samples=TOTAL_SAMPLES)
-    model.build(seq_length=SEQ_LENGTH, feature_dim=VECTOR_SIZE,
+    model.build(seq_length=args.seq_length, feature_dim=VECTOR_SIZE,
                 lstm1_size=args.LSTM_1_SIZE, lstm2_size=args.LSTM_2_SIZE, lstm3_size=args.LSTM_3_SIZE, lstm4_size=args.LSTM_4_SIZE)
     model.compile(learning_rate=args.learning_rate)
 
     train_gen = DataGenerator(
-        'data/dev-noise-subtractive-250ms-1', seq_length=SEQ_LENGTH, batch_size=args.batch_size, train_set=True)
+        'data/dev-noise-subtractive-250ms-1', seq_length=args.seq_length, batch_size=args.batch_size, train_set=True)
     val_gen = DataGenerator(
-        'data/dev-noise-subtractive-250ms-1', seq_length=SEQ_LENGTH, batch_size=args.batch_size, test_set=True)
+        'data/dev-noise-subtractive-250ms-1', seq_length=args.seq_length, batch_size=args.batch_size, test_set=True)
 
     model.train(train_gen=train_gen, val_gen=val_gen,
                 batch_size=args.batch_size, epochs=args.epochs, worker_count=args.worker_count, max_queue_size=args.max_queue_size, use_multiprocessing=args.use_multiprocessing)

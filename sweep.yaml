@@ -9,6 +9,11 @@ parameters:
     min: 0.01
     max: 0.2
     q: 0.01
+  seq_length:
+    distribution: q_uniform
+    min: 100
+    max: 1000
+    q: 50
   use_multiprocessing:
     distribution: constant
     value: True
