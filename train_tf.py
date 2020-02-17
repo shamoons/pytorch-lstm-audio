@@ -16,7 +16,7 @@ import argparse
 from scipy import signal
 
 from sklearn.preprocessing import normalize
-from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.callbacks import EarlyStopping
 from keras.layers import Input, LSTM, Dense, TimeDistributed, Activation, BatchNormalization, Dropout
 from keras.models import Sequential
 from keras.utils import Sequence
@@ -172,7 +172,7 @@ def main():
     print(model.summary())
 
     callbacks = [WandbCallback(), EarlyStopping(
-        monitor='val_loss', patience=10), ModelCheckpoint(filepath='saved_models/' + 'model' + '.hdf5', monitor='val_loss', save_best_only=True)]
+        monitor='val_loss', patience=10)]
 
     trainGen = DataGenerator(
         'data/dev-noise-subtractive-250ms-1', seq_length=SEQ_LENGTH, batch_size=args.batch_size, train_set=True)
