@@ -7,6 +7,7 @@ import numpy as np
 import math
 import random
 import os
+import socket
 import multiprocessing
 import os.path as path
 import soundfile as sf
@@ -134,8 +135,7 @@ def parse_args():
 
 
 def main():
-    wandb_tags = []
-    wandb_tags.append(os.environ.get('HOSTNAME'))
+    wandb_tags = [socket.gethostname()]
     wandb.init(project="pytorch-lstm-audio", tags=','.join(wandb_tags))
 
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
