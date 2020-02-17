@@ -5,9 +5,10 @@ metric:
   goal: minimize
 parameters:
   learning_rate:
-    distribution: uniform
+    distribution: q_uniform
     min: 0.001
     max: 0.1
+    q: 0.001
   epochs:
     distribution: constant
     value: 10

@@ -161,7 +161,7 @@ def main():
     # model.add(Dropout(0.2))
     model.add(LSTM(args.LSTM_3_SIZE, return_sequences=True))
     # model.add(Dropout(0.2))
-    # model.add(LSTM(args.LSTM_4_SIZE, return_sequences=True))
+    model.add(LSTM(args.LSTM_4_SIZE, return_sequences=True))
     # model.add(Dropout(0.2))
     model.add(TimeDistributed(Dense(VECTOR_SIZE, activation='relu')))
 
