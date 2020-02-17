@@ -28,28 +28,6 @@ VECTOR_SIZE = 129
 BATCH_SIZE = 32
 
 
-def get_test_data(batches=1):
-    inputs = tf.random.uniform(
-        shape=(batches, 10, VECTOR_SIZE),
-        minval=-1,
-        maxval=1
-    )
-
-    outputs = inputs * 2
-    return inputs, outputs
-
-
-def get_training_data(batches=1):
-    inputs = tf.random.uniform(
-        shape=(batches, 10, VECTOR_SIZE),
-        minval=-1,
-        maxval=1
-    )
-
-    outputs = inputs * 2
-    return inputs, outputs
-
-
 class DataGenerator(Sequence):
     def __init__(self, corrupted_path, seq_length=10, batch_size=20, train_set=False, test_set=False):
         corrupted_base_path = path.abspath(corrupted_path)
@@ -124,24 +102,6 @@ class DataGenerator(Sequence):
             outputs_array - outputs_array.mean()) / outputs_array.std()
 
         return normalized_inputs, normalized_outputs
-
-    def __getitem__2(self, index):
-        inputs = []
-        outputs = []
-
-        while len(inputs) < self.batch_size:
-            inp = tf.random.uniform(
-                shape=(self.seq_length, VECTOR_SIZE),
-                minval=-1,
-                maxval=1
-            )
-
-            outp = inp * 2
-
-            inputs.append(inp)
-            outputs.append(outp)
-
-        return np.array(inputs), np.array(outputs)
 
 
 def parse_args():
