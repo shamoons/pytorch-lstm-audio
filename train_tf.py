@@ -122,6 +122,9 @@ def parse_args():
     parser.add_argument('--max_queue_size', help='Max queue size for fit_generator',
                         type=int, default=32 * 4)
 
+    parser.add_argument('--use_multiprocessing', help='Use multiprocessing for fit_generator',
+                        type=bool, default=False)
+
     args = parser.parse_args()
 
     return args
@@ -158,11 +161,8 @@ def main():
     valGen = DataGenerator(
         'data/dev-noise-subtractive-250ms-1', seq_length=SEQ_LENGTH, batch_size=args.batch_size, test_set=True)
 
-    worker_count = args.worker_count
-    max_queue_size = args.max_queue_size
-    use_multiprocessing = True
     model.fit_generator(
-        trainGen, steps_per_epoch=math.ceil(TOTAL_SAMPLES / args.batch_size), callbacks=callbacks, epochs=250, workers=worker_count, max_queue_size=max_queue_size, use_multiprocessing=use_multiprocessing, validation_data=valGen)
+        trainGen, steps_per_epoch=math.ceil(TOTAL_SAMPLES / args.batch_size), callbacks=callbacks, epochs=250, workers=args.worker_count, max_queue_size=args.max_queue_size, use_multiprocessing=args.use_multiprocessing, validation_data=valGen)
 
 
 if __name__ == '__main__':
