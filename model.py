@@ -35,12 +35,10 @@ class SpeechBaselineModel():
         self.model.add(TimeDistributed(Dense(feature_dim, activation='relu')))
 
     def compile(self, learning_rate):
-        # try:
-        #     self.model = multi_gpu_model(self.model)
-        # except:
-        #     self.model = self.model
-        #     pass
-        # self.model = model
+        try:
+            self.model = multi_gpu_model(self.model)
+        except:
+            pass
 
         adam_optimizer = optimizers.Adam(learning_rate=learning_rate)
         return self.model.compile(loss='mean_squared_error', optimizer=adam_optimizer)
