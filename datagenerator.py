@@ -9,11 +9,16 @@ from keras.utils import Sequence
 
 class DataGenerator(Sequence):
     def __init__(self, corrupted_path, seq_length=10, batch_size=20, train_set=False, test_set=False):
-        print('DataGenerator __init__')
         corrupted_base_path = path.abspath(corrupted_path)
         corrupted_base_path_parts = corrupted_base_path.split('/')
         clean_base_path = corrupted_base_path_parts.copy()
-        clean_base_path[-1] = 'dev-clean'
+        if 'dev' in clean_base_path[-1]:
+            clean_base_path[-1] = 'dev-clean'
+        elif 'train' in clean_base_path[-1]:
+            clean_base_path[-1] = 'train-clean'
+        elif 'test' in clean_base_path[-1]:
+            clean_base_path[-1] = 'test-clean'
+
         clean_base_path = '/'.join(clean_base_path)
 
         corrupted_audio_file_paths = list(
@@ -40,26 +45,6 @@ class DataGenerator(Sequence):
 
     def __getitem__(self, index):
         batch_index = index * self.batch_size
-
-        # corrupted_samples, sample_rate = sf.read(
-        #     self.corrupted_file_paths[batch_index])
-
-        # clean_samples, sample_rate = sf.read(
-        #     self.clean_file_paths[batch_index])
-
-        # # Taken from https://github.com/PaddlePaddle/DeepSpeech/blob/766e96e600795cea4187123b9ed76dcd250f2d04/data_utils/featurizer/audio_featurizer.py#L121
-        # nperseg = int(sample_rate * 0.001 * 20)  # 20ms
-
-        # _, _, corrupted_spectrogram = signal.spectrogram(
-        #     corrupted_samples, fs=sample_rate, nperseg=nperseg, noverlap=nperseg // 2, window=signal.hann(nperseg))
-
-        # _, _, clean_spectrogram = signal.spectrogram(
-        #     clean_samples, fs=sample_rate, nperseg=nperseg, noverlap=nperseg // 2, window=signal.hann(nperseg))
-
-        # # By default, the first axis is frequencies and the second is time.
-        # # We swap them here.
-        # input_spectrogram = np.swapaxes(corrupted_spectrogram, 0, 1)
-        # output_spectrogram = np.swapaxes(clean_spectrogram, 0, 1)
 
         input_spectrogram = load_audio_spectrogram(
             self.corrupted_file_paths[batch_index])
