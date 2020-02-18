@@ -1,112 +1,93 @@
-import matplotlib.pyplot as plt
 import tensorflow as tf
-import pandas as pd
 import numpy as np
-from keras.callbacks import EarlyStopping
-from keras.layers import Input, LSTM, Dense, TimeDistributed, Activation
-from keras.models import Sequential
+import os
+import socket
 import wandb
-from wandb.keras import WandbCallback
-wandb.init(project="pytorch-lstm-audio")
+import multiprocessing
+import argparse
+
+from datagenerator import DataGenerator
+from model import SpeechBaselineModel
+
+TOTAL_SAMPLES = 2676
+VECTOR_SIZE = 161
 
 
-VECTOR_SIZE = 100
-BATCH_SIZE = 5000
+def parse_args():
+    parser = argparse.ArgumentParser()
 
+    parser.add_argument('--audio_path', help='Path for corrupted audio',
+                        default='data/dev-noise-subtractive-250ms-1')
 
-def get_test_data(batches=1):
-    inputs = tf.random.uniform(
-        shape=(batches, 10, VECTOR_SIZE),
-        minval=-1,
-        maxval=1
-    )
+    parser.add_argument(
+        "--LSTM_1_SIZE", help="Hidden size for the first LSTM Layer", type=int, default=256)
 
-    outputs = inputs * 2
-    return inputs, outputs
+    parser.add_argument(
+        "--LSTM_2_SIZE", help="Hidden size for the second LSTM Layer", type=int, default=256)
 
+    parser.add_argument(
+        "--LSTM_3_SIZE", help="Hidden size for the third LSTM Layer", type=int, default=256)
 
-def get_training_data(batches=1):
-    inputs = tf.random.uniform(
-        shape=(batches, 10, VECTOR_SIZE),
-        minval=-1,
-        maxval=1
-    )
+    parser.add_argument(
+        "--LSTM_4_SIZE", help="Hidden size for the fourth LSTM Layer", type=int, default=256)
 
-    outputs = inputs * 2
-    return inputs, outputs
+    parser.add_argument('--learning_rate', help='Learning rate for optimizer',
+                        type=float, default=0.01)
 
+    parser.add_argument('--seq_length', help='Length of sequences of the spectrogram',
+                        type=int, default=100)
 
-def main2():
-    N = 1000
-    Tp = 800
-    t = np.arange(0, N)
-    x = np.sin(0.2 * t) + 2 * np.random.rand(N)
-    df = pd.DataFrame(x)
+    parser.add_argument('--epochs', help='Epochs to run',
+                        type=int, default=250)
 
-    values = df.values
-    train, test = values[0: Tp, :], values[Tp:N, :]
+    parser.add_argument('--batch_size', help='Batch size',
+                        type=int, default=32)
 
-    step = 20
-    train = np.append(train, np.repeat(train[-1, ], step))
-    test = np.append(test, np.repeat(test[-1, ], step))
+    parser.add_argument('--worker_count', help='Number of workers for fit_generator',
+                        type=int, default=multiprocessing.cpu_count())
 
-    print('train.shape', train.shape)
-    print('test.shape', test.shape)
+    parser.add_argument('--max_queue_size', help='Max queue size for fit_generator',
+                        type=int, default=32 * 8)
 
-    trainX, trainY = convertToMatrix(train, step)
-    testX, testY = convertToMatrix(test, step)
+    parser.add_argument('--use_multiprocessing', help='Use multiprocessing for fit_generator',
+                        type=bool, default=False)
 
-    print('trainX.shape', trainX.shape, 'trainY.shape', trainY.shape)
-    print('testX.shape', testX.shape, 'testY.shape', testY.shape)
+    args = parser.parse_args()
 
-    trainX = np.reshape(trainX, (trainX.shape[0], 1, trainX.shape[1]))
-    testX = np.reshape(testX, (testX.shape[0], 1, testX.shape[1]))
-
-    model = Sequential()
-    model.add(SimpleRNN(units=32, input_shape=(1, step), activation='relu'))
-    model.add(Dense(8, activation='relu'))
-    model.add(Dense(1))
-    model.compile(loss='mean_squared_error', optimizer='rmsprop')
-    print(model.summary())
-
-    model.fit(trainX, trainY, epochs=100, batch_size=16, verbose=1)
-
-    trainPredict = model.predict(trainX)
-    testPredict = model.predict(testX)
-
-    predicted = np.concatenate((trainPredict, testPredict), axis=0)
-    trainScore = model.evaluate(trainX, trainY, verbose=1)
-
-    print('trainScore', trainScore)
+    return args
 
 
 def main():
+    wandb_tags = [socket.gethostname()]
+    wandb.init(project="pytorch-lstm-audio", tags=','.join(wandb_tags))
+
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
     tf.random.set_seed(0)
+    np.random.seed(0)
 
-    model = Sequential()
-    model.add(LSTM(256, input_shape=(10, VECTOR_SIZE), return_sequences=True))
-    model.add(LSTM(256, return_sequences=True))
-    model.add(LSTM(256, return_sequences=True))
-    model.add(TimeDistributed(Dense(VECTOR_SIZE, activation='linear')))
-    model.compile(loss='mean_squared_error', optimizer='rmsprop')
+    args = parse_args()
 
-    print(model.summary())
-    callbacks = [WandbCallback(), EarlyStopping(
-        monitor='val_loss', patience=10)]
+    model = SpeechBaselineModel(total_samples=TOTAL_SAMPLES)
+    model.build(seq_length=args.seq_length, feature_dim=VECTOR_SIZE,
+                lstm1_size=args.LSTM_1_SIZE, lstm2_size=args.LSTM_2_SIZE, lstm3_size=args.LSTM_3_SIZE, lstm4_size=args.LSTM_4_SIZE)
+    model.compile(learning_rate=args.learning_rate)
 
-    trainX, trainY = get_training_data(BATCH_SIZE)
+    train_gen = DataGenerator(
+        args.audio_path, seq_length=args.seq_length, batch_size=args.batch_size, train_set=True)
+    val_gen = DataGenerator(
+        args.audio_path, seq_length=args.seq_length, batch_size=args.batch_size, test_set=True)
 
-    model.fit(trainX.numpy(), trainY.numpy(), epochs=250, batch_size=32,
-              verbose=1, callbacks=callbacks, validation_split=0.1)
+    # first_item = train_gen.__getitem__(0)
+    # print(first_item[0].shape, first_item[1].shape)
 
-    testX, testY = get_test_data(BATCH_SIZE)
+    model.train(train_gen=train_gen, val_gen=val_gen,
+                batch_size=args.batch_size, epochs=args.epochs, worker_count=args.worker_count, max_queue_size=args.max_queue_size, use_multiprocessing=args.use_multiprocessing)
 
-    # print('testX', testX)
-    scores = model.evaluate(testX.numpy(), testY.numpy(), verbose=1)
-    print('scores', scores)
-    # predicted = model.predict(testX.numpy(), verbose=1)
-    # print('predicted', predicted)
-    # print('testY', testY)
+    # print(first_item[0])
+    # Y = model.predict(first_item[0])
+
+    # print('Y', Y)
 
 
 if __name__ == '__main__':

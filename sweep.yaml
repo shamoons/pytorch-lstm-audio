@@ -1,0 +1,62 @@
+program: train_tf.py
+method: bayes
+metric:
+  name: val_loss
+  goal: minimize
+parameters:
+  learning_rate:
+    distribution: q_uniform
+    min: 0.01
+    max: 0.2
+    q: 0.01
+  seq_length:
+    distribution: q_uniform
+    min: 10
+    max: 150
+    q: 10
+  use_multiprocessing:
+    distribution: constant
+    value: True
+  max_queue_size:
+    distribution: constant
+    value: 4096
+  LSTM_1_SIZE:
+    distribution: categorical
+    values:
+      - 8
+      - 16
+      - 32
+      - 64
+      - 128
+      - 256
+  LSTM_2_SIZE:
+    distribution: categorical
+    values:
+      - 8
+      - 16
+      - 32
+      - 64
+      - 128
+      - 256
+  LSTM_3_SIZE:
+    distribution: categorical
+    values:
+      - 8
+      - 16
+      - 32
+      - 64
+      - 128
+      - 256
+  LSTM_4_SIZE:
+    distribution: categorical
+    values:
+      - 8
+      - 16
+      - 32
+      - 64
+      - 128
+      - 256
+early_terminate:
+  type: hyperband
+  max_iter: 250
+  s: 3
