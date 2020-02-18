@@ -17,15 +17,21 @@ class SpeechBaselineModel():
 
     def build(self, seq_length, feature_dim, lstm1_size, lstm2_size, lstm3_size, lstm4_size):
 
-        self.model.add(Bidirectional(LSTM(lstm1_size, input_shape=(
-            seq_length, feature_dim), return_sequences=True)))
-        self.model.add(Dropout(0.2))
+        # self.model.add(Bidirectional(LSTM(lstm1_size, input_shape=(
+        #     seq_length, feature_dim), return_sequences=True)))
+        self.model.add(LSTM(lstm1_size, input_shape=(
+            seq_length, feature_dim), return_sequences=True))
+
+        # self.model.add(Dropout(0.2))
         self.model.add(LSTM(lstm2_size, return_sequences=True))
-        self.model.add(Dropout(0.2))
+        # self.model.add(Dropout(0.2))
         self.model.add(LSTM(lstm3_size, return_sequences=True))
-        self.model.add(Dropout(0.2))
+        # self.model.add(Dropout(0.2))
         self.model.add(LSTM(lstm4_size, return_sequences=True))
-        self.model.add(Dropout(0.2))
+        # self.model.add(Dropout(0.2))
+        self.model.add(TimeDistributed(
+            Dense(feature_dim * 2, activation='relu')))
+        # self.model.add(Dropout(0.2))
         self.model.add(TimeDistributed(Dense(feature_dim, activation='relu')))
 
     def compile(self, learning_rate):
@@ -37,14 +43,14 @@ class SpeechBaselineModel():
         # self.model = model
 
         adam_optimizer = optimizers.Adam(learning_rate=learning_rate)
-        self.model.compile(loss='mean_squared_error', optimizer=adam_optimizer)
+        return self.model.compile(loss='mean_squared_error', optimizer=adam_optimizer)
 
     def train(self, train_gen, val_gen, batch_size, epochs, worker_count, max_queue_size, use_multiprocessing):
 
         callbacks = [WandbCallback(), EarlyStopping(
             monitor='val_loss', patience=10)]
 
-        self.model.fit_generator(
+        return self.model.fit_generator(
             train_gen, steps_per_epoch=math.ceil(self.total_samples / batch_size), callbacks=callbacks, epochs=epochs, workers=worker_count, max_queue_size=max_queue_size, use_multiprocessing=use_multiprocessing, validation_data=val_gen)
 
     def predict(self):

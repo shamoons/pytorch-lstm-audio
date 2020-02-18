@@ -9,6 +9,7 @@ from keras.utils import Sequence
 
 class DataGenerator(Sequence):
     def __init__(self, corrupted_path, seq_length=10, batch_size=20, train_set=False, test_set=False):
+        print('DataGenerator __init__')
         corrupted_base_path = path.abspath(corrupted_path)
         corrupted_base_path_parts = corrupted_base_path.split('/')
         clean_base_path = corrupted_base_path_parts.copy()
@@ -35,9 +36,11 @@ class DataGenerator(Sequence):
         return
 
     def __len__(self):
+        print('__len__', math.ceil(len(self.clean_file_paths) / self.batch_size))
         return math.ceil(len(self.clean_file_paths) / self.batch_size)
 
     def __getitem__(self, index):
+        print('index', index)
         batch_index = index * self.batch_size
 
         # corrupted_samples, sample_rate = sf.read(
@@ -89,4 +92,5 @@ class DataGenerator(Sequence):
         normalized_outputs = (
             outputs_array - outputs_array.mean()) / outputs_array.std()
 
+        print(normalized_inputs.shape, normalized_outputs.shape)
         return normalized_inputs, normalized_outputs
