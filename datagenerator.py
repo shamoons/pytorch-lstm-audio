@@ -36,11 +36,9 @@ class DataGenerator(Sequence):
         return
 
     def __len__(self):
-        print('__len__', math.ceil(len(self.clean_file_paths) / self.batch_size))
         return math.ceil(len(self.clean_file_paths) / self.batch_size)
 
     def __getitem__(self, index):
-        print('index', index)
         batch_index = index * self.batch_size
 
         # corrupted_samples, sample_rate = sf.read(
@@ -92,5 +90,4 @@ class DataGenerator(Sequence):
         normalized_outputs = (
             outputs_array - outputs_array.mean()) / outputs_array.std()
 
-        print(normalized_inputs.shape, normalized_outputs.shape)
         return normalized_inputs, normalized_outputs
