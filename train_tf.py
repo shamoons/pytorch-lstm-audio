@@ -16,6 +16,9 @@ VECTOR_SIZE = 161
 def parse_args():
     parser = argparse.ArgumentParser()
 
+    parser.add_argument('--audio_path', help='Path for corrupted audio',
+                        default='data/dev-noise-subtractive-250ms-1')
+
     parser.add_argument(
         "--LSTM_1_SIZE", help="Hidden size for the first LSTM Layer", type=int, default=256)
 
@@ -71,12 +74,20 @@ def main():
     model.compile(learning_rate=args.learning_rate)
 
     train_gen = DataGenerator(
-        'data/dev-noise-subtractive-250ms-1', seq_length=args.seq_length, batch_size=args.batch_size, train_set=True)
+        args.audio_path, seq_length=args.seq_length, batch_size=args.batch_size, train_set=True)
     val_gen = DataGenerator(
-        'data/dev-noise-subtractive-250ms-1', seq_length=args.seq_length, batch_size=args.batch_size, test_set=True)
+        args.audio_path, seq_length=args.seq_length, batch_size=args.batch_size, test_set=True)
+
+    # first_item = train_gen.__getitem__(0)
+    # print(first_item[0].shape, first_item[1].shape)
 
     model.train(train_gen=train_gen, val_gen=val_gen,
                 batch_size=args.batch_size, epochs=args.epochs, worker_count=args.worker_count, max_queue_size=args.max_queue_size, use_multiprocessing=args.use_multiprocessing)
+
+    # print(first_item[0])
+    # Y = model.predict(first_item[0])
+
+    # print('Y', Y)
 
 
 if __name__ == '__main__':

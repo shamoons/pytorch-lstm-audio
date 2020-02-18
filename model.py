@@ -23,16 +23,19 @@ class SpeechBaselineModel():
             seq_length, feature_dim), return_sequences=True))
 
         # self.model.add(Dropout(0.2))
-        self.model.add(LSTM(lstm2_size, return_sequences=True))
+        # self.model.add(LSTM(lstm2_size, return_sequences=True))
         # self.model.add(Dropout(0.2))
-        self.model.add(LSTM(lstm3_size, return_sequences=True))
+        # self.model.add(LSTM(lstm3_size, return_sequences=True))
+        self.model.add(Dense(feature_dim // 2, activation='relu'))
         # self.model.add(Dropout(0.2))
         self.model.add(LSTM(lstm4_size, return_sequences=True))
         # self.model.add(Dropout(0.2))
-        self.model.add(TimeDistributed(
-            Dense(feature_dim * 2, activation='relu')))
+        self.model.add(Dense(feature_dim, activation='relu'))
+
+        # self.model.add(TimeDistributed(
+        #     Dense(feature_dim * 2, activation='relu')))
         # self.model.add(Dropout(0.2))
-        self.model.add(TimeDistributed(Dense(feature_dim, activation='relu')))
+        # self.model.add(TimeDistributed(Dense(feature_dim, activation='relu')))
 
     def compile(self, learning_rate):
         try:
@@ -51,5 +54,6 @@ class SpeechBaselineModel():
         return self.model.fit_generator(
             train_gen, steps_per_epoch=math.ceil(self.total_samples / batch_size), callbacks=callbacks, epochs=epochs, workers=worker_count, max_queue_size=max_queue_size, use_multiprocessing=use_multiprocessing, validation_data=val_gen)
 
-    def predict(self):
-        return
+    def predict(self, X):
+        pred = self.model.predict(X)
+        return pred
