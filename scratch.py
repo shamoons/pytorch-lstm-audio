@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 from keras.models import Sequential
-from keras.layers import LSTM, Dense, TimeDistributed
+from keras.layers import LSTM, Dense, TimeDistributed, Bidirectional
 
 VECTOR_SIZE = 3
 SEQ_LENGTH = 1
@@ -15,14 +15,15 @@ def get_training_data(batches=1):
         maxval=1
     )
 
-    outputs = inputs
+    outputs = inputs * 2
     return np.array(inputs), np.array(outputs)
 
 
 model = Sequential()
-model.add(LSTM(256, input_shape=(SEQ_LENGTH, VECTOR_SIZE), return_sequences=True))
-# model.add(LSTM(256, return_sequences=True))
-model.add(TimeDistributed(Dense(VECTOR_SIZE, activation='relu')))
+model.add(Bidirectional(LSTM(256, input_shape=(
+    SEQ_LENGTH, VECTOR_SIZE), return_sequences=True)))
+# model.add(Bidirectional(LSTM(100, return_sequences=True)))
+model.add(Dense(VECTOR_SIZE, activation='relu'))
 
 model.compile(loss='mean_squared_error', optimizer='adam')
 

@@ -56,6 +56,9 @@ parameters:
       - 64
       - 128
       - 256
+  audio_path:
+    distribution: constant
+    value: data/train-noise-subtractive-250ms-1
 early_terminate:
   type: hyperband
   max_iter: 250

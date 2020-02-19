@@ -19,14 +19,13 @@ class SpeechBaselineModel():
 
         self.model.add(LSTM(lstm1_size, input_shape=(
             seq_length, feature_dim), return_sequences=True))
-
-        # self.model.add(Dropout(0.2))
+        self.model.add(Dropout(0.2))
         self.model.add(LSTM(lstm2_size, return_sequences=True))
-        # self.model.add(Dropout(0.2))
+        self.model.add(Dropout(0.2))
         self.model.add(LSTM(lstm3_size, return_sequences=True))
-        # self.model.add(Dropout(0.2))
+        self.model.add(Dropout(0.2))
         self.model.add(LSTM(lstm4_size, return_sequences=True))
-        # self.model.add(Dropout(0.2))
+        self.model.add(Dropout(0.2))
         self.model.add(Dense(feature_dim, activation='relu'))
 
         # self.model.add(TimeDistributed(Dense(feature_dim, activation='relu')))
@@ -38,7 +37,7 @@ class SpeechBaselineModel():
             pass
 
         adam_optimizer = optimizers.Adam(learning_rate=learning_rate)
-        return self.model.compile(loss='mean_squared_error', optimizer=adam_optimizer)
+        self.model.compile(loss='mean_squared_error', optimizer=adam_optimizer)
 
     def train(self, train_gen, val_gen, batch_size, epochs, worker_count, max_queue_size, use_multiprocessing):
 
