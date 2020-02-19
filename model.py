@@ -22,13 +22,11 @@ class SpeechBaselineModel():
         self.model.add(Dropout(0.2))
         self.model.add(LSTM(lstm2_size, return_sequences=True))
         self.model.add(Dropout(0.2))
-        self.model.add(LSTM(lstm3_size, return_sequences=True))
-        self.model.add(Dropout(0.2))
-        self.model.add(LSTM(lstm4_size, return_sequences=True))
-        self.model.add(Dropout(0.2))
+        # self.model.add(LSTM(lstm3_size, return_sequences=True))
+        # self.model.add(Dropout(0.2))
+        # self.model.add(LSTM(lstm4_size, return_sequences=True))
+        # self.model.add(Dropout(0.2))
         self.model.add(Dense(feature_dim, activation='relu'))
-
-        # self.model.add(TimeDistributed(Dense(feature_dim, activation='relu')))
 
     def compile(self, learning_rate):
         try:
