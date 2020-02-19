@@ -43,6 +43,9 @@ class DataGenerator(Sequence):
     def __len__(self):
         return math.ceil(len(self.clean_file_paths) / self.batch_size)
 
+    def count_files(self):
+        return len(self.clean_file_paths)
+
     def __getitem__(self, index):
         batch_index = index * self.batch_size
 
