@@ -6,9 +6,9 @@ metric:
 parameters:
   learning_rate:
     distribution: q_uniform
-    min: 0.01
-    max: 0.2
-    q: 0.01
+    min: 0.001
+    max: 0.1
+    q: 0.001
   seq_length:
     distribution: q_uniform
     min: 10
