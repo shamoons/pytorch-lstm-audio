@@ -10,7 +10,7 @@ from datagenerator import DataGenerator
 from model import SpeechBaselineModel
 
 VECTOR_SIZE = 161
-NORMALIZER = 0.01
+NORMALIZER = {'mean': 1e-07, 'std': 1e-5}
 
 
 def parse_args():

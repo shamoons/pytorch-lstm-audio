@@ -23,7 +23,8 @@ if args.get_max == True:
         max_spectrogram = np.max(spectrogram)
         if max_spectrogram > current_max:
             current_max = max_spectrogram
-        print('max: ', max_spectrogram, '\tCurrent: ', current_max)
+        print('max: ', max_spectrogram, '\tCurrent: ',
+              current_max, '\tmean:', np.mean(spectrogram), '\tstd: ', np.std(spectrogram))
 
 else:
     samples, sample_rate = sf.read(args.file)

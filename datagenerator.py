@@ -74,7 +74,9 @@ class DataGenerator(Sequence):
         outputs_array = np.array(outputs)
 
         if self.normalizer != None:
-            inputs_array = inputs_array / self.normalizer
-            outputs_array = outputs_array / self.normalizer
+            inputs_array = (
+                inputs_array - self.normalizer['mean']) / self.normalizer['std']
+            outputs_array = (
+                outputs_array - self.normalizer['mean']) / self.normalizer['std']
 
         return inputs_array, outputs_array
