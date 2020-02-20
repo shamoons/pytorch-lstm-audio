@@ -8,7 +8,7 @@ from keras.utils import Sequence
 
 
 class DataGenerator(Sequence):
-    def __init__(self, corrupted_path, seq_length=10, batch_size=20, train_set=False, test_set=False):
+    def __init__(self, corrupted_path, seq_length=10, batch_size=20, train_set=False, test_set=False, normalizer=None):
         corrupted_base_path = path.abspath(corrupted_path)
         corrupted_base_path_parts = corrupted_base_path.split('/')
         clean_base_path = corrupted_base_path_parts.copy()
@@ -38,6 +38,7 @@ class DataGenerator(Sequence):
 
         self.seq_length = seq_length
         self.batch_size = batch_size
+        self.normalizer = normalizer
         return
 
     def __len__(self):
@@ -72,10 +73,8 @@ class DataGenerator(Sequence):
         inputs_array = np.array(inputs)
         outputs_array = np.array(outputs)
 
-        normalized_inputs = (
-            inputs_array - inputs_array.mean()) / inputs_array.std()
+        if self.normalizer != None:
+            inputs_array = inputs_array / self.normalizer
+            outputs_array = outputs_array / self.normalizer
 
-        normalized_outputs = (
-            outputs_array - outputs_array.mean()) / outputs_array.std()
-
-        return normalized_inputs, normalized_outputs
+        return inputs_array, outputs_array

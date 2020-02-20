@@ -10,6 +10,7 @@ from datagenerator import DataGenerator
 from model import SpeechBaselineModel
 
 VECTOR_SIZE = 161
+NORMALIZER = 0.01
 
 
 def parse_args():
@@ -68,9 +69,9 @@ def main():
     args = parse_args()
 
     train_gen = DataGenerator(
-        args.audio_path, seq_length=args.seq_length, batch_size=args.batch_size, train_set=True)
+        args.audio_path, seq_length=args.seq_length, batch_size=args.batch_size, train_set=True, normalizer=NORMALIZER)
     val_gen = DataGenerator(
-        args.audio_path, seq_length=args.seq_length, batch_size=args.batch_size, test_set=True)
+        args.audio_path, seq_length=args.seq_length, batch_size=args.batch_size, test_set=True, normalizer=NORMALIZER)
 
     model = SpeechBaselineModel(total_samples=train_gen.count_files())
     model.build(seq_length=args.seq_length, feature_dim=VECTOR_SIZE,
