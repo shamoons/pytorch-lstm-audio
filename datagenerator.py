@@ -73,10 +73,15 @@ class DataGenerator(Sequence):
         inputs_array = np.array(inputs)
         outputs_array = np.array(outputs)
 
-        if self.normalizer != None:
-            inputs_array = (
-                inputs_array - self.normalizer['mean']) / self.normalizer['std']
-            outputs_array = (
-                outputs_array - self.normalizer['mean']) / self.normalizer['std']
+        inputs_array = (inputs_array - inputs_array.mean()) / \
+            inputs_array.std()
+        outputs_array = (outputs_array - outputs_array.mean()
+                         ) / outputs_array.std()
+
+        # if self.normalizer != None:
+        #     inputs_array = (
+        #         inputs_array - self.normalizer['mean']) / self.normalizer['std']
+        #     outputs_array = (
+        #         outputs_array - self.normalizer['mean']) / self.normalizer['std']
 
         return inputs_array, outputs_array
