@@ -20,13 +20,13 @@ class SpeechBaselineModel():
         self.model.add(LSTM(lstm1_size, input_shape=(
             seq_length, feature_dim), return_sequences=True))
         # self.model.add(BatchNormalization())
-        # self.model.add(Dropout(0.2))
+        self.model.add(Dropout(0.2))
         self.model.add(LSTM(lstm2_size, return_sequences=True))
-        # self.model.add(Dropout(0.2))
+        self.model.add(Dropout(0.2))
         self.model.add(LSTM(lstm3_size, return_sequences=True))
-        # self.model.add(Dropout(0.2))
-        # self.model.add(LSTM(lstm4_size, return_sequences=True))
-        # self.model.add(Dropout(0.2))
+        self.model.add(Dropout(0.2))
+        self.model.add(LSTM(lstm4_size, return_sequences=True))
+        self.model.add(Dropout(0.2))
         self.model.add(Dense(feature_dim, activation='linear'))
 
     def compile(self, learning_rate):

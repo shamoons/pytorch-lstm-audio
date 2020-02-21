@@ -47,15 +47,15 @@ parameters:
       - 64
       - 128
       - 256
-  # LSTM_4_SIZE:
-  #   distribution: categorical
-  #   values:
-  #     - 8
-  #     - 16
-  #     - 32
-  #     - 64
-  #     - 128
-  #     - 256
+  LSTM_4_SIZE:
+    distribution: categorical
+    values:
+      - 8
+      - 16
+      - 32
+      - 64
+      - 128
+      - 256
   audio_path:
     distribution: constant
     value: data/train-noise-subtractive-250ms-1
