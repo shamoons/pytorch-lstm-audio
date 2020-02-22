@@ -2,12 +2,12 @@ import math
 
 from keras import optimizers
 from keras.callbacks import EarlyStopping
-from keras.layers import Input, LSTM, Dense, TimeDistributed, Activation, BatchNormalization, Dropout, Bidirectional, CuDNNLSTM
+from keras.layers import LSTM, Dense, Activation, BatchNormalization, Dropout, Bidirectional
 from keras.models import Sequential
 from keras.utils import Sequence
 from keras.utils import multi_gpu_model
 from wandb.keras import WandbCallback
-import tensorflow as tf
+from tensorflow.compat.v1.keras.layers import CuDNNLSTM
 
 
 class SpeechBaselineModel():
@@ -17,7 +17,6 @@ class SpeechBaselineModel():
         return
 
     def build(self, seq_length, feature_dim, lstm1_size, lstm2_size, lstm3_size, lstm4_size):
-
         self.model.add(CuDNNLSTM(lstm1_size, input_shape=(
             seq_length, feature_dim), return_sequences=True))
         # self.model.add(BatchNormalization())
