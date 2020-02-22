@@ -26,4 +26,4 @@ def load_times_frequencies(audio_path):
     frequencies, times, _ = signal.spectrogram(
         samples, fs=sample_rate, nperseg=nperseg, noverlap=nperseg // 2, window=signal.hann(nperseg))
 
-    return frequencies, times
+    return times, frequencies
