@@ -28,7 +28,6 @@ parameters:
       - 32
       - 64
       - 128
-      - 256
   LSTM_2_SIZE:
     distribution: categorical
     values:
@@ -37,7 +36,6 @@ parameters:
       - 32
       - 64
       - 128
-      - 256
   LSTM_3_SIZE:
     distribution: categorical
     values:
