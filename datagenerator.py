@@ -4,7 +4,7 @@ import math
 import numpy as np
 import os.path as path
 from audio_util import load_audio_spectrogram
-from keras.utils import Sequence
+from tensorflow.keras.utils import Sequence
 
 
 class DataGenerator(Sequence):
@@ -84,4 +84,5 @@ class DataGenerator(Sequence):
         #     outputs_array = (
         #         outputs_array - self.normalizer['mean']) / self.normalizer['std']
 
-        return inputs_array, outputs_array
+        # Added None because of https://stackoverflow.com/a/60131716/239879
+        return inputs_array, outputs_array, [None]
