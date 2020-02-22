@@ -133,3 +133,4 @@ dmypy.json
 wandb
 wandb-debug.log
 saved_models/
+data/train*/

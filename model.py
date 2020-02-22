@@ -2,7 +2,7 @@ import math
 
 from keras import optimizers
 from keras.callbacks import EarlyStopping
-from keras.layers import Input, LSTM, Dense, TimeDistributed, Activation, BatchNormalization, Dropout, Bidirectional
+from keras.layers import LSTM, Dense, Activation, BatchNormalization, Dropout, Bidirectional
 from keras.models import Sequential
 from keras.utils import Sequence
 from keras.utils import multi_gpu_model
@@ -17,25 +17,17 @@ class SpeechBaselineModel():
 
     def build(self, seq_length, feature_dim, lstm1_size, lstm2_size, lstm3_size, lstm4_size):
 
-        # self.model.add(Bidirectional(LSTM(lstm1_size, input_shape=(
-        #     seq_length, feature_dim), return_sequences=True)))
         self.model.add(LSTM(lstm1_size, input_shape=(
             seq_length, feature_dim), return_sequences=True))
-
-        # self.model.add(Dropout(0.2))
-        # self.model.add(LSTM(lstm2_size, return_sequences=True))
-        # self.model.add(Dropout(0.2))
-        # self.model.add(LSTM(lstm3_size, return_sequences=True))
-        self.model.add(Dense(feature_dim // 2, activation='relu'))
-        # self.model.add(Dropout(0.2))
+        # self.model.add(BatchNormalization())
+        self.model.add(Dropout(0.2))
+        self.model.add(LSTM(lstm2_size, return_sequences=True))
+        self.model.add(Dropout(0.2))
+        self.model.add(LSTM(lstm3_size, return_sequences=True))
+        self.model.add(Dropout(0.2))
         self.model.add(LSTM(lstm4_size, return_sequences=True))
-        # self.model.add(Dropout(0.2))
-        self.model.add(Dense(feature_dim, activation='relu'))
-
-        # self.model.add(TimeDistributed(
-        #     Dense(feature_dim * 2, activation='relu')))
-        # self.model.add(Dropout(0.2))
-        # self.model.add(TimeDistributed(Dense(feature_dim, activation='relu')))
+        self.model.add(Dropout(0.2))
+        self.model.add(Dense(feature_dim, activation='linear'))
 
     def compile(self, learning_rate):
         try:
@@ -44,7 +36,7 @@ class SpeechBaselineModel():
             pass
 
         adam_optimizer = optimizers.Adam(learning_rate=learning_rate)
-        return self.model.compile(loss='mean_squared_error', optimizer=adam_optimizer)
+        self.model.compile(loss='mean_squared_error', optimizer=adam_optimizer)
 
     def train(self, train_gen, val_gen, batch_size, epochs, worker_count, max_queue_size, use_multiprocessing):
 
