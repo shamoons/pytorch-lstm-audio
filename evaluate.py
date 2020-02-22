@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import argparse
 from audio_util import load_audio_spectrogram, load_times_frequencies
-from keras.models import load_model
+from tensorflow.keras.models import load_model
 import numpy as np
 
 
@@ -25,6 +25,7 @@ def main():
     print(model.summary())
 
     input_spectrogram = load_audio_spectrogram(args.audio_path)
+    print('input_spectrogram.shape', input_spectrogram.shape)
 
     start_index = 0
     end_index = start_index + 100
@@ -33,9 +34,12 @@ def main():
 
     times, frequencies = load_times_frequencies(args.audio_path)
 
-    while end_index <= len(input_spectrogram):
-        output = model.predict(
-            np.array([input_spectrogram[start_index:end_index]]))
+    # while end_index <= len(input_spectrogram):
+    while end_index <= start_index + 100:
+        input_spectrogram_slice = np.array(
+            [input_spectrogram[start_index:end_index]])
+        print('input', input_spectrogram_slice.shape)
+        output = model.predict(input_spectrogram_slice)
 
         output_spectrogram.append(output[0])
 

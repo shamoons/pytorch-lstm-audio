@@ -1,14 +1,16 @@
 import math
+import os
 import tensorflow as tf
 
 from tensorflow.keras import optimizers
-from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.layers import LSTM, Dense, Activation, BatchNormalization, Dropout, Bidirectional
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+from tensorflow.keras.layers import LSTM, Dense, Activation, Dropout, Bidirectional
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.utils import Sequence
 from tensorflow.keras.utils import multi_gpu_model
 from wandb.keras import WandbCallback
 from tensorflow.compat.v1.keras.layers import CuDNNLSTM
+import wandb
 
 
 class SpeechBaselineModel():
@@ -25,7 +27,6 @@ class SpeechBaselineModel():
 
         self.model.add(LSTMLayer(lstm1_size, input_shape=(
             seq_length, feature_dim), return_sequences=True))
-        # self.model.add(BatchNormalization())
         self.model.add(Dropout(0.2))
         self.model.add(LSTMLayer(lstm2_size, return_sequences=True))
         self.model.add(Dropout(0.2))
@@ -47,7 +48,7 @@ class SpeechBaselineModel():
 
     def train(self, train_gen, val_gen, batch_size, epochs, worker_count, max_queue_size, use_multiprocessing):
 
-        callbacks = [WandbCallback(), EarlyStopping(
+        callbacks = [WandbCallback(save_weights_only=False, monitor='val_loss'), EarlyStopping(
             monitor='val_loss', patience=10)]
 
         return self.model.fit(
