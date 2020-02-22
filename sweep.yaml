@@ -16,13 +16,14 @@ parameters:
     q: 10
   use_multiprocessing:
     distribution: constant
-    value: True
+    value: False
   max_queue_size:
     distribution: constant
     value: 4096
   LSTM_1_SIZE:
     distribution: categorical
     values:
+      - 4
       - 8
       - 16
       - 32
