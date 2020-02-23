@@ -14,9 +14,6 @@ parameters:
     min: 10
     max: 150
     q: 10
-  use_multiprocessing:
-    distribution: constant
-    value: False
   max_queue_size:
     distribution: constant
     value: 4096
@@ -45,7 +42,6 @@ parameters:
       - 32
       - 64
       - 128
-      - 256
   LSTM_4_SIZE:
     distribution: categorical
     values:
@@ -54,11 +50,10 @@ parameters:
       - 32
       - 64
       - 128
-      - 256
   audio_path:
     distribution: constant
     value: data/train-noise-subtractive-250ms-1
 early_terminate:
   type: hyperband
-  max_iter: 250
-  s: 3
+  max_iter: 27
+  s: 2
