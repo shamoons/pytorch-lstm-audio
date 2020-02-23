@@ -5,7 +5,7 @@ import socket
 import wandb
 import multiprocessing
 import argparse
-
+import distutils
 from datagenerator import DataGenerator
 from model import SpeechBaselineModel
 
@@ -41,7 +41,7 @@ def parse_args():
                         type=int, default=250)
 
     parser.add_argument('--batch_size', help='Batch size',
-                        type=int, default=32)
+                        type=int, default=64)
 
     parser.add_argument('--worker_count', help='Number of workers for fit_generator',
                         type=int, default=multiprocessing.cpu_count())
@@ -50,7 +50,7 @@ def parse_args():
                         type=int, default=32 * 8)
 
     parser.add_argument('--use_multiprocessing', help='Use multiprocessing for fit_generator',
-                        type=bool, default=False)
+                        type=lambda x: bool(distutils.util.strtobool(x)), default=False)
 
     args = parser.parse_args()
 
