@@ -4,6 +4,9 @@ metric:
   name: val_loss
   goal: minimize
 parameters:
+  epochs:
+    distribution: constant
+    value: 30
   learning_rate:
     distribution: q_uniform
     min: 0.001
