@@ -18,6 +18,7 @@ wandb = "*"
 scipy = "*"
 soundfile = "*"
 keras = "*"
+librosa = "*"
 
 [requires]
 python_version = "3.6"
