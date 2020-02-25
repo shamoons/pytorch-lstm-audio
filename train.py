@@ -51,6 +51,9 @@ def parse_args():
     parser.add_argument('--max_queue_size', help='Max queue size for fit_generator',
                         type=int, default=32 * 8)
 
+    parser.add_argument('--repeat_sample', help='How many times to sample each file',
+                        type=int, default=5)
+
     parser.add_argument('--use_multiprocessing', help='Use multiprocessing for fit_generator',
                         type=lambda x: bool(distutils.util.strtobool(x)), default=False)
 
