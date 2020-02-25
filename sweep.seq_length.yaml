@@ -24,38 +24,36 @@ parameters:
     min: 50
     max: 150
     q: 10
-  # max_queue_size:
-  #   distribution: constant
-  #   value: 4096
-  # LSTM_1_SIZE:
-  #   distribution: categorical
-  #   values:
-  #     - 32
-  #     - 64
-  #     - 128
-  # LSTM_2_SIZE:
-  #   distribution: categorical
-  #   values:
-  #     - 16
-  #     - 32
-  #     - 64
-  # LSTM_3_SIZE:
-  #   distribution: categorical
-  #   values:
-  #     - 16
-  #     - 32
-  #     - 64
-  #     - 128
-  # LSTM_4_SIZE:
-  #   distribution: categorical
-  #   values:
-  #     - 16
-  #     - 32
-  #     - 64
-  #     - 128
-  # audio_path:
-  #   distribution: constant
-  #   value: data/train-noise-subtractive-250ms-1
+  LSTM_1_SIZE:
+    distribution: categorical
+    values:
+      - 32
+      - 64
+      - 128
+  LSTM_2_SIZE:
+    distribution: categorical
+    values:
+      - 32
+      - 64
+      - 128
+  LSTM_3_SIZE:
+    distribution: categorical
+    values:
+      - 32
+      - 64
+      - 128
+  LSTM_4_SIZE:
+    distribution: categorical
+    values:
+      - 32
+      - 64
+      - 128
+  LSTM_5_SIZE:
+    distribution: categorical
+    values:
+      - 32
+      - 64
+      - 128
 early_terminate:
   type: hyperband
   max_iter: 27
