@@ -20,26 +20,33 @@ parameters:
   max_queue_size:
     distribution: constant
     value: 4096
-  LSTM_1_SIZE:
+  LSTM1_SIZE:
     distribution: categorical
     values:
       - 32
       - 64
       - 128
-  LSTM_2_SIZE:
+  LSTM2_SIZE:
     distribution: categorical
     values:
       - 16
       - 32
       - 64
-  LSTM_3_SIZE:
+  LSTM3_SIZE:
     distribution: categorical
     values:
       - 16
       - 32
       - 64
       - 128
-  LSTM_4_SIZE:
+  LSTM4_SIZE:
+    distribution: categorical
+    values:
+      - 16
+      - 32
+      - 64
+      - 128
+  LSTM5_SIZE:
     distribution: categorical
     values:
       - 16
