@@ -19,16 +19,16 @@ def parse_args():
                         default='data/dev-noise-subtractive-250ms-1')
 
     parser.add_argument(
-        "--LSTM_1_SIZE", help="Hidden size for the first LSTM Layer", type=int, default=256)
+        "--LSTM_1_SIZE", help="Hidden size for the first LSTM Layer", type=int, default=128)
 
     parser.add_argument(
-        "--LSTM_2_SIZE", help="Hidden size for the second LSTM Layer", type=int, default=256)
+        "--LSTM_2_SIZE", help="Hidden size for the second LSTM Layer", type=int, default=128)
 
     parser.add_argument(
-        "--LSTM_3_SIZE", help="Hidden size for the third LSTM Layer", type=int, default=256)
+        "--LSTM_3_SIZE", help="Hidden size for the third LSTM Layer", type=int, default=128)
 
     parser.add_argument(
-        "--LSTM_4_SIZE", help="Hidden size for the fourth LSTM Layer", type=int, default=256)
+        "--LSTM_4_SIZE", help="Hidden size for the fourth LSTM Layer", type=int, default=128)
 
     parser.add_argument('--learning_rate', help='Learning rate for optimizer',
                         type=float, default=0.01)

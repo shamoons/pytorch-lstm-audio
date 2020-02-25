@@ -14,8 +14,8 @@ parameters:
     q: 0.001
   seq_length:
     distribution: q_uniform
-    min: 2000
-    max: 3000
+    min: 4000
+    max: 8000
     q: 100
   max_queue_size:
     distribution: constant
