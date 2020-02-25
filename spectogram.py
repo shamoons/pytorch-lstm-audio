@@ -31,18 +31,24 @@ if args.get_max == True:
 else:
     samples, sample_rate = sf.read(args.file)
     print(samples, samples.shape)
+    print('sample_rate: ', sample_rate)
     nperseg = int(sample_rate * 0.001 * 20)
-    overlap = nperseg // 4
+    # overlap = nperseg // 4
+
+    print(nperseg, 'nperseg')
+    print(overlap, 'overlap')
     frequencies, times, spectrogram = signal.spectrogram(
         samples, sample_rate, nperseg=nperseg, window=signal.hann(nperseg), noverlap=overlap, mode='magnitude')
 
-    print(spectrogram.shape)
+    print(times)
+    print('times.shape', times.shape)
+    print('spectrogram.shape', spectrogram.shape)
 
-    plt.pcolormesh(times, frequencies, spectrogram)
-    plt.imshow(spectrogram)
-    plt.ylabel('Frequency [Hz]')
-    plt.xlabel('Time [sec]')
-    plt.show()
+    # plt.pcolormesh(times, frequencies, spectrogram)
+    # plt.imshow(spectrogram)
+    # plt.ylabel('Frequency [Hz]')
+    # plt.xlabel('Time [sec]')
+    # plt.show()
 
     audio_signal = librosa.griffinlim(
         spectrogram, n_iter=128, win_length=nperseg, hop_length=overlap, window=signal.hann(nperseg))

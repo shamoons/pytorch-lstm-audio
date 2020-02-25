@@ -17,7 +17,7 @@ class SpeechBaselineModel():
         self.total_samples = total_samples
         return
 
-    def build(self, seq_length, feature_dim, lstm1_size, lstm2_size, lstm3_size, lstm4_size):
+    def build(self, seq_length, feature_dim, lstm1_size, lstm2_size, lstm3_size, lstm4_size, lstm5_size):
 
         self.model.add(Bidirectional(LSTM(lstm1_size, input_shape=(
             seq_length, feature_dim), return_sequences=True)))
@@ -26,17 +26,24 @@ class SpeechBaselineModel():
 
         self.model.add(Bidirectional(
             LSTM(lstm2_size, return_sequences=True)))
-        self.model.add(BatchNormalization())
+        # self.model.add(BatchNormalization())
         self.model.add(Dropout(0.2))
+
+        # BOTTLENECK HERE
 
         self.model.add(Bidirectional(
             LSTM(lstm3_size, return_sequences=True)))
-        self.model.add(BatchNormalization())
+        # self.model.add(BatchNormalization())
         self.model.add(Dropout(0.2))
 
         self.model.add(Bidirectional(
             LSTM(lstm4_size, return_sequences=True)))
-        self.model.add(BatchNormalization())
+        # self.model.add(BatchNormalization())
+        self.model.add(Dropout(0.2))
+
+        self.model.add(Bidirectional(
+            LSTM(lstm5_size, return_sequences=True)))
+        # self.model.add(BatchNormalization())
         self.model.add(Dropout(0.2))
 
         self.model.add(Dense(feature_dim, activation='linear'))

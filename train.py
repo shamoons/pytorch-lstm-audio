@@ -19,16 +19,19 @@ def parse_args():
                         default='data/dev-noise-subtractive-250ms-1')
 
     parser.add_argument(
-        "--LSTM_1_SIZE", help="Hidden size for the first LSTM Layer", type=int, default=128)
+        "--LSTM1_SIZE", help="Hidden size for the first LSTM Layer", type=int, default=128)
 
     parser.add_argument(
-        "--LSTM_2_SIZE", help="Hidden size for the second LSTM Layer", type=int, default=128)
+        "--LSTM2_SIZE", help="Hidden size for the second LSTM Layer", type=int, default=128)
 
     parser.add_argument(
-        "--LSTM_3_SIZE", help="Hidden size for the third LSTM Layer", type=int, default=128)
+        "--LSTM3_SIZE", help="Hidden size for the third LSTM Layer", type=int, default=128)
 
     parser.add_argument(
-        "--LSTM_4_SIZE", help="Hidden size for the fourth LSTM Layer", type=int, default=128)
+        "--LSTM4_SIZE", help="Hidden size for the fourth LSTM Layer", type=int, default=128)
+
+    parser.add_argument(
+        "--LSTM5_SIZE", help="Hidden size for the fourth LSTM Layer", type=int, default=128)
 
     parser.add_argument('--learning_rate', help='Learning rate for optimizer',
                         type=float, default=0.01)
@@ -74,7 +77,7 @@ def main():
 
     model = SpeechBaselineModel(total_samples=train_gen.count_files())
     model.build(seq_length=args.seq_length, feature_dim=N_MELS,
-                lstm1_size=args.LSTM_1_SIZE, lstm2_size=args.LSTM_2_SIZE, lstm3_size=args.LSTM_3_SIZE, lstm4_size=args.LSTM_4_SIZE)
+                lstm1_size=args.LSTM1_SIZE, lstm2_size=args.LSTM2_SIZE, lstm3_size=args.LSTM3_SIZE, lstm4_size=args.LSTM4_SIZE, lstm5_size=args.LSTM5_SIZE)
     model.compile(learning_rate=args.learning_rate)
 
     model.train(train_gen=train_gen, val_gen=val_gen,
