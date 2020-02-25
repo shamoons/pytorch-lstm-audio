@@ -61,6 +61,8 @@ class DataGenerator(Sequence):
         outputs = []
 
         while len(inputs) < self.batch_size:
+            if len(input_spectrogram) - self.seq_length < 0:
+                continue
             start_index = random.randint(
                 0, len(input_spectrogram) - self.seq_length)
             end_index = start_index + self.seq_length

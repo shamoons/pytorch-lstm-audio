@@ -1,0 +1,55 @@
+program: train.py
+method: bayes
+metric:
+  name: val_loss
+  goal: minimize
+parameters:
+  epochs:
+    distribution: constant
+    value: 30
+  learning_rate:
+    distribution: q_uniform
+    min: 0.001
+    max: 0.01
+    q: 0.001
+  seq_length:
+    distribution: q_uniform
+    min: 2000
+    max: 3000
+    q: 100
+  max_queue_size:
+    distribution: constant
+    value: 4096
+  LSTM_1_SIZE:
+    distribution: categorical
+    values:
+      - 32
+      - 64
+      - 128
+  LSTM_2_SIZE:
+    distribution: categorical
+    values:
+      - 16
+      - 32
+      - 64
+  LSTM_3_SIZE:
+    distribution: categorical
+    values:
+      - 16
+      - 32
+      - 64
+      - 128
+  LSTM_4_SIZE:
+    distribution: categorical
+    values:
+      - 16
+      - 32
+      - 64
+      - 128
+  audio_path:
+    distribution: constant
+    value: data/train-noise-subtractive-250ms-1
+early_terminate:
+  type: hyperband
+  max_iter: 27
+  s: 2
