@@ -24,31 +24,31 @@ parameters:
     min: 50
     max: 150
     q: 10
-  LSTM_1_SIZE:
+  LSTM1_SIZE:
     distribution: categorical
     values:
       - 32
       - 64
       - 128
-  LSTM_2_SIZE:
+  LSTM2_SIZE:
     distribution: categorical
     values:
       - 32
       - 64
       - 128
-  LSTM_3_SIZE:
+  LSTM3_SIZE:
     distribution: categorical
     values:
       - 32
       - 64
       - 128
-  LSTM_4_SIZE:
+  LSTM4_SIZE:
     distribution: categorical
     values:
       - 32
       - 64
       - 128
-  LSTM_5_SIZE:
+  LSTM5_SIZE:
     distribution: categorical
     values:
       - 32
