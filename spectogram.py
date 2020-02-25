@@ -2,6 +2,8 @@ import matplotlib.pyplot as plt
 from scipy import signal
 import soundfile as sf
 import argparse
+import scipy
+import librosa
 import glob
 import numpy as np
 
@@ -28,14 +30,22 @@ if args.get_max == True:
 
 else:
     samples, sample_rate = sf.read(args.file)
+    print(samples, samples.shape)
     nperseg = int(sample_rate * 0.001 * 20)
+    overlap = nperseg // 4
     frequencies, times, spectrogram = signal.spectrogram(
-        samples, sample_rate, nperseg=nperseg, window=signal.hann(nperseg))
+        samples, sample_rate, nperseg=nperseg, window=signal.hann(nperseg), noverlap=overlap, mode='magnitude')
 
-    print(len(times))
+    print(spectrogram.shape)
 
     plt.pcolormesh(times, frequencies, spectrogram)
     plt.imshow(spectrogram)
     plt.ylabel('Frequency [Hz]')
     plt.xlabel('Time [sec]')
     plt.show()
+
+    audio_signal = librosa.griffinlim(
+        spectrogram, n_iter=128, win_length=nperseg, hop_length=overlap, window=signal.hann(nperseg))
+    print(audio_signal, audio_signal.shape)
+
+    sf.write('test.wav', audio_signal, sample_rate)

@@ -8,7 +8,7 @@ from tensorflow.keras.utils import Sequence
 
 
 class DataGenerator(Sequence):
-    def __init__(self, corrupted_path, seq_length=10, batch_size=20, train_set=False, test_set=False, normalizer=None):
+    def __init__(self, corrupted_path, seq_length=10, batch_size=20, train_set=False, test_set=False, n_mels=None):
         corrupted_base_path = path.abspath(corrupted_path)
         corrupted_base_path_parts = corrupted_base_path.split('/')
         clean_base_path = corrupted_base_path_parts.copy()
@@ -21,10 +21,10 @@ class DataGenerator(Sequence):
 
         clean_base_path = '/'.join(clean_base_path)
 
-        corrupted_audio_file_paths = list(
+        corrupted_audio_file_paths = np.array(
             sorted(glob.iglob(corrupted_base_path + '/**/*.flac', recursive=True)))
 
-        clean_audio_file_paths = list(
+        clean_audio_file_paths = np.array(
             sorted(glob.iglob(clean_base_path + '/**/*.flac', recursive=True)))
 
         cutoff_index = int(len(corrupted_audio_file_paths) * 0.9)
@@ -36,9 +36,10 @@ class DataGenerator(Sequence):
             self.clean_file_paths = clean_audio_file_paths[cutoff_index:]
             self.corrupted_file_paths = corrupted_audio_file_paths[cutoff_index:]
 
+        self.clean_file_paths = np.repeat(self.clean_file_paths, 10)
+        self.corrupted_file_paths = np.repeat(self.corrupted_file_paths, 10)
         self.seq_length = seq_length
         self.batch_size = batch_size
-        self.normalizer = normalizer
         return
 
     def __len__(self):
@@ -77,12 +78,6 @@ class DataGenerator(Sequence):
             inputs_array.std()
         outputs_array = (outputs_array - outputs_array.mean()
                          ) / outputs_array.std()
-
-        # if self.normalizer != None:
-        #     inputs_array = (
-        #         inputs_array - self.normalizer['mean']) / self.normalizer['std']
-        #     outputs_array = (
-        #         outputs_array - self.normalizer['mean']) / self.normalizer['std']
 
         # Added None because of https://stackoverflow.com/a/60131716/239879
         return inputs_array, outputs_array, [None]
