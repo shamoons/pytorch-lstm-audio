@@ -18,9 +18,9 @@ parameters:
     q: 0.001
   seq_length:
     distribution: q_uniform
-    min: 50
-    max: 150
-    q: 10
+    min: 25
+    max: 75
+    q: 5
   LSTM1_SIZE:
     distribution: categorical
     values:

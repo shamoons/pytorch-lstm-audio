@@ -34,13 +34,15 @@ else:
     print('sample_rate: ', sample_rate)
     time_per_segment_ms = 20
     nperseg = int(sample_rate * 0.001 * time_per_segment_ms)
-    # overlap = nperseg // 4
     # https://stackoverflow.com/questions/46635958/python-scipy-how-to-set-the-time-frame-for-a-spectrogram
-    overlap = int(
-        sample_rate * (time_per_segment_ms - time_per_segment_ms)/1000)
+    overlap = nperseg // 2
+
+    seconds_per_segment = (nperseg - overlap) / sample_rate
+    ms_per_segment = int(seconds_per_segment * 1000)
 
     print(nperseg, 'nperseg')
     print(overlap, 'overlap')
+    print(ms_per_segment, 'ms_per_segment')
     frequencies, times, spectrogram = signal.spectrogram(
         samples, sample_rate, nperseg=nperseg, window=signal.hann(nperseg), noverlap=overlap, mode='magnitude')
 
