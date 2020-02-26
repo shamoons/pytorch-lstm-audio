@@ -2,6 +2,8 @@ import matplotlib.pyplot as plt
 from scipy import signal
 import soundfile as sf
 import argparse
+import scipy
+import librosa
 import glob
 import numpy as np
 
@@ -28,14 +30,34 @@ if args.get_max == True:
 
 else:
     samples, sample_rate = sf.read(args.file)
-    nperseg = int(sample_rate * 0.001 * 20)
+    print(samples, samples.shape, sample_rate)
+
+    time_per_segment_ms = 20
+    nperseg = int(sample_rate * 0.001 * time_per_segment_ms)
+    # https://stackoverflow.com/questions/46635958/python-scipy-how-to-set-the-time-frame-for-a-spectrogram
+    overlap = nperseg // 4
+
+    seconds_per_segment = (nperseg - overlap) / sample_rate
+    ms_per_segment = int(seconds_per_segment * 1000)
+
+    print(nperseg, 'nperseg')
+    print(overlap, 'overlap')
+    print(ms_per_segment, 'ms_per_segment')
     frequencies, times, spectrogram = signal.spectrogram(
-        samples, sample_rate, nperseg=nperseg, window=signal.hann(nperseg))
+        samples, sample_rate, nperseg=nperseg, window=signal.hann(nperseg), noverlap=overlap, mode='magnitude')
 
-    print(len(times))
+    print(times)
+    print('times.shape', times.shape)
+    print('spectrogram.shape', spectrogram.shape)
 
-    plt.pcolormesh(times, frequencies, spectrogram)
-    plt.imshow(spectrogram)
-    plt.ylabel('Frequency [Hz]')
-    plt.xlabel('Time [sec]')
-    plt.show()
+    # plt.pcolormesh(times, frequencies, spectrogram)
+    # plt.imshow(spectrogram)
+    # plt.ylabel('Frequency [Hz]')
+    # plt.xlabel('Time [sec]')
+    # plt.show()
+
+    audio_signal = librosa.griffinlim(
+        spectrogram, n_iter=128, win_length=nperseg, hop_length=overlap, window=signal.hann(nperseg))
+    print(audio_signal, audio_signal.shape)
+
+    sf.write('test.wav', audio_signal, sample_rate)

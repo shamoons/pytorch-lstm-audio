@@ -9,9 +9,6 @@ import distutils
 from datagenerator import DataGenerator
 from model import SpeechBaselineModel
 
-VECTOR_SIZE = 161
-NORMALIZER = {'mean': 1e-07, 'std': 1e-5}
-
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -20,19 +17,22 @@ def parse_args():
                         default='data/dev-noise-subtractive-250ms-1')
 
     parser.add_argument(
-        "--LSTM_1_SIZE", help="Hidden size for the first LSTM Layer", type=int, default=256)
+        "--LSTM1_SIZE", help="Hidden size for the first LSTM Layer", type=int, default=128)
 
     parser.add_argument(
-        "--LSTM_2_SIZE", help="Hidden size for the second LSTM Layer", type=int, default=256)
+        "--LSTM2_SIZE", help="Hidden size for the second LSTM Layer", type=int, default=128)
 
     parser.add_argument(
-        "--LSTM_3_SIZE", help="Hidden size for the third LSTM Layer", type=int, default=256)
+        "--LSTM3_SIZE", help="Hidden size for the third LSTM Layer", type=int, default=128)
 
     parser.add_argument(
-        "--LSTM_4_SIZE", help="Hidden size for the fourth LSTM Layer", type=int, default=256)
+        "--LSTM4_SIZE", help="Hidden size for the fourth LSTM Layer", type=int, default=128)
+
+    parser.add_argument(
+        "--LSTM5_SIZE", help="Hidden size for the fourth LSTM Layer", type=int, default=128)
 
     parser.add_argument('--learning_rate', help='Learning rate for optimizer',
-                        type=float, default=0.01)
+                        type=float, default=0.001)
 
     parser.add_argument('--seq_length', help='Length of sequences of the spectrogram',
                         type=int, default=100)
@@ -49,6 +49,9 @@ def parse_args():
     parser.add_argument('--max_queue_size', help='Max queue size for fit_generator',
                         type=int, default=32 * 8)
 
+    parser.add_argument('--repeat_sample', help='How many times to sample each file',
+                        type=int, default=5)
+
     parser.add_argument('--use_multiprocessing', help='Use multiprocessing for fit_generator',
                         type=lambda x: bool(distutils.util.strtobool(x)), default=False)
 
@@ -58,6 +61,8 @@ def parse_args():
 
 
 def main():
+    N_MELS = 161
+
     wandb_tags = [socket.gethostname()]
     wandb.init(project="pytorch-lstm-audio", tags=','.join(wandb_tags))
 
@@ -69,13 +74,13 @@ def main():
     args = parse_args()
 
     train_gen = DataGenerator(
-        args.audio_path, seq_length=args.seq_length, batch_size=args.batch_size, train_set=True, normalizer=NORMALIZER)
+        args.audio_path, seq_length=args.seq_length, batch_size=args.batch_size, train_set=True, n_mels=N_MELS, repeat_sample=args.repeat_sample)
     val_gen = DataGenerator(
-        args.audio_path, seq_length=args.seq_length, batch_size=args.batch_size, test_set=True, normalizer=NORMALIZER)
+        args.audio_path, seq_length=args.seq_length, batch_size=args.batch_size, test_set=True, n_mels=N_MELS, repeat_sample=args.repeat_sample)
 
     model = SpeechBaselineModel(total_samples=train_gen.count_files())
-    model.build(seq_length=args.seq_length, feature_dim=VECTOR_SIZE,
-                lstm1_size=args.LSTM_1_SIZE, lstm2_size=args.LSTM_2_SIZE, lstm3_size=args.LSTM_3_SIZE, lstm4_size=args.LSTM_4_SIZE)
+    model.build(seq_length=args.seq_length, feature_dim=N_MELS,
+                lstm1_size=args.LSTM1_SIZE, lstm2_size=args.LSTM2_SIZE, lstm3_size=args.LSTM3_SIZE, lstm4_size=args.LSTM4_SIZE, lstm5_size=args.LSTM5_SIZE)
     model.compile(learning_rate=args.learning_rate)
 
     model.train(train_gen=train_gen, val_gen=val_gen,

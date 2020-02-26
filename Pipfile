@@ -19,6 +19,7 @@ scipy = "*"
 soundfile = "*"
 keras = "*"
 librosa = "*"
+tensorflow-addons = "*"
 
 [requires]
 python_version = "3.6"
