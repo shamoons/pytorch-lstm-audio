@@ -40,8 +40,8 @@ class DataGenerator(Sequence):
         self.clean_file_paths = np.repeat(self.clean_file_paths, repeat_sample)
         self.corrupted_file_paths = np.repeat(
             self.corrupted_file_paths, repeat_sample)
-        self.clean_file_paths = self.clean_file_paths[0:100]
-        self.corrupted_file_paths = self.corrupted_file_paths[0:100]
+        # self.clean_file_paths = self.clean_file_paths[0:100]
+        # self.corrupted_file_paths = self.corrupted_file_paths[0:100]
 
         self.seq_length = seq_length
         self.batch_size = batch_size
@@ -54,31 +54,25 @@ class DataGenerator(Sequence):
     def count_files(self):
         return len(self.clean_file_paths)
 
+    # def __getitem__(self, index):
+    #     inputs_array = tf.random.uniform(
+    #         shape=(64, 100, 128),
+    #         minval=-1,
+    #         maxval=1
+    #     )
+
+    #     outputs_array = inputs_array * 2
+
+    #     return inputs_array, outputs_array, [None]
+
     def __getitem__(self, index):
-        inputs_array = tf.random.uniform(
-            shape=(64, 100, 128),
-            minval=-1,
-            maxval=1
-        )
-
-        outputs_array = inputs_array * 2
-
-        return inputs_array, outputs_array, [None]
-
-    def __getitem__2(self, index):
         batch_index = index * self.batch_size
 
-        input_spectrogram = load_mel_spectrogram(
-            self.corrupted_file_paths[batch_index], n_mels=self.n_mels)
+        input_spectrogram = load_audio_spectrogram(
+            self.corrupted_file_paths[batch_index])
 
-        output_spectrogram = load_mel_spectrogram(
-            self.clean_file_paths[batch_index], n_mels=self.n_mels)
-
-        # input_spectrogram = load_audio_spectrogram(
-        #     self.corrupted_file_paths[batch_index])
-
-        # output_spectrogram = load_audio_spectrogram(
-        #     self.clean_file_paths[batch_index])
+        output_spectrogram = load_audio_spectrogram(
+            self.clean_file_paths[batch_index])
 
         inputs = []
         outputs = []

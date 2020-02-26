@@ -8,7 +8,7 @@ import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 
 
-def load_mel_spectrogram(audio_path, n_mels=128, eps=1e-10):
+def load_mel_spectrogram(audio_path, n_mels=128):
     samples, sample_rate = sf.read(audio_path)
 
     # Taken from https://github.com/PaddlePaddle/DeepSpeech/blob/766e96e600795cea4187123b9ed76dcd250f2d04/data_utils/featurizer/audio_featurizer.py#L121
@@ -27,7 +27,7 @@ def load_mel_spectrogram(audio_path, n_mels=128, eps=1e-10):
     # By default, the first axis is frequencies and the second is time.
     # We swap them here.
     melspectrogram = np.swapaxes(melspectrogram, 0, 1)
-    log_spectrogram = np.log(melspectrogram + eps)
+    log_spectrogram = np.log1p(melspectrogram)
 
     return log_spectrogram
 

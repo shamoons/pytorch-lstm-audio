@@ -61,10 +61,10 @@ def parse_args():
 
 
 def main():
-    N_MELS = 128
+    N_MELS = 161
 
-    # wandb_tags = [socket.gethostname()]
-    # wandb.init(project="pytorch-lstm-audio", tags=','.join(wandb_tags))
+    wandb_tags = [socket.gethostname()]
+    wandb.init(project="pytorch-lstm-audio", tags=','.join(wandb_tags))
 
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 

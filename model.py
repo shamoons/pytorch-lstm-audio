@@ -1,6 +1,7 @@
 import math
 import os
-import tensorflow as tf
+import tensorflow_addons as tfa
+import wandb
 
 from tensorflow.keras import optimizers
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
@@ -8,7 +9,6 @@ from tensorflow.keras.layers import LSTM, Dense, Activation, Dropout, Bidirectio
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.utils import Sequence
 from wandb.keras import WandbCallback
-import wandb
 
 
 class SpeechBaselineModel():
@@ -49,18 +49,17 @@ class SpeechBaselineModel():
         self.model.add(Dense(feature_dim, activation='linear'))
 
     def compile(self, learning_rate):
-        lr_schedule = optimizers.schedules
+        lr_schedule = tfa.optimizers.ExponentialCyclicalLearningRate(
+            initial_learning_rate=1e-5, maximal_learning_rate=1e-2, step_size=2000, scale_mode="cycle", scale_fn=lambda x: 1)
         adam_optimizer = optimizers.Adam(
-            learning_rate=learning_rate, clipnorm=1.0)
+            learning_rate=lr_schedule, clipnorm=1.0)
         self.model.compile(loss='mean_squared_error', optimizer=adam_optimizer)
 
     def train(self, train_gen, val_gen, batch_size, epochs, worker_count, max_queue_size, use_multiprocessing):
-        early_stopping_patience = min(10, epochs // 10)
+        early_stopping_patience = max(10, epochs // 10)
 
-        callbacks = [EarlyStopping(
+        callbacks = [WandbCallback(save_weights_only=False, monitor='val_loss'), EarlyStopping(
             monitor='val_loss', patience=early_stopping_patience)]
-        # callbacks = [WandbCallback(save_weights_only=False, monitor='val_loss'), EarlyStopping(
-        #     monitor='val_loss', patience=early_stopping_patience)]
 
         return self.model.fit(
             train_gen, steps_per_epoch=math.ceil(self.total_samples / batch_size), callbacks=callbacks, epochs=epochs, workers=worker_count, max_queue_size=max_queue_size, use_multiprocessing=use_multiprocessing,            validation_data=val_gen)
