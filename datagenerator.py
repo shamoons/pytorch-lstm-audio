@@ -3,7 +3,7 @@ import glob
 import math
 import numpy as np
 import os.path as path
-from audio_util import load_audio_spectrogram
+from audio_util import load_audio_spectrogram, load_mel_spectrogram
 from tensorflow.keras.utils import Sequence
 
 
@@ -39,8 +39,12 @@ class DataGenerator(Sequence):
         self.clean_file_paths = np.repeat(self.clean_file_paths, repeat_sample)
         self.corrupted_file_paths = np.repeat(
             self.corrupted_file_paths, repeat_sample)
+        self.clean_file_paths = self.clean_file_paths[0:100]
+        self.corrupted_file_paths = self.corrupted_file_paths[0:100]
+
         self.seq_length = seq_length
         self.batch_size = batch_size
+        self.n_mels = n_mels
         return
 
     def __len__(self):
@@ -52,11 +56,17 @@ class DataGenerator(Sequence):
     def __getitem__(self, index):
         batch_index = index * self.batch_size
 
-        input_spectrogram = load_audio_spectrogram(
-            self.corrupted_file_paths[batch_index])
+        input_spectrogram = load_mel_spectrogram(
+            self.corrupted_file_paths[batch_index], n_mels=self.n_mels)
 
-        output_spectrogram = load_audio_spectrogram(
-            self.clean_file_paths[batch_index])
+        output_spectrogram = load_mel_spectrogram(
+            self.clean_file_paths[batch_index], n_mels=self.n_mels)
+
+        # input_spectrogram = load_audio_spectrogram(
+        #     self.corrupted_file_paths[batch_index])
+
+        # output_spectrogram = load_audio_spectrogram(
+        #     self.clean_file_paths[batch_index])
 
         inputs = []
         outputs = []

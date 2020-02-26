@@ -59,7 +59,7 @@ class SpeechBaselineModel():
             monitor='val_loss', patience=10)]
 
         return self.model.fit(
-            train_gen, steps_per_epoch=math.ceil(self.total_samples / batch_size), callbacks=callbacks, epochs=epochs, workers=worker_count, max_queue_size=max_queue_size, use_multiprocessing=use_multiprocessing, validation_data=val_gen)
+            train_gen, steps_per_epoch=math.ceil(self.total_samples / batch_size), callbacks=callbacks, epochs=epochs, workers=worker_count, max_queue_size=max_queue_size, use_multiprocessing=use_multiprocessing,            validation_data=val_gen)
 
     def predict(self, X):
         pred = self.model.predict(X)

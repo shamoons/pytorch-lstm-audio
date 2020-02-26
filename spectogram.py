@@ -30,12 +30,12 @@ if args.get_max == True:
 
 else:
     samples, sample_rate = sf.read(args.file)
-    print(samples, samples.shape)
-    print('sample_rate: ', sample_rate)
+    print(samples, samples.shape, sample_rate)
+
     time_per_segment_ms = 20
     nperseg = int(sample_rate * 0.001 * time_per_segment_ms)
     # https://stackoverflow.com/questions/46635958/python-scipy-how-to-set-the-time-frame-for-a-spectrogram
-    overlap = nperseg // 2
+    overlap = nperseg // 4
 
     seconds_per_segment = (nperseg - overlap) / sample_rate
     ms_per_segment = int(seconds_per_segment * 1000)

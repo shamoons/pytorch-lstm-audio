@@ -9,8 +9,6 @@ import distutils
 from datagenerator import DataGenerator
 from model import SpeechBaselineModel
 
-N_MELS = 161
-
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -63,6 +61,8 @@ def parse_args():
 
 
 def main():
+    N_MELS = 128
+
     wandb_tags = [socket.gethostname()]
     wandb.init(project="pytorch-lstm-audio", tags=','.join(wandb_tags))
 

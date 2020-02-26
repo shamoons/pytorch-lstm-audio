@@ -14,16 +14,22 @@ def main():
     args = parser.parse_args()
 
     samples, sample_rate = sf.read(args.file)
-    print(samples, samples.shape)
+    print(samples, samples.shape, sample_rate)
 
-    n_fft = int(sample_rate * 0.001 * 20)
+    time_per_segment_ms = 20
+    n_fft = int(sample_rate * 0.001 * time_per_segment_ms)
     hop_length = n_fft // 4
+    net_segments = n_fft - hop_length
+
+    seconds_per_segment = net_segments / sample_rate
+    ms_per_segment = int(seconds_per_segment * 1000)
+    print('ms_per_segment', ms_per_segment)
 
     # nperseg = int(round(window_size * sample_rate / 1e3))
     # noverlap = int(round(step_size * sample_rate / 1e3))
 
     melspectrogram = librosa.feature.melspectrogram(
-        y=samples, sr=sample_rate, window=scipy.signal.hanning, n_fft=n_fft, hop_length=hop_length, n_mels=256)
+        y=samples, sr=sample_rate, window=scipy.signal.hanning, n_fft=n_fft, hop_length=hop_length, n_mels=128)
     log_melspectrogram = np.log(melspectrogram + 1e-10)
     normalized_melspectrogram = (
         log_melspectrogram - log_melspectrogram.mean()) / log_melspectrogram.std()

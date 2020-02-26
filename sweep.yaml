@@ -13,9 +13,9 @@ metric:
 parameters:
   learning_rate:
     distribution: q_uniform
-    min: 0.001
-    max: 0.01
-    q: 0.001
+    min: 0.0001
+    max: 0.001
+    q: 0.0001
   seq_length:
     distribution: q_uniform
     min: 25
