@@ -49,14 +49,18 @@ class SpeechBaselineModel():
         self.model.add(Dense(feature_dim, activation='linear'))
 
     def compile(self, learning_rate):
+        lr_schedule = optimizers.schedules
         adam_optimizer = optimizers.Adam(
             learning_rate=learning_rate, clipnorm=1.0)
         self.model.compile(loss='mean_squared_error', optimizer=adam_optimizer)
 
     def train(self, train_gen, val_gen, batch_size, epochs, worker_count, max_queue_size, use_multiprocessing):
+        early_stopping_patience = min(10, epochs // 10)
 
-        callbacks = [WandbCallback(save_weights_only=False, monitor='val_loss'), EarlyStopping(
-            monitor='val_loss', patience=10)]
+        callbacks = [EarlyStopping(
+            monitor='val_loss', patience=early_stopping_patience)]
+        # callbacks = [WandbCallback(save_weights_only=False, monitor='val_loss'), EarlyStopping(
+        #     monitor='val_loss', patience=early_stopping_patience)]
 
         return self.model.fit(
             train_gen, steps_per_epoch=math.ceil(self.total_samples / batch_size), callbacks=callbacks, epochs=epochs, workers=worker_count, max_queue_size=max_queue_size, use_multiprocessing=use_multiprocessing,            validation_data=val_gen)

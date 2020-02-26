@@ -32,7 +32,7 @@ def parse_args():
         "--LSTM5_SIZE", help="Hidden size for the fourth LSTM Layer", type=int, default=128)
 
     parser.add_argument('--learning_rate', help='Learning rate for optimizer',
-                        type=float, default=0.01)
+                        type=float, default=0.001)
 
     parser.add_argument('--seq_length', help='Length of sequences of the spectrogram',
                         type=int, default=100)
@@ -63,8 +63,8 @@ def parse_args():
 def main():
     N_MELS = 128
 
-    wandb_tags = [socket.gethostname()]
-    wandb.init(project="pytorch-lstm-audio", tags=','.join(wandb_tags))
+    # wandb_tags = [socket.gethostname()]
+    # wandb.init(project="pytorch-lstm-audio", tags=','.join(wandb_tags))
 
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 

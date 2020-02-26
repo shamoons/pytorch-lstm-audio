@@ -1,6 +1,7 @@
 import random
 import glob
 import math
+import tensorflow as tf
 import numpy as np
 import os.path as path
 from audio_util import load_audio_spectrogram, load_mel_spectrogram
@@ -54,6 +55,17 @@ class DataGenerator(Sequence):
         return len(self.clean_file_paths)
 
     def __getitem__(self, index):
+        inputs_array = tf.random.uniform(
+            shape=(64, 100, 128),
+            minval=-1,
+            maxval=1
+        )
+
+        outputs_array = inputs_array * 2
+
+        return inputs_array, outputs_array, [None]
+
+    def __getitem__2(self, index):
         batch_index = index * self.batch_size
 
         input_spectrogram = load_mel_spectrogram(
