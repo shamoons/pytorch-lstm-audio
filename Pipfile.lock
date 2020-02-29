@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "50518161c4d2948d9e30c65fa0862b6abf504b5004f811c1c4d3963f8924c38c"
+            "sha256": "057ca1902cefd9047103b319f66d5698e5d8e408139a952c1093d05206a88556"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -792,6 +792,31 @@
             ],
             "index": "pypi",
             "version": "==1.4.0"
+        },
+        "torchaudio": {
+            "hashes": [
+                "sha256:19e9b71e5e24292213e9e35d9ed98c8951b8f0dc69d69941ee16328a8aeacf7b",
+                "sha256:1ca1fe4627c3ada9f1b6c4b72d20a2e650c3bfdc9dbd71b6b2823e8ede75c198",
+                "sha256:35f25e70ea27c52eea7f39f4b27fa446449f275291e751be9e258f0576d187c7",
+                "sha256:600cf5161a5b4e7d503189e59d76bd5cf348d9a8aae1fa37f21f5fc768d5889e",
+                "sha256:8bc670e42c2398a8cda0e55e1b4efc0a017bbd38f70964f32d1ba15d0f5ba204",
+                "sha256:8df88b6a441435e03f408906aa2bfd8e923665f0b4f8a72773807a4403f1e4f6",
+                "sha256:992df8e4b2856bc1a5a9fd434617fe0f4a1f23abda21bd68c1444d1ed1de1f6a",
+                "sha256:bdd9ae76fa7f5505db406e8add26816f32646c2042a1c7cc68142fdf3606bc24",
+                "sha256:e1857438db7ce5b7c5669a43a7dc1a6e6617311cc99da41e702b350e431062b5",
+                "sha256:ed33c74490ff328ce48d769cf8758f82c775e97d45b103ddbd77a07d20e2553b",
+                "sha256:f607da23c6005c83e7087d0bf883f74a67adad421e700b6a350cbba707f74838"
+            ],
+            "index": "pypi",
+            "version": "==0.4.0"
+        },
+        "torchsummary": {
+            "hashes": [
+                "sha256:10f41d1743fb918f83293f13183f532ab1bb8f6639a1b89e5f8592ec1919a976",
+                "sha256:981bf689e22e0cf7f95c746002f20a24ad26aa6b9d861134a14bc6ce92230590"
+            ],
+            "index": "pypi",
+            "version": "==1.5.1"
         },
         "typeguard": {
             "hashes": [
