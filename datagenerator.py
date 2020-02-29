@@ -9,7 +9,7 @@ from tensorflow.keras.utils import Sequence
 
 
 class DataGenerator(Sequence):
-    def __init__(self, corrupted_path, seq_length=10, batch_size=20, train_set=False, test_set=False, repeat_sample=10, n_mels=None):
+    def __init__(self, corrupted_path, seq_length=10, batch_size=20, train_set=False, test_set=False, repeat_sample=10):
         corrupted_base_path = path.abspath(corrupted_path)
         corrupted_base_path_parts = corrupted_base_path.split('/')
         clean_base_path = corrupted_base_path_parts.copy()
@@ -45,7 +45,6 @@ class DataGenerator(Sequence):
 
         self.seq_length = seq_length
         self.batch_size = batch_size
-        self.n_mels = n_mels
         return
 
     def __len__(self):
