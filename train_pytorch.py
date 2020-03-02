@@ -81,7 +81,9 @@ def main():
 
     current_best_validation_loss = 10000
     model = model.float()
-    model.cuda()
+
+    if(torch.cuda.is_available()):
+        model.cuda()
     for epoch in range(args.epochs):
         model.train(True)  # Set model to training mode
 
@@ -112,6 +114,10 @@ def main():
         for _, data in enumerate(data_loaders['val']):
             inputs = data[0]
             outputs = data[1]
+
+            if(torch.cuda.is_available()):
+                inputs = inputs.cuda()
+                outputs = outputs.cuda()
 
             pred, _ = model(inputs)
 
