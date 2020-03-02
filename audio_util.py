@@ -32,7 +32,7 @@ def load_mel_spectrogram(audio_path, n_mels=128):
     return log_spectrogram
 
 
-def load_audio_spectrogram(audio_path, eps=1e-10):
+def load_audio_spectrogram(audio_path):
     samples, sample_rate = sf.read(audio_path)
     # Taken from https://github.com/PaddlePaddle/DeepSpeech/blob/766e96e600795cea4187123b9ed76dcd250f2d04/data_utils/featurizer/audio_featurizer.py#L121
 
@@ -45,7 +45,7 @@ def load_audio_spectrogram(audio_path, eps=1e-10):
     # By default, the first axis is frequencies and the second is time.
     # We swap them here.
     spectrogram = np.swapaxes(spectrogram, 0, 1)
-    log_spectrogram = np.log(spectrogram + eps)
+    log_spectrogram = np.log1p(spectrogram)
 
     return log_spectrogram
 

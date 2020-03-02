@@ -4,6 +4,7 @@ import torchaudio
 import torch
 import numpy as np
 import os.path as path
+from sklearn.preprocessing import normalize
 from torch.utils.data import Dataset
 from audio_util import load_audio_spectrogram
 
@@ -50,12 +51,15 @@ class AudioDataset(Dataset):
         return len(self.clean_file_paths)
 
     def __getitem__(self, index):
+        input_spectrogram = []
+        output_spectrogram = []
 
-        input_spectrogram = load_audio_spectrogram(
-            self.corrupted_file_paths[index])
+        while len(input_spectrogram) <= self.seq_length or len(output_spectrogram) <= self.seq_length:
+            input_spectrogram = load_audio_spectrogram(
+                self.corrupted_file_paths[index])
 
-        output_spectrogram = load_audio_spectrogram(
-            self.clean_file_paths[index])
+            output_spectrogram = load_audio_spectrogram(
+                self.clean_file_paths[index])
 
         start_index = random.randint(
             0, len(input_spectrogram) - self.seq_length)
@@ -67,17 +71,15 @@ class AudioDataset(Dataset):
         inputs = input_sliced
         outputs = output_sliced
 
-        inputs_array = np.array(inputs)
-        outputs_array = np.array(outputs)
+        inputs_array = np.array(inputs, dtype=np.float32)
+        outputs_array = np.array(outputs, dtype=np.float32)
 
-        inputs_array = (inputs_array - inputs_array.mean()) / \
-            inputs_array.std()
-        outputs_array = (outputs_array - outputs_array.mean()
-                         ) / outputs_array.std()
+        inputs_array = normalize(inputs_array)
+        outputs_array = normalize(outputs_array)
 
         return inputs_array, outputs_array
 
-    def __getitem__random(self, index):
+    def __getitem__RANDOM(self, index):
         random_tensor = torch.rand(self.seq_length, self.feature_dim) * 2
         random_tensor = random_tensor - 0.5
 
