@@ -95,7 +95,8 @@ def main():
             if(torch.cuda.is_available()):
                 inputs = inputs.cuda()
                 outputs = outputs.cuda()
-                hidden = hidden.cuda()
+                hidden[0] = hidden[0].cuda()
+                hidden[1] = hidden[1].cuda()
 
             optimizer.zero_grad()
 
