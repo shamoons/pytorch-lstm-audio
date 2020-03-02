@@ -81,6 +81,7 @@ def main():
 
     current_best_validation_loss = 10000
     model = model.float()
+    model.to(device)
     for epoch in range(args.epochs):
         model.train(True)  # Set model to training mode
 
