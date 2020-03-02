@@ -81,7 +81,7 @@ def main():
 
     current_best_validation_loss = 10000
     model = model.float()
-    model.to(device)
+    model.cuda()
     for epoch in range(args.epochs):
         model.train(True)  # Set model to training mode
 
@@ -90,6 +90,10 @@ def main():
         for _, data in enumerate(Bar(data_loaders['train'])):
             inputs = data[0]
             outputs = data[1]
+            if(torch.cuda.is_available()):
+                inputs = inputs.cuda()
+                outputs = outputs.cuda()
+
             optimizer.zero_grad()
 
             pred, hidden = model(inputs, hidden)
