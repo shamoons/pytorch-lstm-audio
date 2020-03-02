@@ -25,29 +25,34 @@ def main():
     loss_fn = torch.nn.MSELoss(reduction='sum')
 
     for epoch in range(250):
-        hidden = model.init_hidden(13)
+
         # hidden = (torch.zeros(2, 13, 5),
         #           torch.zeros(2, 13, 5))
         # model.hidden = hidden
         for i, data in enumerate(train_loader):
+            hidden = model.init_hidden(13)
             inputs = data[0]
             outputs = data[1]
 
-            print('inputs',  inputs.size())
             # print('outputs', outputs.size())
 
-            optimizer.zero_grad()
+            # optimizer.zero_grad()
             model.zero_grad()
 
             # print('inputs', inputs)
             pred, hidden = model(inputs, hidden)
+            print('inputs', inputs, inputs.size())
+            print('pred', pred, pred.size())
+            print('outputs', outputs, outputs.size())
 
-            loss = loss_fn(pred[0], outputs)
+            loss = loss_fn(pred, outputs)
 
-            loss.backward(retain_graph=True)
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
 
             print('Epoch: ', epoch, '\ti: ', i, '\tLoss: ', loss)
+            exit()
 
 
 def main2():
@@ -82,6 +87,7 @@ def main2():
             model.zero_grad()
 
             loss.backward()
+
             optimizer.step()
 
             if i % 10 == 0:
