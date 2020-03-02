@@ -22,6 +22,7 @@ librosa = "*"
 tensorflow-addons = "*"
 torchaudio = "*"
 torchsummary = "*"
+barbar = "*"
 
 [requires]
 python_version = "3.6"
