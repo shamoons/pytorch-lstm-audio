@@ -74,9 +74,9 @@ def main():
     args = parse_args()
 
     train_gen = DataGenerator(
-        args.audio_path, seq_length=args.seq_length, batch_size=args.batch_size, train_set=True, n_mels=N_MELS, repeat_sample=args.repeat_sample)
+        args.audio_path, seq_length=args.seq_length, batch_size=args.batch_size, train_set=True, repeat_sample=args.repeat_sample)
     val_gen = DataGenerator(
-        args.audio_path, seq_length=args.seq_length, batch_size=args.batch_size, test_set=True, n_mels=N_MELS, repeat_sample=args.repeat_sample)
+        args.audio_path, seq_length=args.seq_length, batch_size=args.batch_size, test_set=True, repeat_sample=args.repeat_sample)
 
     model = SpeechBaselineModel(total_samples=train_gen.count_files())
     model.build(seq_length=args.seq_length, feature_dim=N_MELS,
