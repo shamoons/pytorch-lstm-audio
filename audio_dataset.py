@@ -79,7 +79,7 @@ class AudioDataset(Dataset):
 
         return inputs_array, outputs_array
 
-    def __getitem__RANDOM(self, index):
+    def __getitem__RAND(self, index):
         random_tensor = torch.rand(self.seq_length, self.feature_dim) * 2
         random_tensor = random_tensor - 0.5
 

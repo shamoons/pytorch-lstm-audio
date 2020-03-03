@@ -8,8 +8,7 @@ import socket
 import torch
 import torch.optim as optim
 import wandb
-
-FEATURE_DIM = 161
+import time
 
 
 def parse_args():
@@ -26,6 +25,8 @@ def parse_args():
 
     parser.add_argument('--seq_length', help='Length of sequences of the spectrogram',
                         type=int, default=20)
+    parser.add_argument('--feature_dim', help='Feature dimension',
+                        type=int, default=161)
 
     parser.add_argument('--epochs', help='Epochs to run',
                         type=int, default=250)
@@ -34,7 +35,7 @@ def parse_args():
                         type=int, default=64)
 
     parser.add_argument('--repeat_sample', help='How many times to sample each file',
-                        type=int, default=5)
+                        type=int, default=1)
 
     args = parser.parse_args()
 
@@ -46,6 +47,7 @@ def initialize():
     wandb_tags = [socket.gethostname()]
     wandb.init(project="speech-reconstruction-with-deepspeech2",
                tags=','.join(wandb_tags))
+    wandb.save('*.pt')
 
 
 def main():
@@ -56,9 +58,9 @@ def main():
     params = {'num_workers': 1, 'pin_memory': True} if device == 'cuda' else {}
 
     train_set = AudioDataset(
-        args.audio_path, train_set=True, seq_length=args.seq_length, feature_dim=FEATURE_DIM)
+        args.audio_path, train_set=True, seq_length=args.seq_length, feature_dim=args.feature_dim, repeat_sample=args.repeat_sample)
     val_set = AudioDataset(
-        args.audio_path, test_set=True, seq_length=args.seq_length, feature_dim=FEATURE_DIM)
+        args.audio_path, test_set=True, seq_length=args.seq_length, feature_dim=args.feature_dim)
 
     train_loader = torch.utils.data.DataLoader(
         train_set, batch_size=args.batch_size, shuffle=True, **params)
@@ -67,12 +69,12 @@ def main():
 
     data_loaders = {'train': train_loader, 'val': val_loader}
 
-    model = BaselineModel(feature_dim=FEATURE_DIM,
-                          hidden_size=FEATURE_DIM, seq_length=args.seq_length, num_layers=args.num_layers)
+    model = BaselineModel(feature_dim=args.feature_dim,
+                          hidden_size=args.feature_dim, seq_length=args.seq_length, num_layers=args.num_layers)
     # optimizer = optim.Adam(model.parameters(), lr=0.01, weight_decay=0.0001)
-    optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
+    optimizer = optim.SGD(model.parameters(), lr=0.0001, momentum=0.9)
     scheduler = optim.lr_scheduler.CyclicLR(
-        optimizer, base_lr=0.0001, max_lr=0.05, mode='triangular2')
+        optimizer, base_lr=0.0001, max_lr=0.01, mode='triangular2', step_size_up=args.epochs // 8, step_size_down=args.epochs // 4)
 
     loss_fn = torch.nn.MSELoss(reduction='sum')
 
@@ -86,10 +88,13 @@ def main():
 
     for epoch in range(args.epochs):
         model.train(True)  # Set model to training mode
-
+        start_time = time.time()
         train_running_loss = 0.0
-        hidden = model.init_hidden(args.batch_size)
         for _, data in enumerate(Bar(data_loaders['train'])):
+            # Keeping the hidden re-init here because each iteration is a batch of sequences
+            # and batches are unrelated
+            hidden = model.init_hidden(args.batch_size)
+
             inputs = data[0]
             outputs = data[1]
             if(torch.cuda.is_available()):
@@ -127,16 +132,21 @@ def main():
             loss = loss_fn(pred, outputs)
             val_running_loss += loss.data
 
+        time_per_epoch = int(time.time() - start_time)
         train_loss = train_running_loss / len(data_loaders['train'])
         val_loss = val_running_loss / len(data_loaders['val'])
-        wandb.log({"Training Loss": train_loss,
-                   'Validation Loss': val_loss, 'Epoch': epoch})
-        print('\tEpoch: {}\tLoss: {:.4f}\tVal Loss: {:.4f}\n'.format(
-            epoch, train_loss, val_loss))
+        wandb.log({
+            "Training Loss": train_loss,
+            'Validation Loss': val_loss,
+            'Epoch': epoch,
+            'Time per Epoch': time_per_epoch,
+            'Learning Rate': scheduler.get_last_lr()[0]
+        })
+        print('\tEpoch: {}\tLoss: {:.4f}\tVal Loss: {:.4f}\tTime per Epoch: {}s\n'.format(
+            epoch, train_loss, val_loss, time_per_epoch))
 
         if val_loss < current_best_validation_loss:
             torch.save(model, path.join(wandb.run.dir, 'model.pt'))
-            wandb.save(path.join(wandb.run.dir, '*.pt'))
             current_best_validation_loss = val_loss
 
 
