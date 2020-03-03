@@ -101,17 +101,17 @@ def main():
             if(torch.cuda.is_available()):
                 inputs = inputs.cuda()
                 outputs = outputs.cuda()
-                hidden = hidden[0].cuda(), hidden[1].cuda()
+                if type(hidden) is tuple:
+                    hidden = tuple(map(lambda h: h.cuda(), hidden))
+                else:
+                    hidden = hidden.cuda()
 
             optimizer.zero_grad()
 
             pred, hidden = model(inputs, hidden)
-            # print(inputs.size(), pred.size(),
-            #       hidden[0].size(), hidden[1].size(), outputs.size())
 
-            # print('BEFORE')
             loss = loss_fn(pred, outputs)
-            # print('AFTER')
+
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
 
             loss.backward()
@@ -150,6 +150,8 @@ def main():
             epoch, train_loss, val_loss, time_per_epoch))
 
         if val_loss < current_best_validation_loss:
+            print('Saving new best model with val loss: ',
+                  val_loss, '\tOld Loss was: ', current_best_validation_loss)
             torch.save(model, path.join(wandb.run.dir, 'model.pt'))
             current_best_validation_loss = val_loss
 

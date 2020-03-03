@@ -41,9 +41,12 @@ def load_audio_spectrogram(audio_path):
                      win_length=n_fft, window=scipy.signal.hamming)
 
     spect, _ = librosa.magphase(D)
-    spect = np.log1p(spect)
 
     spect = np.swapaxes(spect, 0, 1)
+    print('spect', spect, np.min(spect), np.max(spect))
+
+    spect = np.log1p(spect)
+    print('log', spect, np.min(spect), np.max(spect))
 
     return spect
 

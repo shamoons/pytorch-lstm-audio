@@ -30,7 +30,7 @@ def main():
     model.eval()
 
     input_spectrogram = load_audio_spectrogram(args.audio_path)
-    print('input_spectrogram.shape', input_spectrogram.shape)
+    # print('input_spectrogram.shape', input_spectrogram.shape)
 
     # times, frequencies = load_times_frequencies(args.audio_path)
 
@@ -57,8 +57,14 @@ def main():
 
     output = output[: -remainder, :]
 
+    print('output', output, np.min(output), np.max(output))
+    output = np.expm1(output)
+    print('expm1 output', output, np.min(output), np.max(output))
+
     audio = create_audio_from_spectrogram(
         output, n_fft=320, hop_length=80)
+
+    # Need to invert the log1p
 
     # samples, sample_rate = sf.read(args.audio_path)
     sf.write('test.wav', audio, 16000)

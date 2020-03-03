@@ -74,8 +74,8 @@ class AudioDataset(Dataset):
         inputs_array = np.array(inputs, dtype=np.float32)
         outputs_array = np.array(outputs, dtype=np.float32)
 
-        inputs_array = normalize(inputs_array)
-        outputs_array = normalize(outputs_array)
+        # inputs_array = normalize(inputs_array)
+        # outputs_array = normalize(outputs_array)
 
         return inputs_array, outputs_array
 

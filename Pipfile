@@ -23,6 +23,7 @@ tensorflow-addons = "*"
 torchaudio = "*"
 barbar = "*"
 sklearn = "*"
+sru = "*"
 
 [requires]
 python_version = "3.6"
