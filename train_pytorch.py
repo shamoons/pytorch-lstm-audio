@@ -63,9 +63,9 @@ def main():
         args.audio_path, test_set=True, seq_length=args.seq_length, feature_dim=args.feature_dim)
 
     train_loader = torch.utils.data.DataLoader(
-        train_set, batch_size=args.batch_size, shuffle=True, **params)
+        train_set, batch_size=args.batch_size, shuffle=True, num_workers=10, **params)
     val_loader = torch.utils.data.DataLoader(
-        val_set, batch_size=args.batch_size, shuffle=True, **params)
+        val_set, batch_size=args.batch_size, shuffle=True, num_workers=10, **params)
 
     data_loaders = {'train': train_loader, 'val': val_loader}
 
