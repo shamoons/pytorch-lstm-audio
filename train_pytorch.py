@@ -9,8 +9,6 @@ import torch
 import torch.optim as optim
 import wandb
 
-
-BATCH_SIZE = 32
 FEATURE_DIM = 161
 
 
@@ -63,9 +61,9 @@ def main():
         args.audio_path, test_set=True, seq_length=args.seq_length, feature_dim=FEATURE_DIM)
 
     train_loader = torch.utils.data.DataLoader(
-        train_set, batch_size=BATCH_SIZE, shuffle=True, **params)
+        train_set, batch_size=args.batch_size, shuffle=True, **params)
     val_loader = torch.utils.data.DataLoader(
-        val_set, batch_size=BATCH_SIZE, shuffle=True, **params)
+        val_set, batch_size=args.batch_size, shuffle=True, **params)
 
     data_loaders = {'train': train_loader, 'val': val_loader}
 
@@ -83,16 +81,18 @@ def main():
     current_best_validation_loss = 10000
     model = model.float()
 
+    init_hidden = model.init_hidden
     if(torch.cuda.is_available()):
         model.cuda()
         if torch.cuda.device_count() > 1:
             model = torch.nn.DataParallel(model)
+            init_hidden = model.module.init_hidden
 
     for epoch in range(args.epochs):
         model.train(True)  # Set model to training mode
 
         train_running_loss = 0.0
-        hidden = model.init_hidden(BATCH_SIZE)
+        hidden = model.init_hidden(args.batch_size)
         for _, data in enumerate(Bar(data_loaders['train'])):
             inputs = data[0]
             outputs = data[1]
