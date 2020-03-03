@@ -81,18 +81,14 @@ def main():
     current_best_validation_loss = 10000
     model = model.float()
 
-    init_hidden = model.init_hidden
     if(torch.cuda.is_available()):
         model.cuda()
-        if torch.cuda.device_count() > 1:
-            model = torch.nn.DataParallel(model)
-            init_hidden = model.module.init_hidden
 
     for epoch in range(args.epochs):
         model.train(True)  # Set model to training mode
 
         train_running_loss = 0.0
-        hidden = init_hidden(args.batch_size)
+        hidden = model.init_hidden(args.batch_size)
         for _, data in enumerate(Bar(data_loaders['train'])):
             inputs = data[0]
             outputs = data[1]
