@@ -30,7 +30,7 @@ def parse_args():
                         type=float, default=0.001)
 
     parser.add_argument('--seq_length', help='Length of sequences of the spectrogram',
-                        type=int, default=5)
+                        type=int, default=20)
 
     parser.add_argument('--epochs', help='Epochs to run',
                         type=int, default=250)
