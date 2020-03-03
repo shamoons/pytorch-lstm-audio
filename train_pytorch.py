@@ -71,8 +71,9 @@ def main():
 
     model = BaselineModel(feature_dim=args.feature_dim,
                           hidden_size=args.feature_dim, seq_length=args.seq_length, num_layers=args.num_layers)
-    # optimizer = optim.Adam(model.parameters(), lr=0.01, weight_decay=0.0001)
-    optimizer = optim.SGD(model.parameters(), lr=0.0001, momentum=0.9)
+
+    optimizer = optim.SGD(model.parameters(), lr=0.0001,
+                          momentum=0.9, weight_decay=0.0001)
     scheduler = optim.lr_scheduler.CyclicLR(
         optimizer, base_lr=0.0001, max_lr=0.01, mode='triangular2', step_size_up=args.epochs // 8, step_size_down=args.epochs // 4)
 
