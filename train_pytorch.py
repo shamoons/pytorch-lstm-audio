@@ -26,9 +26,6 @@ def parse_args():
     parser.add_argument(
         "--num_layers", help="Number of layers in the model", type=int, default=2)
 
-    parser.add_argument('--learning_rate', help='Learning rate for optimizer',
-                        type=float, default=0.001)
-
     parser.add_argument('--seq_length', help='Length of sequences of the spectrogram',
                         type=int, default=20)
 
@@ -74,7 +71,11 @@ def main():
 
     model = BaselineModel(feature_dim=FEATURE_DIM,
                           hidden_size=FEATURE_DIM, seq_length=args.seq_length, num_layers=args.num_layers)
-    optimizer = optim.Adam(model.parameters(), lr=0.01, weight_decay=0.0001)
+    # optimizer = optim.Adam(model.parameters(), lr=0.01, weight_decay=0.0001)
+    optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
+    scheduler = optim.lr_scheduler.CyclicLR(
+        optimizer, base_lr=0.0001, max_lr=0.05, mode='triangular2')
+
     loss_fn = torch.nn.MSELoss(reduction='sum')
 
     wandb.watch(model)
@@ -109,6 +110,8 @@ def main():
             optimizer.step()
 
             train_running_loss += loss.data
+
+        scheduler.step()
 
         model.eval()
         val_running_loss = 0.0

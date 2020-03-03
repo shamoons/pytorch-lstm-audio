@@ -1,6 +1,5 @@
 import soundfile as sf
 import scipy
-from scipy import signal
 import librosa
 import numpy as np
 import warnings
@@ -33,30 +32,70 @@ def load_mel_spectrogram(audio_path, n_mels=128):
 
 
 def load_audio_spectrogram(audio_path):
-    samples, sample_rate = sf.read(audio_path)
-    # Taken from https://github.com/PaddlePaddle/DeepSpeech/blob/766e96e600795cea4187123b9ed76dcd250f2d04/data_utils/featurizer/audio_featurizer.py#L121
+    sample_rate = librosa.get_samplerate(audio_path)
+    samples, sample_rate = librosa.core.load(audio_path, sr=sample_rate)
 
-    n_fft = int(sample_rate * 0.001 * 20)  # 20ms
-    hop_length = n_fft // 4
+    n_fft, hop_length = get_n_fft_overlap(sample_rate)
 
-    _, _, spectrogram = signal.spectrogram(
-        samples, fs=sample_rate, nperseg=n_fft, noverlap=hop_length, window=signal.hann(n_fft))
+    D = librosa.stft(samples, n_fft=n_fft, hop_length=hop_length,
+                     win_length=n_fft, window=scipy.signal.hamming)
 
-    # By default, the first axis is frequencies and the second is time.
-    # We swap them here.
-    spectrogram = np.swapaxes(spectrogram, 0, 1)
-    log_spectrogram = np.log1p(spectrogram)
+    spect, _ = librosa.magphase(D)
+    spect = np.log1p(spect)
 
-    return log_spectrogram
+    spect = np.swapaxes(spect, 0, 1)
+
+    return spect
+
+    # D = librosa.stft(y, n_fft=n_fft, hop_length=hop_length,
+    #                  win_length=win_length, window=self.window)
+    # spect, phase = librosa.magphase(D)
+    # # S = log(S+1)
+    # spect = np.log1p(spect)
+
+
+# def load_audio_spectrogram_scipy(audio_path):
+#     samples, sample_rate = sf.read(audio_path)
+
+#     print('samples.shape', samples.shape)
+
+#     n_fft, hop_length = get_n_fft_overlap(sample_rate)
+#     print(n_fft, hop_length)
+
+#     _, _, spectrogram = signal.spectrogram(
+#         samples, fs=sample_rate, nperseg=n_fft, noverlap=hop_length, window=signal.hann(n_fft))
+
+#     # By default, the first axis is frequencies and the second is time.
+#     # We swap them here.
+#     spectrogram = np.swapaxes(spectrogram, 0, 1)
+#     log_spectrogram = np.log1p(spectrogram)
+
+#     return log_spectrogram
 
 
 def load_times_frequencies(audio_path):
     samples, sample_rate = sf.read(audio_path)
     # Taken from https://github.com/PaddlePaddle/DeepSpeech/blob/766e96e600795cea4187123b9ed76dcd250f2d04/data_utils/featurizer/audio_featurizer.py#L121
-    n_fft = int(sample_rate * 0.001 * 20)  # 20ms
-    hop_length = n_fft // 4
+    n_fft, hop_length = get_n_fft_overlap(sample_rate)
 
-    frequencies, times, _ = signal.spectrogram(
-        samples, fs=sample_rate, nperseg=nperseg, noverlap=hop_length, window=signal.hann(n_fft))
+    frequencies, times, _ = scipy.signal.spectrogram(
+        samples, fs=sample_rate, nperseg=n_fft, noverlap=hop_length, window=scipy.signal.hann(n_fft))
 
     return times, frequencies
+
+
+def create_audio_from_spectrogram(spectrogram, n_fft, hop_length):
+    spectrogram = np.swapaxes(spectrogram, 0, 1)
+    audio_signal = librosa.griffinlim(
+        spectrogram, n_iter=128, win_length=n_fft, hop_length=hop_length, window=scipy.signal.hamming)
+
+    return audio_signal
+
+
+def get_n_fft_overlap(sample_rate, time_ms=20):
+    # Taken from https://github.com/PaddlePaddle/DeepSpeech/blob/766e96e600795cea4187123b9ed76dcd250f2d04/data_utils/featurizer/audio_featurizer.py#L121
+
+    n_fft = int(sample_rate * 0.001 * time_ms)  # 20ms
+    hop_length = n_fft // 4
+
+    return n_fft, hop_length

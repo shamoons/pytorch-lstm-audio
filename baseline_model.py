@@ -4,14 +4,14 @@ from torch.autograd import Variable
 
 
 class BaselineModel(nn.Module):
-    def __init__(self, feature_dim=5, hidden_size=5, num_layers=2, seq_length=1):
+    def __init__(self, feature_dim=5, hidden_size=5, num_layers=2, seq_length=1, dropout=0.1):
         super(BaselineModel, self).__init__()
         self.num_layers = num_layers
         self.hidden_size = hidden_size
         self.seq_length = seq_length
 
         self.lstm = nn.LSTM(input_size=feature_dim,
-                            hidden_size=hidden_size, num_layers=num_layers)
+                            hidden_size=hidden_size, num_layers=num_layers, dropout=0.1)
 
     def forward(self, x, hidden=None):
         lstm_out, hidden = self.lstm(x, hidden)

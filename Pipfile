@@ -21,7 +21,6 @@ keras = "*"
 librosa = "*"
 tensorflow-addons = "*"
 torchaudio = "*"
-torchsummary = "*"
 barbar = "*"
 sklearn = "*"
 
