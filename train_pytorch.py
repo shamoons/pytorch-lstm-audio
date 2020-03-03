@@ -85,6 +85,9 @@ def main():
 
     if(torch.cuda.is_available()):
         model.cuda()
+        if torch.cuda.device_count() > 1:
+            model = torch.nn.DataParallel(model)
+
     for epoch in range(args.epochs):
         model.train(True)  # Set model to training mode
 

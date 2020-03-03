@@ -25,7 +25,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    model = torch.load(args.model_path)
+    model = torch.load(args.model_path, map_location='cpu')
     model = model.float()
     model.eval()
 
