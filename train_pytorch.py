@@ -105,11 +105,12 @@ def main():
             optimizer.zero_grad()
 
             pred, hidden = model(inputs, hidden)
-            print(inputs.size(), pred.size(),
-                  hidden[0].size(), hidden[1].size(), outputs.size())
+            # print(inputs.size(), pred.size(),
+            #       hidden[0].size(), hidden[1].size(), outputs.size())
 
+            # print('BEFORE')
             loss = loss_fn(pred, outputs)
-
+            # print('AFTER')
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
 
             loss.backward()
