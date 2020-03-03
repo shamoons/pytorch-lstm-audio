@@ -11,7 +11,7 @@ class BaselineModel(nn.Module):
         self.seq_length = seq_length
 
         self.lstm = nn.LSTM(input_size=feature_dim,
-                            hidden_size=hidden_size, num_layers=num_layers, dropout=0.1)
+                            hidden_size=hidden_size, num_layers=num_layers, dropout=0.1, bidirectional=False)
 
     def forward(self, x, hidden=None):
         lstm_out, hidden = self.lstm(x, hidden)
