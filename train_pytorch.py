@@ -92,7 +92,7 @@ def main():
         model.train(True)  # Set model to training mode
 
         train_running_loss = 0.0
-        hidden = model.init_hidden(args.batch_size)
+        hidden = init_hidden(args.batch_size)
         for _, data in enumerate(Bar(data_loaders['train'])):
             inputs = data[0]
             outputs = data[1]
