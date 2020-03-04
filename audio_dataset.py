@@ -7,6 +7,7 @@ import os.path as path
 from sklearn.preprocessing import normalize
 from torch.utils.data import Dataset
 from audio_util import load_audio_spectrogram
+from .submodules import deepspeech.pytorch
 
 
 class AudioDataset(Dataset):
