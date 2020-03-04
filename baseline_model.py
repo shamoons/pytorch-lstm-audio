@@ -23,7 +23,7 @@ class BaselineModel(nn.Module):
 
     def forward(self, x, hidden=None):
         lstm_out, hidden = self.lstm(x, hidden)
-        lstm_out = lstm_out.view(-1, lstm_out.shape[2])
+
         lstm_out = (lstm_out[:, :, :self.hidden_size] +
                     lstm_out[:, :, self.hidden_size:])
         # out = self.linear(lstm_out)
