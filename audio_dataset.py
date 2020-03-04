@@ -1,6 +1,5 @@
 import glob
 import random
-import torchaudio
 import torch
 import numpy as np
 import os.path as path
@@ -60,13 +59,36 @@ class AudioDataset(Dataset):
         output_spectrogram, _, _, _, _ = load_audio_spectrogram(
             self.clean_file_paths[index])
 
-        while len(input_sliced) < self.seq_length or len(output_sliced) < self.seq_length:
-            start_index = random.randint(
-                0, len(input_spectrogram) - self.seq_length)
-            end_index = start_index + self.seq_length
+        averaged_time_energy_input = torch.mean(input_spectrogram, dim=1)
+        soft_min_inputs = torch.nn.Softmin()(averaged_time_energy_input).detach().numpy()
+        input_indices = np.arange(0, input_spectrogram.size(0))
+        mid_index = np.random.choice(input_indices, p=soft_min_inputs)
 
-            input_sliced = input_spectrogram[start_index:end_index]
-            output_sliced = output_spectrogram[start_index:end_index]
+        if mid_index < self.seq_length // 2:
+            mid_index = self.seq_length // 2
+        if mid_index > (len(input_spectrogram) - self.seq_length) // 2:
+            mid_index = (len(input_spectrogram) - self.seq_length) // 2
+
+        # print(torch.mean(input_spectrogram[mid_index]))
+        # print('AVG',
+        #       averaged_time_energy_input.size())
+        # print('soft_min_inputs',
+        #       soft_min_inputs.shape, np.sum(soft_min_inputs))
+        # print('input_indices',
+        #       input_indices.shape)
+        # print('mid_index', mid_index)
+        start_index = mid_index - self.seq_length // 2
+        end_index = start_index + self.seq_length
+
+        # exit()
+
+        # while len(input_sliced) < self.seq_length or len(output_sliced) < self.seq_length:
+        #     start_index = random.randint(
+        #         0, len(input_spectrogram) - self.seq_length)
+        #     end_index = start_index + self.seq_length
+
+        input_sliced = input_spectrogram[start_index:end_index]
+        output_sliced = output_spectrogram[start_index:end_index]
 
         inputs_array = np.array(input_sliced, dtype=np.float32)
         outputs_array = np.array(output_sliced, dtype=np.float32)

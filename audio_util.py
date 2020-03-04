@@ -49,7 +49,7 @@ def load_audio_spectrogram(audio_path):
     spect = np.swapaxes(spect, 0, 1)
 
     spect = np.log1p(spect)
-    # spect = torch.FloatTensor(spect).contiguous()
+    spect = torch.FloatTensor(spect).contiguous()
 
     return spect, len(samples), sample_rate, n_fft, hop_length
 

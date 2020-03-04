@@ -37,6 +37,9 @@ def parse_args():
     parser.add_argument('--repeat_sample', help='How many times to sample each file',
                         type=int, default=1)
 
+    parser.add_argument('--num_workers', help='Number of workers for data_loaders',
+                        type=int, default=10)
+
     args = parser.parse_args()
 
     return args
@@ -63,9 +66,9 @@ def main():
         args.audio_path, test_set=True, seq_length=args.seq_length, feature_dim=args.feature_dim)
 
     train_loader = torch.utils.data.DataLoader(
-        train_set, batch_size=args.batch_size, shuffle=True, num_workers=10, **params)
+        train_set, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, **params)
     val_loader = torch.utils.data.DataLoader(
-        val_set, batch_size=args.batch_size, shuffle=True, num_workers=10, **params)
+        val_set, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, **params)
 
     data_loaders = {'train': train_loader, 'val': val_loader}
 
