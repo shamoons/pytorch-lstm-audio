@@ -96,6 +96,5 @@ def get_n_fft_overlap(sample_rate, time_ms=20):
 
     n_fft = int(sample_rate * 0.001 * time_ms)  # 20ms
     hop_length = int(sample_rate * 0.001 * (time_ms // 2))  # 10ms
-    # hop_length = n_fft // 4
 
     return n_fft, hop_length

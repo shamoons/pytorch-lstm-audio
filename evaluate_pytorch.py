@@ -27,8 +27,11 @@ def parse_args():
 def main():
     args = parse_args()
     model = torch.load(args.model_path, map_location='cpu')
+
     model = model.float()
     model.eval()
+    print('model', model)
+
     filename_without_ext = Path(args.audio_path).stem
 
     input_spectrogram, samples_length, sample_rate, n_fft, hop_length = load_audio_spectrogram(
@@ -40,8 +43,6 @@ def main():
 
     remainder = args.seq_length - timesteps % args.seq_length
     batches = (timesteps + remainder) // args.seq_length
-    print('timesteps', timesteps)
-    print('remainder', remainder)
 
     reshaped_input_spectrogram = np.append(input_spectrogram, np.zeros(
         (remainder, 161)), axis=0)
@@ -49,13 +50,10 @@ def main():
     reshaped_input_spectrogram = reshaped_input_spectrogram.reshape(
         (batches, args.seq_length, 161))
 
-    # reshaped_input_spectrogram = np.swapaxes(reshaped_input_spectrogram, 0, 1)
-    print('reshaped_input_spectrogram.shape', reshaped_input_spectrogram.shape)
     tensor = torch.from_numpy(reshaped_input_spectrogram).float()
 
     output, _ = model(tensor)
     np_output = output.detach().numpy()
-    print('np_output.shape', np_output.shape)
 
     output = np_output.reshape(timesteps + remainder, 161)
 
