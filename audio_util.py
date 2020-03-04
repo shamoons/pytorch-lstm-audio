@@ -43,10 +43,10 @@ def load_audio_spectrogram(audio_path):
     spect, _ = librosa.magphase(D)
 
     spect = np.swapaxes(spect, 0, 1)
-    print('spect', spect, np.min(spect), np.max(spect))
+    # print('spect', spect, np.min(spect), np.max(spect))
 
     spect = np.log1p(spect)
-    print('log', spect, np.min(spect), np.max(spect))
+    # print('log', spect, np.min(spect), np.max(spect))
 
     return spect
 

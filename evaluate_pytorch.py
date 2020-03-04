@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import argparse
 import torch
+from pathlib import Path
 import soundfile as sf
 from audio_util import load_audio_spectrogram, load_times_frequencies, create_audio_from_spectrogram
 import numpy as np
@@ -28,11 +29,9 @@ def main():
     model = torch.load(args.model_path, map_location='cpu')
     model = model.float()
     model.eval()
+    filename_without_ext = Path(args.audio_path).stem
 
     input_spectrogram = load_audio_spectrogram(args.audio_path)
-    # print('input_spectrogram.shape', input_spectrogram.shape)
-
-    # times, frequencies = load_times_frequencies(args.audio_path)
 
     timesteps = input_spectrogram.shape[0]
 
@@ -45,11 +44,8 @@ def main():
     reshaped_input_spectrogram = reshaped_input_spectrogram.reshape(
         (batches, args.seq_length, 161))
 
-    # reshaped_input_spectrogram = np.swapaxes(reshaped_input_spectrogram, 0, 1)
-
     tensor = torch.from_numpy(reshaped_input_spectrogram).float()
 
-    # print(input_spectrogram)
     output, _ = model(tensor)
     np_output = output.detach().numpy()
 
@@ -67,7 +63,7 @@ def main():
     # Need to invert the log1p
 
     # samples, sample_rate = sf.read(args.audio_path)
-    sf.write('test.wav', audio, 16000)
+    sf.write(filename_without_ext + '.wav', audio, 16000)
 
 
 if __name__ == '__main__':

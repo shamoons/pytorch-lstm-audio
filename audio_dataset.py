@@ -51,28 +51,25 @@ class AudioDataset(Dataset):
         return len(self.clean_file_paths)
 
     def __getitem__(self, index):
-        input_spectrogram = []
-        output_spectrogram = []
+        input_sliced = []
+        output_sliced = []
 
-        while len(input_spectrogram) <= self.seq_length or len(output_spectrogram) <= self.seq_length:
-            input_spectrogram = load_audio_spectrogram(
-                self.corrupted_file_paths[index])
+        input_spectrogram = load_audio_spectrogram(
+            self.corrupted_file_paths[index])
 
-            output_spectrogram = load_audio_spectrogram(
-                self.clean_file_paths[index])
+        output_spectrogram = load_audio_spectrogram(
+            self.clean_file_paths[index])
 
-        start_index = random.randint(
-            0, len(input_spectrogram) - self.seq_length)
-        end_index = start_index + self.seq_length
+        while len(input_sliced) < self.seq_length or len(output_sliced) < self.seq_length:
+            start_index = random.randint(
+                0, len(input_spectrogram) - self.seq_length)
+            end_index = start_index + self.seq_length
 
-        input_sliced = input_spectrogram[start_index:end_index]
-        output_sliced = output_spectrogram[start_index:end_index]
+            input_sliced = input_spectrogram[start_index:end_index]
+            output_sliced = output_spectrogram[start_index:end_index]
 
-        inputs = input_sliced
-        outputs = output_sliced
-
-        inputs_array = np.array(inputs, dtype=np.float32)
-        outputs_array = np.array(outputs, dtype=np.float32)
+        inputs_array = np.array(input_sliced, dtype=np.float32)
+        outputs_array = np.array(output_sliced, dtype=np.float32)
 
         # inputs_array = normalize(inputs_array)
         # outputs_array = normalize(outputs_array)
