@@ -54,10 +54,10 @@ class AudioDataset(Dataset):
         input_sliced = []
         output_sliced = []
 
-        input_spectrogram = load_audio_spectrogram(
+        input_spectrogram, _, _, _, _ = load_audio_spectrogram(
             self.corrupted_file_paths[index])
 
-        output_spectrogram = load_audio_spectrogram(
+        output_spectrogram, _, _, _, _ = load_audio_spectrogram(
             self.clean_file_paths[index])
 
         while len(input_sliced) < self.seq_length or len(output_sliced) < self.seq_length:

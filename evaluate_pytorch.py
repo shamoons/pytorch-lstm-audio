@@ -31,7 +31,10 @@ def main():
     model.eval()
     filename_without_ext = Path(args.audio_path).stem
 
-    input_spectrogram = load_audio_spectrogram(args.audio_path)
+    input_spectrogram, samples_length, sample_rate, n_fft, hop_length = load_audio_spectrogram(
+        args.audio_path)
+    print('input_spectrogram', torch.min(
+        input_spectrogram), torch.max(input_spectrogram))
 
     timesteps = input_spectrogram.shape[0]
 
@@ -53,17 +56,14 @@ def main():
 
     output = output[: -remainder, :]
 
-    print('output', output, np.min(output), np.max(output))
+    print('output', np.min(output), np.max(output))
     output = np.expm1(output)
-    print('expm1 output', output, np.min(output), np.max(output))
+    print('expm1 output', np.min(output), np.max(output))
 
     audio = create_audio_from_spectrogram(
-        output, n_fft=320, hop_length=80)
+        output, n_fft=n_fft, hop_length=hop_length, length=samples_length)
 
-    # Need to invert the log1p
-
-    # samples, sample_rate = sf.read(args.audio_path)
-    sf.write(filename_without_ext + '.wav', audio, 16000)
+    sf.write(filename_without_ext + '.wav', audio, sample_rate)
 
 
 if __name__ == '__main__':

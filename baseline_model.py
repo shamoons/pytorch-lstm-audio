@@ -25,6 +25,7 @@ class BaselineModel(nn.Module):
         lstm_out, hidden = self.lstm(x, hidden)
         lstm_out = (lstm_out[:, :, :self.hidden_size] +
                     lstm_out[:, :, self.hidden_size:])
+        lstm_out = torch.nn.SELU()(lstm_out)
         return lstm_out, hidden
 
     def init_hidden_gru(self, batch_size):

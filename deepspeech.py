@@ -1,6 +1,7 @@
 from audio_util import load_audio_spectrogram
 from submodules import DeepSpeech
 import torch
+import numpy as np
 
 
 def main():
@@ -15,10 +16,10 @@ def main():
 
     # model = utils.load_model(
     #     'cpu', 'data/pretrained_models/librispeech_pretrained_v2-2.pth', False)
-    print(model)
-    print(model.audio_conf)
+    # print(model)
+    # print(model.audio_conf)
 
-    spect = load_audio_spectrogram(
+    spect, _ = load_audio_spectrogram(
         'data/dev-noise-subtractive-250ms-1/1272/135031/1272-135031-0023.flac')
 
     print('spect', spect.shape)

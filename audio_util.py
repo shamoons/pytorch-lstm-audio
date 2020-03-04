@@ -47,21 +47,11 @@ def load_audio_spectrogram(audio_path):
     spect, _ = librosa.magphase(D)
 
     spect = np.swapaxes(spect, 0, 1)
-    # print('spect', spect, np.min(spect), np.max(spect))
 
     spect = np.log1p(spect)
-    spect = torch.FloatTensor(spect).contiguous()
+    # spect = torch.FloatTensor(spect).contiguous()
 
-    # print('log', spect, np.min(spect), np.max(spect))
-
-    return spect
-
-    # D = librosa.stft(y, n_fft=n_fft, hop_length=hop_length,
-    #                  win_length=win_length, window=self.window)
-    # spect, phase = librosa.magphase(D)
-    # # S = log(S+1)
-    # spect = np.log1p(spect)
-
+    return spect, len(samples), sample_rate, n_fft, hop_length
 
 # def load_audio_spectrogram_scipy(audio_path):
 #     samples, sample_rate = sf.read(audio_path)
@@ -93,10 +83,10 @@ def load_times_frequencies(audio_path):
     return times, frequencies
 
 
-def create_audio_from_spectrogram(spectrogram, n_fft, hop_length):
+def create_audio_from_spectrogram(spectrogram, n_fft, hop_length, length):
     spectrogram = np.swapaxes(spectrogram, 0, 1)
     audio_signal = librosa.griffinlim(
-        spectrogram, n_iter=128, win_length=n_fft, hop_length=hop_length, window=scipy.signal.hamming)
+        spectrogram, n_iter=128, win_length=n_fft, hop_length=hop_length, window=scipy.signal.hamming, length=length)
 
     return audio_signal
 
