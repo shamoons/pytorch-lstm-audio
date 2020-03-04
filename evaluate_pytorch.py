@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import argparse
 import torch
+from pathlib import Path
 import soundfile as sf
 from audio_util import load_audio_spectrogram, load_times_frequencies, create_audio_from_spectrogram
 import numpy as np
@@ -28,11 +29,12 @@ def main():
     model = torch.load(args.model_path, map_location='cpu')
     model = model.float()
     model.eval()
+    filename_without_ext = Path(args.audio_path).stem
 
-    input_spectrogram = load_audio_spectrogram(args.audio_path)
-    print('input_spectrogram.shape', input_spectrogram.shape)
-
-    # times, frequencies = load_times_frequencies(args.audio_path)
+    input_spectrogram, samples_length, sample_rate, n_fft, hop_length = load_audio_spectrogram(
+        args.audio_path)
+    print('input_spectrogram', torch.min(
+        input_spectrogram), torch.max(input_spectrogram))
 
     timesteps = input_spectrogram.shape[0]
 
@@ -51,7 +53,6 @@ def main():
     print('reshaped_input_spectrogram.shape', reshaped_input_spectrogram.shape)
     tensor = torch.from_numpy(reshaped_input_spectrogram).float()
 
-    # print(input_spectrogram)
     output, _ = model(tensor)
     np_output = output.detach().numpy()
     print('np_output.shape', np_output.shape)
@@ -60,11 +61,14 @@ def main():
 
     output = output[: -remainder, :]
 
-    audio = create_audio_from_spectrogram(
-        output, n_fft=320, hop_length=80)
+    print('output', np.min(output), np.max(output))
+    output = np.expm1(output)
+    print('expm1 output', np.min(output), np.max(output))
 
-    # samples, sample_rate = sf.read(args.audio_path)
-    sf.write('test.wav', audio, 16000)
+    audio = create_audio_from_spectrogram(
+        output, n_fft=n_fft, hop_length=hop_length, length=samples_length)
+
+    sf.write(filename_without_ext + '.wav', audio, sample_rate)
 
 
 if __name__ == '__main__':

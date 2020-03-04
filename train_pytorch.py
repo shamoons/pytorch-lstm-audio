@@ -37,6 +37,9 @@ def parse_args():
     parser.add_argument('--repeat_sample', help='How many times to sample each file',
                         type=int, default=1)
 
+    parser.add_argument('--num_workers', help='Number of workers for data_loaders',
+                        type=int, default=10)
+
     args = parser.parse_args()
 
     return args
@@ -63,16 +66,17 @@ def main():
         args.audio_path, test_set=True, seq_length=args.seq_length, feature_dim=args.feature_dim)
 
     train_loader = torch.utils.data.DataLoader(
-        train_set, batch_size=args.batch_size, shuffle=True, num_workers=10, **params)
+        train_set, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, **params)
     val_loader = torch.utils.data.DataLoader(
-        val_set, batch_size=args.batch_size, shuffle=True, num_workers=10, **params)
+        val_set, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, **params)
 
     data_loaders = {'train': train_loader, 'val': val_loader}
 
     model = BaselineModel(feature_dim=args.feature_dim,
                           hidden_size=args.feature_dim, seq_length=args.seq_length, num_layers=args.num_layers)
-    # optimizer = optim.Adam(model.parameters(), lr=0.01, weight_decay=0.0001)
-    optimizer = optim.SGD(model.parameters(), lr=0.0001, momentum=0.9)
+
+    optimizer = optim.SGD(model.parameters(), lr=0.0001,
+                          momentum=0.9, weight_decay=0.0001)
     scheduler = optim.lr_scheduler.CyclicLR(
         optimizer, base_lr=0.0001, max_lr=0.01, mode='triangular2', step_size_up=args.epochs // 8, step_size_down=args.epochs // 4)
 
@@ -100,13 +104,14 @@ def main():
             if(torch.cuda.is_available()):
                 inputs = inputs.cuda()
                 outputs = outputs.cuda()
-                hidden = hidden[0].cuda(), hidden[1].cuda()
+                if type(hidden) is tuple:
+                    hidden = tuple(map(lambda h: h.cuda(), hidden))
+                else:
+                    hidden = hidden.cuda()
 
             optimizer.zero_grad()
 
             pred, hidden = model(inputs, hidden)
-            print(inputs.size(), pred.size(),
-                  hidden[0].size(), hidden[1].size(), outputs.size())
 
             loss = loss_fn(pred, outputs)
 
@@ -148,6 +153,8 @@ def main():
             epoch, train_loss, val_loss, time_per_epoch))
 
         if val_loss < current_best_validation_loss:
+            print('Saving new best model with val loss: ',
+                  val_loss, '\tOld Loss was: ', current_best_validation_loss)
             torch.save(model, path.join(wandb.run.dir, 'model.pt'))
             current_best_validation_loss = val_loss
 

@@ -20,9 +20,12 @@ soundfile = "*"
 keras = "*"
 librosa = "*"
 tensorflow-addons = "*"
-torchaudio = "*"
 barbar = "*"
 sklearn = "*"
+sru = "*"
+python-levenshtein = "*"
+visdom = "*"
+tqdm = "*"
 
 [requires]
 python_version = "3.6"
