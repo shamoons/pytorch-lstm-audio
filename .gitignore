@@ -134,3 +134,4 @@ wandb
 wandb-debug.log
 saved_models/
 data/train*/
+data/pretrained_models/*
