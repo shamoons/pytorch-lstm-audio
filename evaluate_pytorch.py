@@ -17,7 +17,7 @@ def parse_args():
         "--audio_path", help="Audio file", type=str)
 
     parser.add_argument(
-        "--seq_length", help="Sequence Length", type=int, default=5)
+        "--seq_length", help="Sequence Length", type=int, default=20)
 
     args = parser.parse_args()
 
@@ -27,8 +27,11 @@ def parse_args():
 def main():
     args = parse_args()
     model = torch.load(args.model_path, map_location='cpu')
+
     model = model.float()
     model.eval()
+    print('model', model)
+
     filename_without_ext = Path(args.audio_path).stem
 
     input_spectrogram, samples_length, sample_rate, n_fft, hop_length = load_audio_spectrogram(

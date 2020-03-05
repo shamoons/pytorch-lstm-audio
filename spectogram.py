@@ -5,7 +5,9 @@ import argparse
 import scipy
 import librosa
 import glob
+import torch
 import numpy as np
+from audio_util import load_audio_spectrogram
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -18,15 +20,16 @@ args = parser.parse_args()
 if args.get_max == True:
     current_max = 0
     for file_path in glob.iglob('data//**/*.flac', recursive=True):
-        samples, sample_rate = sf.read(file_path)
-        nperseg = int(sample_rate * 0.001 * 20)
-        frequencies, times, spectrogram = signal.spectrogram(
-            samples, sample_rate, nperseg=nperseg, window=signal.hann(nperseg))
-        max_spectrogram = np.max(spectrogram)
+        spectrogram, _, _, _, _ = load_audio_spectrogram(file_path)
+        # samples, sample_rate = sf.read(file_path)
+        # nperseg = int(sample_rate * 0.001 * 20)
+        # frequencies, times, spectrogram = signal.spectrogram(
+        #     samples, sample_rate, nperseg=nperseg, window=signal.hann(nperseg))
+        max_spectrogram = torch.max(spectrogram)
         if max_spectrogram > current_max:
             current_max = max_spectrogram
         print('max: ', max_spectrogram, '\tCurrent: ',
-              current_max, '\tmean:', np.mean(spectrogram), '\tstd: ', np.std(spectrogram))
+              current_max, '\tmean:', torch.mean(spectrogram), '\tstd: ', torch.std(spectrogram))
 
 else:
     samples, sample_rate = sf.read(args.file)
