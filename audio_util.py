@@ -47,6 +47,8 @@ def load_audio_spectrogram(audio_path):
     spect, _ = librosa.magphase(D)
 
     spect = np.swapaxes(spect, 0, 1)
+    # print('pre spec', np.min(
+    #     spect), np.max(spect))
 
     spect = np.log1p(spect)
     spect = torch.FloatTensor(spect).contiguous()

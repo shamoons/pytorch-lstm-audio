@@ -42,6 +42,9 @@ class AudioDataset(Dataset):
             self.clean_file_paths = clean_audio_file_paths[cutoff_index:]
             self.corrupted_file_paths = corrupted_audio_file_paths[cutoff_index:]
 
+        self.clean_file_paths = self.clean_file_paths[136:138]
+        self.corrupted_file_paths = self.corrupted_file_paths[136:138]
+
         self.clean_file_paths = np.repeat(self.clean_file_paths, repeat_sample)
         self.corrupted_file_paths = np.repeat(
             self.corrupted_file_paths, repeat_sample)
@@ -69,32 +72,14 @@ class AudioDataset(Dataset):
         if mid_index > (len(input_spectrogram) - self.seq_length) // 2:
             mid_index = (len(input_spectrogram) - self.seq_length) // 2
 
-        # print(torch.mean(input_spectrogram[mid_index]))
-        # print('AVG',
-        #       averaged_time_energy_input.size())
-        # print('soft_min_inputs',
-        #       soft_min_inputs.shape, np.sum(soft_min_inputs))
-        # print('input_indices',
-        #       input_indices.shape)
-        # print('mid_index', mid_index)
         start_index = mid_index - self.seq_length // 2
         end_index = start_index + self.seq_length
-
-        # exit()
-
-        # while len(input_sliced) < self.seq_length or len(output_sliced) < self.seq_length:
-        #     start_index = random.randint(
-        #         0, len(input_spectrogram) - self.seq_length)
-        #     end_index = start_index + self.seq_length
 
         input_sliced = input_spectrogram[start_index:end_index]
         output_sliced = output_spectrogram[start_index:end_index]
 
         inputs_array = np.array(input_sliced, dtype=np.float32)
         outputs_array = np.array(output_sliced, dtype=np.float32)
-
-        # inputs_array = normalize(inputs_array)
-        # outputs_array = normalize(outputs_array)
 
         return inputs_array, outputs_array
 
