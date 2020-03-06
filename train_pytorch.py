@@ -164,11 +164,11 @@ def main():
         val_loss = val_running_loss / len(data_loaders['val'])
         scheduler.step()
         wandb.log({
-            "Training Loss": train_loss,
-            'Validation Loss': val_loss,
-            'Epoch': epoch,
-            'Time per Epoch': time_per_epoch,
-            'Learning Rate': scheduler.get_last_lr()[0]
+            "train_loss": train_loss,
+            'val_loss': val_loss,
+            'epoch': epoch,
+            'sec_per_epoch': time_per_epoch,
+            'lr': scheduler.get_last_lr()[0]
         })
         print('\tEpoch: {}\tLoss: {:.4f}\tVal Loss: {:.4f}\tTime per Epoch: {}s\n'.format(
             epoch, train_loss, val_loss, time_per_epoch))
