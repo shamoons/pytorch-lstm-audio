@@ -90,7 +90,7 @@ def main():
     data_loaders = {'train': train_loader, 'val': val_loader}
 
     model = BaselineModel(feature_dim=args.feature_dim,
-                          hidden_size=args.feature_dim, seq_length=args.seq_length, num_layers=args.num_layers)
+                          hidden_size=args.hidden_size, seq_length=args.seq_length, num_layers=args.num_layers)
 
     optimizer = optim.SGD(model.parameters(), lr=args.base_lr,
                           momentum=0.9, weight_decay=0.1)

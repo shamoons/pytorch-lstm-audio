@@ -12,7 +12,7 @@ class BaselineModel(nn.Module):
         self.hidden_size = hidden_size
         self.seq_length = seq_length
 
-        self.linear = nn.Linear(feature_dim * 2, 161)
+        self.linear = nn.Linear(hidden_size * 2, 161)
         # self.linear = nn.Linear(64 * seq_length, 5)
         self.lstm = nn.LSTM(input_size=feature_dim,
                             hidden_size=hidden_size, num_layers=num_layers, dropout=0.1, bidirectional=True)
