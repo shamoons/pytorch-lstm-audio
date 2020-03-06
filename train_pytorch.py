@@ -8,6 +8,7 @@ import socket
 import torch
 import torch.optim as optim
 import wandb
+import json
 import time
 
 
@@ -88,6 +89,12 @@ def main():
     val_loader = train_loader
 
     data_loaders = {'train': train_loader, 'val': val_loader}
+    print(args)
+    baseline_model_file = open('baseline_model.py', 'r').read()
+    open(path.join(wandb.run.dir, 'saved_model.py'), 'w').write(
+        baseline_model_file)
+    open(path.join(wandb.run.dir, 'args.json'),
+         'w').write(json.dumps(vars(args)))
 
     model = BaselineModel(feature_dim=args.feature_dim,
                           hidden_size=args.hidden_size, seq_length=args.seq_length, num_layers=args.num_layers)
@@ -176,9 +183,12 @@ def main():
         if val_loss < current_best_validation_loss:
             print('Saving new best model with val loss: ',
                   val_loss, '\tOld Loss was: ', current_best_validation_loss)
-            torch.save(model, path.join(wandb.run.dir, 'best-model.pt'))
+            torch.save(model.state_dict(), path.join(
+                wandb.run.dir, 'best-model.pt'))
             current_best_validation_loss = val_loss
-        torch.save(model, path.join(wandb.run.dir, 'latest-model.pt'))
+        torch.save(model.state_dict(), path.join(
+            wandb.run.dir, 'latest-model.pt'))
+
         if val_loss <= last_val_loss:
             early_stop_count = 0
         else:

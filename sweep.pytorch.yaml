@@ -15,18 +15,18 @@ metric:
 parameters:
   hidden_size:
     distribution: q_uniform
-    min: 50
-    max: 150
-    q: 30
+    min: 25
+    max: 100
+    q: 25
   num_layers:
     distribution: q_uniform
     min: 2
-    max: 10
+    max: 6
     q: 1
   seq_length:
     distribution: q_uniform
     min: 10
-    max: 110
+    max: 80
     q: 20
   gamma:
     distribution: q_uniform
@@ -36,13 +36,13 @@ parameters:
   step_size_up:
     distribution: q_uniform
     min: 10
-    max: 100
-    q: 10
+    max: 110
+    q: 20
   step_size_down:
     distribution: q_uniform
     min: 10
-    max: 100
-    q: 10
+    max: 110
+    q: 20
 
 early_terminate:
   type: hyperband

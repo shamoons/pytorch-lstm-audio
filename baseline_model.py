@@ -40,7 +40,7 @@ class BaselineModel(nn.Module):
 
         return out, hidden
 
-    def init_hidden_gru(self, batch_size):
+    def init_hidden_gru(self):
         hidden = torch.zeros(
             self.num_layers * 2, self.seq_length, self.hidden_size)
         return hidden
