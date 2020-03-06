@@ -28,6 +28,20 @@ def parse_args():
     parser.add_argument('--feature_dim', help='Feature dimension',
                         type=int, default=161)
 
+    parser.add_argument(
+        '--base_lr', help='Base learning rate', type=float, default=1e-6)
+    parser.add_argument('--max_lr', help='Base learning rate',
+                        type=float, default=1e-4)
+
+    parser.add_argument(
+        '--gamma', help='Gamma decay for learning rate scheduler', type=float, default=0.995)
+
+    parser.add_argument(
+        '--step_size_up', help='Amount of steps to upcycle the Cyclic Learning Rate', type=int, default=10)
+
+    parser.add_argument(
+        '--step_size_down', help='Amount of steps to downcycle the Cyclic Learning Rate', type=int, default=50)
+
     parser.add_argument('--epochs', help='Epochs to run',
                         type=int, default=250)
 
@@ -78,13 +92,13 @@ def main():
     model = BaselineModel(feature_dim=args.feature_dim,
                           hidden_size=args.feature_dim, seq_length=args.seq_length, num_layers=args.num_layers)
 
-    optimizer = optim.SGD(model.parameters(), lr=1e-4,
+    optimizer = optim.SGD(model.parameters(), lr=args.base_lr,
                           momentum=0.9, weight_decay=0.1)
     # scheduler = optim.lr_scheduler.ReduceLROnPlateau(
     #     optimizer, patience=args.epochs // 20, factor=0.5, verbose=True)
     # scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.99)
     scheduler = optim.lr_scheduler.CyclicLR(
-        optimizer, base_lr=1e-6, max_lr=1e-4, mode='exp_range', step_size_up=10, step_size_down=50, gamma=0.995)
+        optimizer, base_lr=args.base_lr, max_lr=args.max_lr, mode='exp_range', step_size_up=args.step_size_up, step_size_down=args.step_size_down, gamma=args.gamma)
 
     loss_fn = torch.nn.MSELoss(reduction='sum')
 
@@ -172,7 +186,7 @@ def main():
         last_val_loss = val_loss
 
         if early_stop_count == 50:
-            print('Early stopping because no val_loss improvement for 20 epochs')
+            print('Early stopping because no val_loss improvement for 50 epochs')
             break
 
 

@@ -1,0 +1,49 @@
+program: train_pytorch.py
+command:
+  - ${env}
+  - python
+  - ${program}
+  - "--epochs=1000"
+  # - "--audio_path=data/train-noise-subtractive-250ms-1"
+  - "--audio_path=data/dev-noise-subtractive-250ms-1"
+  - "--repeat_sample=100"
+method: bayes
+metric:
+  name: val_loss
+  goal: minimize
+parameters:
+  hidden_size:
+    distribution: q_uniform
+    min: 50
+    max: 150
+    q: 30
+  num_layers:
+    distribution: q_uniform
+    min: 2
+    max: 10
+    q: 1
+  seq_length:
+    distribution: q_uniform
+    min: 10
+    max: 110
+    q: 20
+  gamma:
+    distribution: q_uniform
+    min: 0.95
+    max: 0.999
+    q: 0.001
+  step_size_up:
+    distribution: q_uniform
+    min: 10
+    max: 100
+    q: 10
+  step_size_down:
+    distribution: q_uniform
+    min: 10
+    max: 100
+    q: 10
+
+early_terminate:
+  type: hyperband
+  max_iter: 27
+  s: 2
