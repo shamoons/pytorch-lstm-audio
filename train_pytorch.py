@@ -92,9 +92,9 @@ def main():
     # TODO: Set shuffle to True
     train_loader = torch.utils.data.DataLoader(
         train_set, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, **params)
-    val_loader = torch.utils.data.DataLoader(
-        val_set, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, **params)
-    # val_loader = train_loader
+    # val_loader = torch.utils.data.DataLoader(
+    #     val_set, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, **params)
+    val_loader = train_loader
 
     data_loaders = {'train': train_loader, 'val': val_loader}
 
