@@ -3,7 +3,7 @@ command:
   - ${env}
   - python
   - ${program}
-  - "--epochs=1000"
+  - "--epochs=500"
   # - "--audio_path=data/train-noise-subtractive-250ms-1"
   - "--audio_path=data/dev-noise-subtractive-250ms-1"
   - "--repeat_sample=100"

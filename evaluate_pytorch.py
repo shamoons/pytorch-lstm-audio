@@ -6,7 +6,7 @@ import torch
 import os
 from pathlib import Path
 import soundfile as sf
-from audio_util import load_audio_spectrogram, load_times_frequencies, create_audio_from_spectrogram
+from utils.audio_util import load_audio_spectrogram, load_times_frequencies, create_audio_from_spectrogram
 import numpy as np
 
 
