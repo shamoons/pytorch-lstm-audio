@@ -1,8 +1,6 @@
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
 from torch.nn import LSTM, GRU
-from sru import SRU
 
 
 class BaselineModel(nn.Module):
@@ -13,13 +11,8 @@ class BaselineModel(nn.Module):
         self.seq_length = seq_length
 
         self.linear = nn.Linear(hidden_size * 2, 161)
-        # self.linear = nn.Linear(64 * seq_length, 5)
         self.lstm = nn.LSTM(input_size=feature_dim,
                             hidden_size=hidden_size, num_layers=num_layers, dropout=0.1, bidirectional=True)
-        # self.lstm = SRU(input_size=feature_dim, hidden_size=hidden_size,
-        #                 num_layers=num_layers, dropout=0.1, bidirectional=True, use_tanh=True, nn_rnn_compatible_return=True)
-        # self.lstm = nn.GRU(input_size=feature_dim, hidden_size=feature_dim,
-        #                    num_layers=num_layers, dropout=0.1, bidirectional=True)
 
     def forward(self, x, hidden=None):
         lstm_out, hidden = self.lstm(x, hidden)

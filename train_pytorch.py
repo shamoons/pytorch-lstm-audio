@@ -69,8 +69,15 @@ def initialize():
 
 
 def main():
-    initialize()
     args = parse_args()
+
+    baseline_model_file = open('baseline_model.py', 'r').read()
+    open(path.join(wandb.run.dir, 'saved_model.py'), 'w').write(
+        baseline_model_file)
+    open(path.join(wandb.run.dir, 'args.json'),
+         'w').write(json.dumps(vars(args)))
+
+    initialize()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     params = {'num_workers': 1, 'pin_memory': True} if device == 'cuda' else {}
@@ -90,20 +97,12 @@ def main():
 
     data_loaders = {'train': train_loader, 'val': val_loader}
 
-    baseline_model_file = open('baseline_model.py', 'r').read()
-    open(path.join(wandb.run.dir, 'saved_model.py'), 'w').write(
-        baseline_model_file)
-    open(path.join(wandb.run.dir, 'args.json'),
-         'w').write(json.dumps(vars(args)))
-
     model = BaselineModel(feature_dim=args.feature_dim,
                           hidden_size=args.hidden_size, seq_length=args.seq_length, num_layers=args.num_layers)
 
     optimizer = optim.SGD(model.parameters(), lr=args.base_lr,
                           momentum=0.9, weight_decay=0.1)
-    # scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-    #     optimizer, patience=args.epochs // 20, factor=0.5, verbose=True)
-    # scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.99)
+
     scheduler = optim.lr_scheduler.CyclicLR(
         optimizer, base_lr=args.base_lr, max_lr=args.max_lr, mode='exp_range', step_size_up=args.step_size_up, step_size_down=args.step_size_down, gamma=args.gamma)
 

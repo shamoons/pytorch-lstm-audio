@@ -33,7 +33,10 @@ def parse_args():
 def main():
     args = parse_args()
 
+    model = torch.load(args.model_path, map_location=torch.device('cpu'))
+
     saved_args = json.loads(open('saved_models/args.json', 'r').read())
+    args.seq_length = saved_args['seq_length']
 
     sys.path.append(os.path.abspath(args.saved_model_path))
     model = importlib.import_module(
@@ -45,7 +48,6 @@ def main():
 
     model = model.float()
     model.eval()
-    print('model', model)
 
     filename_without_ext = Path(args.audio_path).stem
 
