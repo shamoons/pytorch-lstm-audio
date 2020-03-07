@@ -4,7 +4,7 @@ import math
 import tensorflow as tf
 import numpy as np
 import os.path as path
-from audio_util import load_audio_spectrogram, load_mel_spectrogram
+from utils.audio_util import load_audio_spectrogram, load_mel_spectrogram
 from tensorflow.keras.utils import Sequence
 
 

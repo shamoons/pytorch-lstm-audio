@@ -7,7 +7,7 @@ import librosa
 import glob
 import torch
 import numpy as np
-from audio_util import load_audio_spectrogram
+from utils.audio_util import load_audio_spectrogram
 
 parser = argparse.ArgumentParser()
 parser.add_argument(

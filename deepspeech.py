@@ -1,4 +1,4 @@
-from audio_util import load_audio_spectrogram
+from utils.audio_util import load_audio_spectrogram
 from submodules import DeepSpeech
 import torch
 import numpy as np

@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import argparse
-from audio_util import load_audio_spectrogram, load_times_frequencies
+from utils.audio_util import load_audio_spectrogram, load_times_frequencies
 from tensorflow.keras.models import load_model
 import numpy as np
 

@@ -5,7 +5,7 @@ import numpy as np
 import os.path as path
 from sklearn.preprocessing import normalize
 from torch.utils.data import Dataset
-from audio_util import load_audio_spectrogram
+from utils.audio_util import load_audio_spectrogram
 
 
 class AudioDataset(Dataset):

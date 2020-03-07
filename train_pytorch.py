@@ -70,14 +70,15 @@ def initialize():
 
 def main():
     args = parse_args()
+    initialize()
 
     baseline_model_file = open('baseline_model.py', 'r').read()
     open(path.join(wandb.run.dir, 'saved_model.py'), 'w').write(
         baseline_model_file)
     open(path.join(wandb.run.dir, 'args.json'),
          'w').write(json.dumps(vars(args)))
-
-    initialize()
+    wandb.save('saved_model.py')
+    wandb.save('args.json')
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     params = {'num_workers': 1, 'pin_memory': True} if device == 'cuda' else {}
@@ -93,7 +94,7 @@ def main():
         train_set, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, **params)
     # val_loader = torch.utils.data.DataLoader(
     #     val_set, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, **params)
-    val_loader = train_loader
+    # val_loader = train_loader
 
     data_loaders = {'train': train_loader, 'val': val_loader}
 
