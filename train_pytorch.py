@@ -89,7 +89,7 @@ def main():
     val_loader = train_loader
 
     data_loaders = {'train': train_loader, 'val': val_loader}
-    print(args)
+
     baseline_model_file = open('baseline_model.py', 'r').read()
     open(path.join(wandb.run.dir, 'saved_model.py'), 'w').write(
         baseline_model_file)

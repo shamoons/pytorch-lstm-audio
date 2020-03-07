@@ -26,18 +26,18 @@ parameters:
   seq_length:
     distribution: q_uniform
     min: 10
-    max: 80
-    q: 20
+    max: 50
+    q: 10
   gamma:
     distribution: q_uniform
-    min: 0.95
+    min: 0.99
     max: 0.999
     q: 0.001
   step_size_up:
     distribution: q_uniform
     min: 10
-    max: 110
-    q: 20
+    max: 50
+    q: 10
   step_size_down:
     distribution: q_uniform
     min: 10
