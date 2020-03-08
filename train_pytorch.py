@@ -19,7 +19,7 @@ def parse_args():
                         default='data/dev-noise-subtractive-250ms-1')
 
     parser.add_argument(
-        "--hidden_size", help="Hidden size for the LSTM Layers", type=int, default=128)
+        "--hidden_size", help="Hidden size for the LSTM Layers", type=int, default=20)
 
     parser.add_argument(
         "--num_layers", help="Number of layers in the model", type=int, default=2)
