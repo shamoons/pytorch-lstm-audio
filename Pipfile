@@ -26,6 +26,7 @@ sru = "*"
 python-levenshtein = "*"
 visdom = "*"
 tqdm = "*"
+ctcdecode = {editable = true,git = "https://github.com/parlance/ctcdecode.git"}
 
 [requires]
 python_version = "3.6"
