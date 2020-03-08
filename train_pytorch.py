@@ -89,12 +89,10 @@ def main():
     val_set = AudioDataset(
         args.audio_path, test_set=True, seq_length=args.seq_length, feature_dim=args.feature_dim)
 
-    # TODO: Set shuffle to True
     train_loader = torch.utils.data.DataLoader(
-        train_set, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, **params)
-    # val_loader = torch.utils.data.DataLoader(
-    #     val_set, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, **params)
-    val_loader = train_loader
+        train_set, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, **params)
+    val_loader = torch.utils.data.DataLoader(
+        val_set, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, **params)
 
     data_loaders = {'train': train_loader, 'val': val_loader}
 
