@@ -1,7 +1,6 @@
 from audio_dataset import AudioDataset
 from barbar import Bar
 from baseline_model import BaselineModel
-from torchsummary import summary
 import argparse
 import os.path as path
 import socket
@@ -30,7 +29,7 @@ def parse_args():
                         type=int, default=161)
 
     parser.add_argument(
-        '--base_lr', help='Base learning rate', type=float, default=1e-6)
+        '--base_lr', help='Base learning rate', type=float, default=1e-4)
     parser.add_argument('--max_lr', help='Base learning rate',
                         type=float, default=1e-4)
 
@@ -97,13 +96,16 @@ def main():
     data_loaders = {'train': train_loader, 'val': val_loader}
 
     model = BaselineModel(feature_dim=args.feature_dim,
-                          hidden_size=args.hidden_size, seq_length=args.seq_length, num_layers=args.num_layers)
+                          hidden_size=args.hidden_size, seq_length=args.seq_length, num_layers=args.num_layers, dropout=0.5)
 
-    optimizer = optim.SGD(model.parameters(), lr=args.base_lr,
-                          momentum=0.9, weight_decay=0.1)
+    # optimizer = optim.SGD(model.parameters(), lr=args.base_lr,
+    #                       momentum=0.9, weight_decay=0.1)
 
-    scheduler = optim.lr_scheduler.CyclicLR(
-        optimizer, base_lr=args.base_lr, max_lr=args.max_lr, mode='exp_range', step_size_up=args.step_size_up, step_size_down=args.step_size_down, gamma=args.gamma)
+    optimizer = optim.Adam(
+        model.parameters(), lr=args.base_lr, weight_decay=0.1)
+
+    # scheduler = optim.lr_scheduler.CyclicLR(
+    #     optimizer, base_lr=args.base_lr, max_lr=args.max_lr, mode='exp_range', step_size_up=args.step_size_up, step_size_down=args.step_size_down, gamma=args.gamma)
 
     loss_fn = torch.nn.MSELoss(reduction='sum')
 
@@ -167,13 +169,13 @@ def main():
         time_per_epoch = int(time.time() - start_time)
         train_loss = train_running_loss / len(data_loaders['train'])
         val_loss = val_running_loss / len(data_loaders['val'])
-        scheduler.step()
+        # scheduler.step()
         wandb.log({
             "train_loss": train_loss,
             'val_loss': val_loss,
             'epoch': epoch,
             'sec_per_epoch': time_per_epoch,
-            'lr': scheduler.get_last_lr()[0]
+            # 'lr': scheduler.get_last_lr()[0]
         })
         print('\tEpoch: {}\tLoss: {:.4f}\tVal Loss: {:.4f}\tTime per Epoch: {}s\n'.format(
             epoch, train_loss, val_loss, time_per_epoch))

@@ -1,12 +1,49 @@
+import os
+import json
 from utils.audio_util import load_audio_spectrogram
 from submodules import DeepSpeech
+from submodules import GreedyDecoder
 import torch
 import numpy as np
 
+model_path = 'data/pretrained_models/librispeech_pretrained_v2-2.pth'
+lm_path = 'data/saved_models/3-gram.pruned.3e-7.arpa'
+
+
+def decode_results(decoded_output, decoded_offsets):
+    decoder = 'greedy'
+    results = {
+        "output": [],
+        "_meta": {
+            "acoustic_model": {
+                "name": os.path.basename(model_path)
+            },
+            "language_model": {
+                "name": os.path.basename(lm_path) if lm_path else None,
+            },
+            "decoder": {
+                "lm": lm_path is not None,
+                "alpha": 1.97,
+                "beta": 4.36,
+                "type": decoder,
+            }
+        }
+    }
+
+    for b in range(len(decoded_output)):
+        for pi in range(min(1, len(decoded_output[b]))):
+            # for pi in range(min(args.top_paths, len(decoded_output[b]))):
+            result = {'transcription': decoded_output[b][pi]}
+            # if args.offsets:
+            #     result['offsets'] = decoded_offsets[b][pi].tolist()
+            results['output'].append(result)
+    return results
+
 
 def main():
-    model = DeepSpeech.load_model(
-        'data/pretrained_models/librispeech_pretrained_v2-2.pth')
+    model = DeepSpeech.load_model(model_path)
+    decoder = GreedyDecoder(
+        model.labels, blank_index=model.labels.index('_'))
 
     model.eval()
     model = model.to('cpu')
@@ -19,8 +56,9 @@ def main():
     # print(model)
     # print(model.audio_conf)
 
-    spect, _ = load_audio_spectrogram(
-        'data/dev-noise-subtractive-250ms-1/1272/135031/1272-135031-0023.flac')
+    spect, _, _, _, _ = load_audio_spectrogram(
+        'data/dev-clean/1462/170142/1462-170142-0036.flac')
+    spect = spect.permute(1, 0)
 
     print('spect', spect.shape)
 
@@ -30,7 +68,11 @@ def main():
     print('input_sizes', input_sizes, input_sizes.shape)
     out, output_sizes = model(spect, input_sizes)
 
-    print(out, output_sizes)
+    decoded_output, decoded_offsets = decoder.decode(out, output_sizes)
+
+    # print(out, output_sizes)
+    print(decoded_output, decoded_offsets)
+    print(json.dumps(decode_results(decoded_output, decoded_offsets)))
 
 
 if __name__ == '__main__':

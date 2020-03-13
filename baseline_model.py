@@ -4,15 +4,17 @@ from torch.nn import LSTM, GRU
 
 
 class BaselineModel(nn.Module):
-    def __init__(self, feature_dim=5, hidden_size=5, num_layers=2, seq_length=1, dropout=0.1):
+    def __init__(self, feature_dim=5, hidden_size=5, num_layers=2, seq_length=1, dropout=0.25):
         super(BaselineModel, self).__init__()
         self.num_layers = num_layers
         self.hidden_size = hidden_size
         self.seq_length = seq_length
 
-        self.linear = nn.Linear(hidden_size * 2, 161)
+        intermediate_size = ((hidden_size * 2) + 161) // 2
+        self.linear1 = nn.Linear(hidden_size * 2, intermediate_size)
+        self.linear2 = nn.Linear(intermediate_size, 161)
         self.lstm = nn.LSTM(input_size=feature_dim,
-                            hidden_size=hidden_size, num_layers=num_layers, dropout=0.1, bidirectional=True)
+                            hidden_size=hidden_size, num_layers=num_layers, dropout=dropout, bidirectional=True)
 
     def forward(self, x, hidden=None):
         lstm_out, hidden = self.lstm(x, hidden)
@@ -20,14 +22,11 @@ class BaselineModel(nn.Module):
 
         flattened_out = lstm_out.view(-1, self.hidden_size * 2)
 
-        # lstm_out = (lstm_out[:, :, :self.hidden_size] +
-        #             lstm_out[:, :, self.hidden_size:])
-        # print('\nlstm_out', torch.min(lstm_out), torch.max(lstm_out))
-        out = self.linear(flattened_out)
-        # print('post linear out', torch.min(out), torch.max(out))
-        # out = torch.nn.SELU()(lstm_out)
+        out = self.linear1(flattened_out)
+
         out = torch.nn.functional.relu(out)
-        # print('activation out', torch.min(out), torch.max(out))
+        out = self.linear2(out)
+        out = torch.nn.functional.relu(out)
 
         out = out.view(batch_size, self.seq_length, -1)
 
