@@ -34,7 +34,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 #     return log_spectrogram
 
 
-def load_audio_spectrogram(audio_path):
+def load_audio_spectrogram(audio_path, transpose=True, normalize_spect=False):
 
     sample_rate = librosa.get_samplerate(audio_path)
     samples, sample_rate = librosa.core.load(audio_path, sr=sample_rate)
@@ -47,14 +47,22 @@ def load_audio_spectrogram(audio_path):
                      win_length=n_fft, window=scipy.signal.hamming)
 
     spect, _ = librosa.magphase(D)
-    print(spect.shape, spect.mean())
     spect = np.log1p(spect)
+    print('After LOG1p: ', spect.shape, spect.mean())
 
-    spect = np.swapaxes(spect, 0, 1)
+    if transpose:
+        spect = np.swapaxes(spect, 0, 1)
+    spect = torch.FloatTensor(spect)
+    print('After FloatTensor: ', spect.shape, spect.mean())
 
-    spect = torch.FloatTensor(spect).contiguous()
+    if normalize_spect:
+        mean = spect.mean()
+        std = spect.std()
+        spect.add_(-mean)
+        spect.div_(std)
+    print('After normalize: ', spect.shape, spect.mean())
 
-    return spect, len(samples), sample_rate, n_fft, hop_length
+    return spect.contiguous(), len(samples), sample_rate, n_fft, hop_length
 
 # def load_audio_spectrogram_scipy(audio_path):
 #     samples, sample_rate = sf.read(audio_path)

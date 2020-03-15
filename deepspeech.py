@@ -40,7 +40,7 @@ def decode_results(decoded_output, decoded_offsets):
     return results
 
 
-def main():
+def transcribe():
     audio_path = 'data/dev-clean/1462/170142/1462-170142-0001.flac'
     model = DeepSpeech.load_model(model_path)
     decoder = GreedyDecoder(
@@ -57,22 +57,22 @@ def main():
     # print(model)
     # print(model.audio_conf)
 
-    spect, _, _, _, _ = load_audio_spectrogram(audio_path)
-    exit()
-    spect = spect.permute(1, 0)
+    spect, _, _, _, _ = load_audio_spectrogram(
+        audio_path, transpose=False, normalize_spect=True)
 
     spect = spect.view(1, 1, spect.size(0), spect.size(1))
+    print(spect.size(), spect.mean(), spect.std())
     input_sizes = torch.IntTensor([spect.size(3)]).int()
-    print(spect.size(), spect.mean())
-    print('input_sizes', input_sizes, input_sizes.shape)
+
     out, output_sizes = model(spect, input_sizes)
 
     decoded_output, decoded_offsets = decoder.decode(out, output_sizes)
 
-    # print(out, output_sizes)
-    print(decoded_output, decoded_offsets)
     print(json.dumps(decode_results(decoded_output, decoded_offsets)))
 
 
+def train():
+
+
 if __name__ == '__main__':
-    main()
+    transcribe()
