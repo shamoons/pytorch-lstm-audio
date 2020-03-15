@@ -24,7 +24,7 @@ def parse_args():
         "--num_layers", help="Number of layers in the model", type=int, default=2)
 
     parser.add_argument('--seq_length', help='Length of sequences of the spectrogram',
-                        type=int, default=20)
+                        type=int, default=32)
     parser.add_argument('--feature_dim', help='Feature dimension',
                         type=int, default=161)
 
@@ -80,7 +80,7 @@ def main():
     wandb.save('args.json')
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    params = {'num_workers': 1, 'pin_memory': True} if device == 'cuda' else {}
+    params = {'pin_memory': True} if device == 'cuda' else {}
 
     train_set = AudioDataset(
         args.audio_path, train_set=True, seq_length=args.seq_length, feature_dim=args.feature_dim, repeat_sample=args.repeat_sample)
@@ -95,8 +95,10 @@ def main():
 
     data_loaders = {'train': train_loader, 'val': val_loader}
 
-    model = BaselineModel(feature_dim=args.feature_dim,
-                          hidden_size=args.hidden_size, seq_length=args.seq_length, num_layers=args.num_layers, dropout=0.5)
+    # model = BaselineModel(feature_dim=args.feature_dim,
+    #                       hidden_size=args.hidden_size, seq_length=args.seq_length, num_layers=args.num_layers, dropout=0.5)
+    model = BaselineModel(seq_length=args.seq_length,
+                          feature_dim=args.feature_dim)
 
     # optimizer = optim.SGD(model.parameters(), lr=args.base_lr,
     #                       momentum=0.9, weight_decay=0.1)
@@ -126,21 +128,23 @@ def main():
         for _, data in enumerate(Bar(data_loaders['train'])):
             # Keeping the hidden re-init here because each iteration is a batch of sequences
             # and batches are unrelated
-            hidden = model.init_hidden(args.batch_size)
+            # hidden = model.init_hidden(args.batch_size)
 
             inputs = data[0]
             outputs = data[1]
+            outputs = inputs
             if(torch.cuda.is_available()):
                 inputs = inputs.cuda()
                 outputs = outputs.cuda()
-                if type(hidden) is tuple:
-                    hidden = tuple(map(lambda h: h.cuda(), hidden))
-                else:
-                    hidden = hidden.cuda()
+                # if type(hidden) is tuple:
+                #     hidden = tuple(map(lambda h: h.cuda(), hidden))
+                # else:
+                #     hidden = hidden.cuda()
 
             optimizer.zero_grad()
 
-            pred, hidden = model(inputs, hidden)
+            # pred, hidden = model(inputs, hidden)
+            pred = model(inputs)
 
             loss = loss_fn(pred, outputs)
 
@@ -156,12 +160,13 @@ def main():
         for _, data in enumerate(data_loaders['val']):
             inputs = data[0]
             outputs = data[1]
+            outputs = inputs
 
             if(torch.cuda.is_available()):
                 inputs = inputs.cuda()
                 outputs = outputs.cuda()
 
-            pred, _ = model(inputs)
+            pred = model(inputs)
 
             loss = loss_fn(pred, outputs)
             val_running_loss += loss.data
@@ -169,13 +174,12 @@ def main():
         time_per_epoch = int(time.time() - start_time)
         train_loss = train_running_loss / len(data_loaders['train'])
         val_loss = val_running_loss / len(data_loaders['val'])
-        # scheduler.step()
+
         wandb.log({
             "train_loss": train_loss,
             'val_loss': val_loss,
             'epoch': epoch,
             'sec_per_epoch': time_per_epoch,
-            # 'lr': scheduler.get_last_lr()[0]
         })
         print('\tEpoch: {}\tLoss: {:.4f}\tVal Loss: {:.4f}\tTime per Epoch: {}s\n'.format(
             epoch, train_loss, val_loss, time_per_epoch))
