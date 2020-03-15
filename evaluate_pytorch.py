@@ -41,7 +41,10 @@ def main():
     sys.path.append(os.path.abspath(args.saved_model_path))
     model = importlib.import_module(
         'saved_model').BaselineModel(feature_dim=saved_args['feature_dim'],
-                                     hidden_size=saved_args['hidden_size'], seq_length=saved_args['seq_length'], num_layers=saved_args['num_layers'])
+                                     seq_length=saved_args['seq_length'])
+    # model = importlib.import_module(
+    #     'saved_model').BaselineModel(feature_dim=saved_args['feature_dim'],
+    #                                  hidden_size=saved_args['hidden_size'], seq_length=saved_args['seq_length'], num_layers=saved_args['num_layers'])
     state_dict = torch.load(args.model_path, map_location='cpu')
 
     model.load_state_dict(state_dict)
@@ -69,7 +72,7 @@ def main():
 
     tensor = torch.from_numpy(reshaped_input_spectrogram).float()
 
-    output, _ = model(tensor)
+    output = model(tensor)
     np_output = output.detach().numpy()
 
     output = np_output.reshape(timesteps + remainder, 161)
