@@ -40,15 +40,18 @@ def load_audio_spectrogram(audio_path):
     samples, sample_rate = librosa.core.load(audio_path, sr=sample_rate)
 
     n_fft, hop_length = get_n_fft_overlap(sample_rate)
-
+    print('n_fft: {}\thop_length: {}\twin_length: {}\twindow: {}'.format(
+        n_fft, hop_length, n_fft, scipy.signal.hamming))
+    print(samples.shape, samples.mean())
     D = librosa.stft(samples, n_fft=n_fft, hop_length=hop_length,
                      win_length=n_fft, window=scipy.signal.hamming)
 
     spect, _ = librosa.magphase(D)
+    print(spect.shape, spect.mean())
+    spect = np.log1p(spect)
 
     spect = np.swapaxes(spect, 0, 1)
 
-    spect = np.log1p(spect)
     spect = torch.FloatTensor(spect).contiguous()
 
     return spect, len(samples), sample_rate, n_fft, hop_length

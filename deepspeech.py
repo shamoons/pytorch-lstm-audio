@@ -41,6 +41,7 @@ def decode_results(decoded_output, decoded_offsets):
 
 
 def main():
+    audio_path = 'data/dev-clean/1462/170142/1462-170142-0001.flac'
     model = DeepSpeech.load_model(model_path)
     decoder = GreedyDecoder(
         model.labels, blank_index=model.labels.index('_'))
@@ -56,15 +57,13 @@ def main():
     # print(model)
     # print(model.audio_conf)
 
-    spect, _, _, _, _ = load_audio_spectrogram(
-        'data/dev-clean/1462/170142/1462-170142-0036.flac')
+    spect, _, _, _, _ = load_audio_spectrogram(audio_path)
+    exit()
     spect = spect.permute(1, 0)
-
-    print('spect', spect.shape)
 
     spect = spect.view(1, 1, spect.size(0), spect.size(1))
     input_sizes = torch.IntTensor([spect.size(3)]).int()
-    print('spect.view', spect.shape)
+    print(spect.size(), spect.mean())
     print('input_sizes', input_sizes, input_sizes.shape)
     out, output_sizes = model(spect, input_sizes)
 
