@@ -40,27 +40,27 @@ def load_audio_spectrogram(audio_path, transpose=True, normalize_spect=False):
     samples, sample_rate = librosa.core.load(audio_path, sr=sample_rate)
 
     n_fft, hop_length = get_n_fft_overlap(sample_rate)
-    print('n_fft: {}\thop_length: {}\twin_length: {}\twindow: {}'.format(
-        n_fft, hop_length, n_fft, scipy.signal.hamming))
-    print(samples.shape, samples.mean())
+    # print('n_fft: {}\thop_length: {}\twin_length: {}\twindow: {}'.format(
+    #     n_fft, hop_length, n_fft, scipy.signal.hamming))
+    # print(samples.shape, samples.mean())
     D = librosa.stft(samples, n_fft=n_fft, hop_length=hop_length,
                      win_length=n_fft, window=scipy.signal.hamming)
 
     spect, _ = librosa.magphase(D)
     spect = np.log1p(spect)
-    print('After LOG1p: ', spect.shape, spect.mean())
+    # print('After LOG1p: ', spect.shape, spect.mean())
 
     if transpose:
         spect = np.swapaxes(spect, 0, 1)
     spect = torch.FloatTensor(spect)
-    print('After FloatTensor: ', spect.shape, spect.mean())
+    # print('After FloatTensor: ', spect.shape, spect.mean())
 
     if normalize_spect:
         mean = spect.mean()
         std = spect.std()
         spect.add_(-mean)
         spect.div_(std)
-    print('After normalize: ', spect.shape, spect.mean())
+    # print('After normalize: ', spect.shape, spect.mean())
 
     return spect.contiguous(), len(samples), sample_rate, n_fft, hop_length
 

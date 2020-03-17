@@ -2,9 +2,10 @@ import torch
 
 
 class BaselineModel(torch.nn.Module):
-    def __init__(self, feature_dim=1, seq_length=32, kernel_sizes=(11, 9), strides=(1, 1)):
+    def __init__(self, feature_dim=1, seq_length=32, kernel_sizes=(11, 9), strides=(1, 1), make_4d=False):
         super(BaselineModel, self).__init__()
         self.seq_length = seq_length
+        self.make_4d = make_4d
 
         self.conv1 = torch.nn.Conv1d(
             in_channels=feature_dim,
@@ -35,18 +36,24 @@ class BaselineModel(torch.nn.Module):
         #     padding=kernel_sizes[1] // 2)
 
     def forward(self, x):
+        if self.make_4d:
+            x = x.view(x.size(0), x.size(3), x.size(2))
+
         # print('x', x.size())
         inp = x.transpose(1, 2)
         # print('inp', inp.size())
 
         out = self.conv1(inp)
-        out = torch.nn.functional.relu(out)
+        out = torch.tanh(out)
         # print('out1', out.size())
 
         out = self.conv2(out)
-        out = torch.nn.functional.relu(out)
+        out = torch.tanh(out)
         out = out.transpose(1, 2)
-        # print('out2', out.size())
+        # print('out', out.size())
+        if self.make_4d:
+            out = out.reshape(out.size(0), 1, out.size(2), out.size(1))
+            # print('make4d out', out.size())
 
         return out
 
@@ -66,6 +73,7 @@ class BaselineModelLSTM(torch.nn.Module):
                                   bidirectional=True)
 
     def forward(self, x, hidden=None):
+
         lstm_out, hidden = self.lstm(x, hidden)
         batch_size = lstm_out.size(0)
 

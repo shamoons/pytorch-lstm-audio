@@ -71,8 +71,5 @@ def transcribe():
     print(json.dumps(decode_results(decoded_output, decoded_offsets)))
 
 
-def train():
-
-
 if __name__ == '__main__':
     transcribe()
