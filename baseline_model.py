@@ -2,38 +2,47 @@ import torch
 
 
 class BaselineModel(torch.nn.Module):
-    def __init__(self, feature_dim=1, seq_length=32, kernel_sizes=(11, 9), strides=(1, 1), make_4d=False):
+    def __init__(self, feature_dim=1, kernel_sizes=(11, 9, 7, 5, 3), make_4d=False, dropout=0.01):
         super(BaselineModel, self).__init__()
-        self.seq_length = seq_length
         self.make_4d = make_4d
+
+        self.dropout = torch.nn.Dropout(p=0.25)
 
         self.conv1 = torch.nn.Conv1d(
             in_channels=feature_dim,
             out_channels=feature_dim,
             kernel_size=kernel_sizes[0],
-            stride=strides[0],
+            stride=1,
             padding=kernel_sizes[0] // 2)
 
         self.conv2 = torch.nn.Conv1d(
             in_channels=feature_dim,
             out_channels=feature_dim,
             kernel_size=kernel_sizes[1],
-            stride=strides[1],
+            stride=1,
             padding=kernel_sizes[1] // 2)
 
-        # self.conv1 = torch.nn.Conv1d(
-        #     in_channels=feature_dim,
-        #     out_channels=feature_dim,
-        #     kernel_size=kernel_sizes[0],
-        #     stride=strides[0],
-        #     padding=kernel_sizes[0] // 2)
+        self.conv3 = torch.nn.Conv1d(
+            in_channels=feature_dim,
+            out_channels=feature_dim,
+            kernel_size=kernel_sizes[2],
+            stride=1,
+            padding=kernel_sizes[2] // 2)
 
-        # self.conv2 = torch.nn.Conv1d(
-        #     in_channels=feature_dim,
-        #     out_channels=feature_dim,
-        #     kernel_size=kernel_sizes[1],
-        #     stride=strides[1],
-        #     padding=kernel_sizes[1] // 2)
+        self.conv4 = torch.nn.Conv1d(
+            in_channels=feature_dim,
+            out_channels=feature_dim,
+            kernel_size=kernel_sizes[3],
+            stride=1,
+            padding=kernel_sizes[3] // 2)
+
+        self.conv5 = torch.nn.Conv1d(
+            in_channels=feature_dim,
+            out_channels=feature_dim,
+            kernel_size=kernel_sizes[4],
+            stride=1,
+            padding=kernel_sizes[4] // 2)
+
 
     def forward(self, x):
         if self.make_4d:
@@ -41,19 +50,31 @@ class BaselineModel(torch.nn.Module):
 
         # print('x', x.size())
         inp = x.transpose(1, 2)
-        # print('inp', inp.size())
 
         out = self.conv1(inp)
         out = torch.tanh(out)
-        # print('out1', out.size())
+        out = self.dropout(out)
 
         out = self.conv2(out)
         out = torch.tanh(out)
+        out = self.dropout(out)
+
+        out = self.conv3(out)
+        out = torch.tanh(out)
+        out = self.dropout(out)
+
+        out = self.conv4(out)
+        out = torch.tanh(out)
+        out = self.dropout(out)
+
+        out = self.conv5(out)
+        out = torch.tanh(out)
+        out = self.dropout(out)
+        
         out = out.transpose(1, 2)
-        # print('out', out.size())
         if self.make_4d:
             out = out.reshape(out.size(0), 1, out.size(2), out.size(1))
-            # print('make4d out', out.size())
+
 
         return out
 

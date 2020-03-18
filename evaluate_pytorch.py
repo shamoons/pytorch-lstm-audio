@@ -40,8 +40,7 @@ def main():
 
     sys.path.append(os.path.abspath(args.saved_model_path))
     model = importlib.import_module(
-        'saved_model').BaselineModel(feature_dim=saved_args['feature_dim'],
-                                     seq_length=saved_args['seq_length'])
+        'saved_model').BaselineModel(feature_dim=saved_args['feature_dim'])
     # model = importlib.import_module(
     #     'saved_model').BaselineModel(feature_dim=saved_args['feature_dim'],
     #                                  hidden_size=saved_args['hidden_size'], seq_length=saved_args['seq_length'], num_layers=saved_args['num_layers'])

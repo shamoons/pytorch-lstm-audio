@@ -29,12 +29,7 @@ def parse_args():
                         type=int, default=161)
 
     parser.add_argument(
-        '--base_lr', help='Base learning rate', type=float, default=1e-4)
-    parser.add_argument('--max_lr', help='Base learning rate',
-                        type=float, default=1e-4)
-
-    parser.add_argument(
-        '--gamma', help='Gamma decay for learning rate scheduler', type=float, default=0.995)
+        '--base_lr', help='Base learning rate', type=float, default=4e-4)
 
     parser.add_argument(
         '--step_size_up', help='Amount of steps to upcycle the Cyclic Learning Rate', type=int, default=10)
@@ -53,6 +48,8 @@ def parse_args():
 
     parser.add_argument('--num_workers', help='Number of workers for data_loaders',
                         type=int, default=10)
+
+    parser.add_argument('--continue-from', default='',help='Continue from checkpoint model')
 
     args = parser.parse_args()
 
@@ -83,10 +80,10 @@ def main():
     params = {'pin_memory': True} if device == 'cuda' else {}
 
     train_set = AudioDataset(
-        args.audio_path, train_set=True, seq_length=args.seq_length, feature_dim=args.feature_dim, repeat_sample=args.repeat_sample)
+        args.audio_path, train_set=True, seq_length=args.seq_length, feature_dim=args.feature_dim, repeat_sample=args.repeat_sample, normalize=False)
 
     val_set = AudioDataset(
-        args.audio_path, test_set=True, seq_length=args.seq_length, feature_dim=args.feature_dim)
+        args.audio_path, test_set=True, seq_length=args.seq_length, feature_dim=args.feature_dim, normalize=False)
 
     train_loader = torch.utils.data.DataLoader(
         train_set, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, **params)
@@ -97,19 +94,23 @@ def main():
 
     # model = BaselineModel(feature_dim=args.feature_dim,
     #                       hidden_size=args.hidden_size, seq_length=args.seq_length, num_layers=args.num_layers, dropout=0.5)
-    model = BaselineModel(seq_length=args.seq_length,
-                          feature_dim=args.feature_dim)
+    model = BaselineModel(feature_dim=args.feature_dim)
+    if args.continue_from:
+        state_dict = torch.load(args.continue_from, map_location=device)
+        model.load_state_dict(state_dict)
+        print('Loading saved model to continue from: {}'.format(args.continue_from))
 
     # optimizer = optim.SGD(model.parameters(), lr=args.base_lr,
     #                       momentum=0.9, weight_decay=0.1)
 
     optimizer = optim.Adam(
-        model.parameters(), lr=args.base_lr, weight_decay=0.1)
+        model.parameters(), lr=args.base_lr, weight_decay=0.001)
 
     # scheduler = optim.lr_scheduler.CyclicLR(
     #     optimizer, base_lr=args.base_lr, max_lr=args.max_lr, mode='exp_range', step_size_up=args.step_size_up, step_size_down=args.step_size_down, gamma=args.gamma)
 
-    loss_fn = torch.nn.MSELoss(reduction='sum')
+    loss_fn = torch.nn.L1Loss(reduction='sum')
+    # loss_fn = torch.nn.MSELoss(reduction='sum')
 
     wandb.watch(model)
 
@@ -131,6 +132,7 @@ def main():
             # hidden = model.init_hidden(args.batch_size)
 
             inputs = data[0]
+            # print('inputs.size', inputs.size())
             outputs = data[1]
             outputs = inputs
             if(torch.cuda.is_available()):
@@ -145,10 +147,11 @@ def main():
 
             # pred, hidden = model(inputs, hidden)
             pred = model(inputs)
+            # print('\noutputs.mean(): {}\tpred.mean(): {}'.format(outputs.mean(),pred.mean()))
 
             loss = loss_fn(pred, outputs)
 
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            # torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
 
             loss.backward()
             optimizer.step()
