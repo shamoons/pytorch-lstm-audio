@@ -29,7 +29,7 @@ def parse_args():
                         type=int, default=161)
 
     parser.add_argument(
-        '--base_lr', help='Base learning rate', type=float, default=4e-4)
+        '--base_lr', help='Base learning rate', type=float, default=1e-3)
 
     parser.add_argument(
         '--step_size_up', help='Amount of steps to upcycle the Cyclic Learning Rate', type=int, default=10)
@@ -109,7 +109,8 @@ def main():
     # scheduler = optim.lr_scheduler.CyclicLR(
     #     optimizer, base_lr=args.base_lr, max_lr=args.max_lr, mode='exp_range', step_size_up=args.step_size_up, step_size_down=args.step_size_down, gamma=args.gamma)
 
-    loss_fn = torch.nn.MSELoss(reduction='mean')
+    # loss_fn = torch.nn.MSELoss(reduction='mean')
+    loss_fn = torch.nn.L1Loss(reduction='mean')
 
     wandb.watch(model)
 
