@@ -59,7 +59,7 @@ def parse_args():
 def initialize():
     torch.set_default_tensor_type('torch.FloatTensor')
     wandb_tags = [socket.gethostname()]
-    wandb.init(project="speech-reconstruction-with-deepspeech2",
+    wandb.init(project="speech-reconstruction-baseline",
                tags=','.join(wandb_tags))
     wandb.save('*.pt')
 
@@ -94,7 +94,7 @@ def main():
 
     # model = BaselineModel(feature_dim=args.feature_dim,
     #                       hidden_size=args.hidden_size, seq_length=args.seq_length, num_layers=args.num_layers, dropout=0.5)
-    model = BaselineModel(feature_dim=args.feature_dim)
+    model = BaselineModel(feature_dim=args.feature_dim, initialize_weights=False)
     if args.continue_from:
         state_dict = torch.load(args.continue_from, map_location=device)
         model.load_state_dict(state_dict)
@@ -109,12 +109,11 @@ def main():
     # scheduler = optim.lr_scheduler.CyclicLR(
     #     optimizer, base_lr=args.base_lr, max_lr=args.max_lr, mode='exp_range', step_size_up=args.step_size_up, step_size_down=args.step_size_down, gamma=args.gamma)
 
-    loss_fn = torch.nn.L1Loss(reduction='sum')
-    # loss_fn = torch.nn.MSELoss(reduction='sum')
+    loss_fn = torch.nn.MSELoss(reduction='mean')
 
     wandb.watch(model)
 
-    current_best_validation_loss = 10000
+    current_best_validation_loss = 1
     model = model.float()
 
     if(torch.cuda.is_available()):
@@ -146,8 +145,9 @@ def main():
             optimizer.zero_grad()
 
             # pred, hidden = model(inputs, hidden)
+            # print('\ninput\tMean: {:.4f}\tSTD: {:.4f}\tMin: {:.4f}\tMax: {:.4f}'.format(torch.mean(inputs), torch.std(inputs), torch.min(inputs), torch.max(inputs)))
             pred = model(inputs)
-            # print('\noutputs.mean(): {}\tpred.mean(): {}'.format(outputs.mean(),pred.mean()))
+            # print('\npred\tMean: {:.4f}\tSTD: {:.4f}\tMin: {:.4f}\tMax: {:.4f}'.format(torch.mean(pred), torch.std(pred), torch.min(pred), torch.max(pred)))
 
             loss = loss_fn(pred, outputs)
 

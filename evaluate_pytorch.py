@@ -55,8 +55,7 @@ def main():
 
     input_spectrogram, samples_length, sample_rate, n_fft, hop_length = load_audio_spectrogram(
         args.audio_path)
-    print('input_spectrogram', torch.mean(input_spectrogram), torch.std(input_spectrogram), torch.min(
-        input_spectrogram), torch.max(input_spectrogram))
+    print('input_spectrogram\tMean: {:.4f}\tSTD: {:.4f}\tMin: {:.4f}\tMax: {:.4f}'.format(torch.mean(input_spectrogram), torch.std(input_spectrogram), torch.min(input_spectrogram), torch.max(input_spectrogram)))
 
     timesteps = input_spectrogram.shape[0]
 
@@ -78,10 +77,9 @@ def main():
 
     output = output[: -remainder, :]
 
-    print('output', np.mean(output), np.std(
-        output), np.min(output), np.max(output))
+
     output = np.expm1(output)
-    print('expm1 output', np.mean(output), np.min(output), np.max(output))
+    print('expm1 output\t\tMean: {:.4f}\tSTD: {:.4f}\tMin: {:.4f}\tMax: {:.4f}'.format(np.mean(output), np.std(output), np.min(output), np.max(output)))
 
     audio = create_audio_from_spectrogram(
         output, n_fft=n_fft, hop_length=hop_length, length=samples_length)
