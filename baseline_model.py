@@ -8,68 +8,79 @@ class BaselineModel(torch.nn.Module):
 
         self.dropout = torch.nn.Dropout(p=0.25)
 
+
         self.conv1 = torch.nn.Conv1d(
             in_channels=feature_dim,
             out_channels=feature_dim,
             kernel_size=kernel_sizes[0],
-            stride=1,
-            padding=kernel_sizes[0] // 2)
+            stride=1
+        )
+            # padding=kernel_sizes[0] // 2)
 
         self.conv2 = torch.nn.Conv1d(
             in_channels=feature_dim,
             out_channels=feature_dim,
             kernel_size=kernel_sizes[1],
-            stride=1,
-            padding=kernel_sizes[1] // 2)
+            stride=1
+        )
+            # padding=kernel_sizes[1] // 2)
 
         self.conv3 = torch.nn.Conv1d(
             in_channels=feature_dim,
             out_channels=feature_dim,
             kernel_size=kernel_sizes[2],
-            stride=1,
-            padding=kernel_sizes[2] // 2)
+            stride=1
+        )
+            # padding=kernel_sizes[2] // 2)
 
         self.conv4 = torch.nn.Conv1d(
             in_channels=feature_dim,
             out_channels=feature_dim,
             kernel_size=kernel_sizes[3],
             stride=1,
-            padding=kernel_sizes[3] // 2)
+            padding=7)
 
         self.conv5 = torch.nn.Conv1d(
             in_channels=feature_dim,
             out_channels=feature_dim,
             kernel_size=kernel_sizes[4],
             stride=1,
-            padding=kernel_sizes[4] // 2)
-
+            padding=8)
+        
+        self.selu = torch.nn.SELU()
+        
 
     def forward(self, x):
         if self.make_4d:
             x = x.view(x.size(0), x.size(3), x.size(2))
 
-        # print('x', x.size())
+        
         inp = x.transpose(1, 2)
-
+        # print('inp', inp.size())
         out = self.conv1(inp)
-        out = torch.tanh(out)
+        out = self.selu(out)
         out = self.dropout(out)
+        # print('out1', out.size())
 
         out = self.conv2(out)
-        out = torch.tanh(out)
+        out = self.selu(out)
         out = self.dropout(out)
+        # print('out2', out.size())
 
         out = self.conv3(out)
-        out = torch.tanh(out)
+        out = self.selu(out)
         out = self.dropout(out)
+        # print('out3', out.size())
 
         out = self.conv4(out)
-        out = torch.tanh(out)
+        out = self.selu(out)
         out = self.dropout(out)
+        # print('out4', out.size())
 
         out = self.conv5(out)
-        out = torch.tanh(out)
+        out = self.selu(out)
         out = self.dropout(out)
+        # print('out5', out.size())
         
         out = out.transpose(1, 2)
         if self.make_4d:
