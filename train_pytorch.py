@@ -30,6 +30,7 @@ def parse_args():
 
     parser.add_argument(
         '--base_lr', help='Base learning rate', type=float, default=1e-3)
+    parser.add_argument('--learning-anneal', default=1.1, type=float,help='Annealing applied to learning rate every epoch')
 
     parser.add_argument(
         '--step_size_up', help='Amount of steps to upcycle the Cyclic Learning Rate', type=int, default=10)
@@ -202,6 +203,10 @@ def main():
         else:
             early_stop_count = early_stop_count + 1
         last_val_loss = val_loss
+
+        for g in optimizer.param_groups:
+            g['lr'] = g['lr'] / args.learning_anneal
+        print('DeepSpeech Learning rate annealed to: {lr:.6f}'.format(lr=g['lr']))
 
         if early_stop_count == 50:
             print('Early stopping because no val_loss improvement for 50 epochs')
