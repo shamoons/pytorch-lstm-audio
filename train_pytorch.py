@@ -17,12 +17,6 @@ def parse_args():
     parser.add_argument('--audio_path', help='Path for corrupted audio',
                         default='data/dev-noise-subtractive-250ms-1')
 
-    parser.add_argument(
-        "--hidden_size", help="Hidden size for the LSTM Layers", type=int, default=20)
-
-    parser.add_argument(
-        "--num_layers", help="Number of layers in the model", type=int, default=2)
-
     parser.add_argument('--seq_length', help='Length of sequences of the spectrogram',
                         type=int, default=32)
     parser.add_argument('--feature_dim', help='Feature dimension',
@@ -32,13 +26,13 @@ def parse_args():
                         help='Base learning rate', type=float, default=1e-3)
 
     parser.add_argument('--learning-anneal',
-                        default=1.05, type=float,
+                        default=1.1, type=float,
                         help='Annealing applied to learning rate every epoch')
 
     parser.add_argument('--lr_bump', default=5, type=float,
                         help='Amount to bump up the learning rate by every lr_bump_partition epochs')
 
-    parser.add_argument('--lr_bump_partition', default=20, type=int,
+    parser.add_argument('--lr_bump_partition', default=10, type=int,
                         help='Number of partitions for bumps')
 
 
@@ -62,17 +56,17 @@ def parse_args():
     return args
 
 
-def initialize():
+def initialize(args):
     torch.set_default_tensor_type('torch.FloatTensor')
     wandb_tags = [socket.gethostname()]
     wandb.init(project="speech-reconstruction-baseline",
-               tags=','.join(wandb_tags))
+               tags=','.join(wandb_tags), config=args)
     wandb.save('*.pt')
 
 
 def main():
     args = parse_args()
-    initialize()
+    initialize(args)
 
     baseline_model_file = open('baseline_model.py', 'r').read()
     open(path.join(wandb.run.dir, 'saved_model.py'), 'w').write(
