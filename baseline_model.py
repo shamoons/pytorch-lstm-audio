@@ -2,7 +2,7 @@ import torch
 
 
 class BaselineModel(torch.nn.Module):
-    def __init__(self, feature_dim=1, kernel_sizes=(11, 9, 7, 5, 3), make_4d=False, dropout=0.01, initialize_weights= True):
+    def __init__(self, feature_dim=1, kernel_sizes=(15, 11, 9, 7, 5), make_4d=False, dropout=0.01, initialize_weights= True):
         super(BaselineModel, self).__init__()
         self.make_4d = make_4d
 
@@ -14,6 +14,7 @@ class BaselineModel(torch.nn.Module):
         conv3_out_channels = int(conv2_out_channels * 0.75)
         conv4_out_channels = int(conv3_out_channels * 1.25)
         conv5_out_channels = feature_dim
+        conv1_out_channels = conv2_out_channels = conv3_out_channels = conv4_out_channels = feature_dim
 
         self.conv1 = torch.nn.Conv1d(
             in_channels=feature_dim,
@@ -51,28 +52,33 @@ class BaselineModel(torch.nn.Module):
             stride=1,
             padding=kernel_sizes[4] // 2)
 
-        if initialize_weights:    
-            self.conv1.weight.data = torch.zeros(self.conv1.weight.data.size())
-            self.conv2.weight.data = torch.zeros(self.conv2.weight.data.size())
-            self.conv3.weight.data = torch.zeros(self.conv3.weight.data.size())
-            self.conv4.weight.data = torch.zeros(self.conv4.weight.data.size())
-            self.conv5.weight.data = torch.zeros(self.conv5.weight.data.size())
+        if initialize_weights:
+            torch.nn.init.zeros_(self.conv1.weight)
+            torch.nn.init.zeros_(self.conv2.weight)
+            torch.nn.init.zeros_(self.conv3.weight)
+            torch.nn.init.zeros_(self.conv4.weight)
+            torch.nn.init.zeros_(self.conv5.weight)
 
-            self.conv1.weight.data[:, :, 5] = 1.0
-            self.conv2.weight.data[:, :, 4] = 1.0
-            self.conv3.weight.data[:, :, 3] = 1.0
-            self.conv4.weight.data[:, :, 2] = 1.0
-            self.conv5.weight.data[:, :, 1] = 1.0
-            
-            self.conv1.bias.data = torch.zeros(self.conv1.bias.data.size())
-            self.conv2.bias.data = torch.zeros(self.conv2.bias.data.size())
-            self.conv3.bias.data = torch.zeros(self.conv3.bias.data.size())
-            self.conv4.bias.data = torch.zeros(self.conv4.bias.data.size())
-            self.conv5.bias.data = torch.zeros(self.conv5.bias.data.size())
+            self.conv1.weight.data[:, :, 5] = torch.eye(161)
+            self.conv2.weight.data[:, :, 4] = torch.eye(161)
+            self.conv3.weight.data[:, :, 3] = torch.eye(161)
+            self.conv4.weight.data[:, :, 2] = torch.eye(161)
+            self.conv5.weight.data[:, :, 1] = torch.eye(161)
+            # self.conv1.weight.data[:, :, 5] = 1.0
+            # self.conv2.weight.data[:, :, 4] = 1.0
+            # self.conv3.weight.data[:, :, 3] = 1.0
+            # self.conv4.weight.data[:, :, 2] = 1.0
+            # self.conv5.weight.data[:, :, 1] = 1.0
+
+            torch.nn.init.zeros_(self.conv1.bias)
+            torch.nn.init.zeros_(self.conv2.bias)
+            torch.nn.init.zeros_(self.conv3.bias)
+            torch.nn.init.zeros_(self.conv4.bias)
+            torch.nn.init.zeros_(self.conv5.bias)
 
         self.selu = torch.nn.SELU()
-        # print(self.conv1.weight.data[0][0])
-        # print(self.conv1.bias.data)
+        # print(self.conv4.weight.data)
+        # print(self.conv4.bias.data)
         
 
     def forward(self, x):
@@ -87,11 +93,13 @@ class BaselineModel(torch.nn.Module):
         out = self.selu(out)
         # out = self.dropout(out)
         # print('\nout1', out.min(), out.mean(), out.max(), out.size())
+        
 
         out = self.conv2(out)
         out = self.selu(out)
         # out = self.dropout(out)
         # print('\nout2', out.min(), out.mean(), out.max(), out.size())
+        # quit()
 
         out = self.conv3(out)
         out = self.selu(out)

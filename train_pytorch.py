@@ -29,14 +29,8 @@ def parse_args():
                         type=int, default=161)
 
     parser.add_argument(
-        '--base_lr', help='Base learning rate', type=float, default=5e-3)
+        '--base_lr', help='Base learning rate', type=float, default=1e-2)
     parser.add_argument('--learning-anneal', default=1.1, type=float,help='Annealing applied to learning rate every epoch')
-
-    parser.add_argument(
-        '--step_size_up', help='Amount of steps to upcycle the Cyclic Learning Rate', type=int, default=10)
-
-    parser.add_argument(
-        '--step_size_down', help='Amount of steps to downcycle the Cyclic Learning Rate', type=int, default=50)
 
     parser.add_argument('--epochs', help='Epochs to run',
                         type=int, default=250)
@@ -95,7 +89,7 @@ def main():
 
     # model = BaselineModel(feature_dim=args.feature_dim,
     #                       hidden_size=args.hidden_size, seq_length=args.seq_length, num_layers=args.num_layers, dropout=0.5)
-    model = BaselineModel(feature_dim=args.feature_dim, initialize_weights=False)
+    model = BaselineModel(feature_dim=args.feature_dim, initialize_weights=True)
     if args.continue_from:
         state_dict = torch.load(args.continue_from, map_location=device)
         model.load_state_dict(state_dict)
@@ -106,9 +100,6 @@ def main():
 
     optimizer = optim.Adam(
         model.parameters(), lr=args.base_lr, weight_decay=0.001)
-
-    # scheduler = optim.lr_scheduler.CyclicLR(
-    #     optimizer, base_lr=args.base_lr, max_lr=args.max_lr, mode='exp_range', step_size_up=args.step_size_up, step_size_down=args.step_size_down, gamma=args.gamma)
 
     # loss_fn = torch.nn.MSELoss(reduction='mean')
     loss_fn = torch.nn.L1Loss(reduction='mean')
@@ -206,7 +197,7 @@ def main():
 
         for g in optimizer.param_groups:
             g['lr'] = g['lr'] / args.learning_anneal
-        print('DeepSpeech Learning rate annealed to: {lr:.6f}'.format(lr=g['lr']))
+        print('DeepSpeech Learning rate annealed to: {lr:.6g}'.format(lr=g['lr']))
 
         if early_stop_count == 50:
             print('Early stopping because no val_loss improvement for 50 epochs')
