@@ -29,8 +29,10 @@ def parse_args():
                         type=int, default=161)
 
     parser.add_argument(
-        '--base_lr', help='Base learning rate', type=float, default=1e-2)
-    parser.add_argument('--learning-anneal', default=1.1, type=float,help='Annealing applied to learning rate every epoch')
+        '--base_lr', help='Base learning rate', type=float, default=1e-3)
+    parser.add_argument('--learning-anneal', default=1.05, type=float,help='Annealing applied to learning rate every epoch')
+
+    parser.add_argument('--lr_bump', default=10, type=float,help='Amount to bump up the learning rate by every epoch / 10 epochs')
 
     parser.add_argument('--epochs', help='Epochs to run',
                         type=int, default=250)
@@ -116,6 +118,13 @@ def main():
     last_val_loss = current_best_validation_loss
     for epoch in range(args.epochs):
         model.train(True)  # Set model to training mode
+
+        print((epoch + 1) // 10)
+        # if epoch % (epoch // 10) == 0:
+        #     for g in optimizer.param_groups:
+        #         g['lr'] = g['lr'] * args.lr_bump
+        #     print('Bumping up LR to: {lr:.3e}'.format(lr=g['lr']))
+
         start_time = time.time()
         train_running_loss = 0.0
         for _, data in enumerate(Bar(data_loaders['train'])):
@@ -138,9 +147,8 @@ def main():
             optimizer.zero_grad()
 
             # pred, hidden = model(inputs, hidden)
-            # print('\ninput\tMean: {:.4f}\tSTD: {:.4f}\tMin: {:.4f}\tMax: {:.4f}'.format(torch.mean(inputs), torch.std(inputs), torch.min(inputs), torch.max(inputs)))
             pred = model(inputs)
-            # print('\npred\tMean: {:.4f}\tSTD: {:.4f}\tMin: {:.4f}\tMax: {:.4f}'.format(torch.mean(pred), torch.std(pred), torch.min(pred), torch.max(pred)))
+
 
             loss = loss_fn(pred, outputs)
 
@@ -150,7 +158,9 @@ def main():
             optimizer.step()
 
             train_running_loss += loss.data
+        print('\ninput\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(torch.mean(inputs), torch.std(inputs), torch.min(inputs), torch.max(inputs)))
 
+        print('\npred\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(torch.mean(pred), torch.std(pred), torch.min(pred), torch.max(pred)))
         model.eval()
         val_running_loss = 0.0
         for _, data in enumerate(data_loaders['val']):
@@ -177,7 +187,7 @@ def main():
             'epoch': epoch,
             'sec_per_epoch': time_per_epoch,
         })
-        print('\tEpoch: {}\tLoss: {:.4f}\tVal Loss: {:.4f}\tTime per Epoch: {}s\n'.format(
+        print('\tEpoch: {}\tLoss: {:.4g}\tVal Loss: {:.4g}\tTime per Epoch: {}s\n'.format(
             epoch, train_loss, val_loss, time_per_epoch))
 
         if val_loss < current_best_validation_loss:
@@ -197,7 +207,7 @@ def main():
 
         for g in optimizer.param_groups:
             g['lr'] = g['lr'] / args.learning_anneal
-        print('DeepSpeech Learning rate annealed to: {lr:.6g}'.format(lr=g['lr']))
+        print('DeepSpeech Learning rate annealed to: {lr:.3e}'.format(lr=g['lr']))
 
         if early_stop_count == 50:
             print('Early stopping because no val_loss improvement for 50 epochs')

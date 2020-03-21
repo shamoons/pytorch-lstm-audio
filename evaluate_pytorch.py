@@ -33,7 +33,8 @@ def parse_args():
 def main():
     args = parse_args()
 
-    model = torch.load(args.model_path, map_location=torch.device('cpu'))
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = torch.load(args.model_path, map_location=device)
 
     saved_args = json.loads(open('saved_models/args.json', 'r').read())
     args.seq_length = saved_args['seq_length']
@@ -44,7 +45,7 @@ def main():
     # model = importlib.import_module(
     #     'saved_model').BaselineModel(feature_dim=saved_args['feature_dim'],
     #                                  hidden_size=saved_args['hidden_size'], seq_length=saved_args['seq_length'], num_layers=saved_args['num_layers'])
-    state_dict = torch.load(args.model_path, map_location='cpu')
+    state_dict = torch.load(args.model_path, map_location=device)
 
     model.load_state_dict(state_dict)
 
@@ -55,7 +56,27 @@ def main():
 
     input_spectrogram, samples_length, sample_rate, n_fft, hop_length = load_audio_spectrogram(
         args.audio_path)
-    print('input_spectrogram\tMean: {:.4f}\tSTD: {:.4f}\tMin: {:.4f}\tMax: {:.4f}'.format(torch.mean(input_spectrogram), torch.std(input_spectrogram), torch.min(input_spectrogram), torch.max(input_spectrogram)))
+    
+    input_spectrogram = input_spectrogram.view(1, input_spectrogram.size(0), input_spectrogram.size(1))
+
+    print('input_spectrogram\tMean: {:.4f} ± {:.4f}\tMin: {:.4f}\tMax: {:.4f}\tSize: {}'.format(torch.mean(input_spectrogram), torch.std(input_spectrogram), torch.min(input_spectrogram), torch.max(input_spectrogram), input_spectrogram.size()))
+    
+    # Model takes data of shape: torch.Size([BATCH_SIZE, SEQUENCE_LENGTH, FEATURE_DIM])
+    output = model(input_spectrogram)
+
+    output = torch.expm1(output)
+    print('expm1 output\t\tMean: {:.4f} ± {:.4f}\tMin: {:.4f}\tMax: {:.4f}\tSize: {}'.format(torch.mean(output), torch.std(output), torch.min(output), torch.max(output), output.size()))
+
+    np_output = output.view(output.size(1), output.size(2)).detach().numpy()
+
+    # output requires shape of [SEQUENCE_LEN, FEATURE_DIM]
+    audio = create_audio_from_spectrogram(
+        np_output, n_fft=n_fft, hop_length=hop_length, length=samples_length)
+
+    sf.write(filename_without_ext + '.wav', audio, sample_rate)
+
+
+    quit()
 
     timesteps = input_spectrogram.shape[0]
 
@@ -70,6 +91,7 @@ def main():
 
     tensor = torch.from_numpy(reshaped_input_spectrogram).float()
 
+    
     output = model(tensor)
     np_output = output.detach().numpy()
 
@@ -79,7 +101,7 @@ def main():
 
 
     output = np.expm1(output)
-    print('expm1 output\t\tMean: {:.4f}\tSTD: {:.4f}\tMin: {:.4f}\tMax: {:.4f}'.format(np.mean(output), np.std(output), np.min(output), np.max(output)))
+    print('expm1 output\t\tMean: {:.4f}\tSTD: {:.4f}\tMin: {:.4f}\tMax: {:.4f}\tSize: {}'.format(np.mean(output), np.std(output), np.min(output), np.max(output), output.shape))
 
     audio = create_audio_from_spectrogram(
         output, n_fft=n_fft, hop_length=hop_length, length=samples_length)

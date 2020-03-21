@@ -77,6 +77,7 @@ class BaselineModel(torch.nn.Module):
             torch.nn.init.zeros_(self.conv5.bias)
 
         self.selu = torch.nn.SELU()
+        self.tanh = torch.nn.Tanh()
         # print(self.conv4.weight.data)
         # print(self.conv4.bias.data)
         
@@ -90,19 +91,19 @@ class BaselineModel(torch.nn.Module):
         # print('\ninp', inp.min(), inp.mean(), inp.max(), inp.size())
         
         out = self.conv1(inp)
-        out = self.selu(out)
+        out = self.tanh(out)
         # out = self.dropout(out)
         # print('\nout1', out.min(), out.mean(), out.max(), out.size())
         
 
         out = self.conv2(out)
-        out = self.selu(out)
+        out = self.tanh(out)
         # out = self.dropout(out)
         # print('\nout2', out.min(), out.mean(), out.max(), out.size())
         # quit()
 
         out = self.conv3(out)
-        out = self.selu(out)
+        out = self.tanh(out)
         # out = self.dropout(out)
         # print('\nout3', out.min(), out.mean(), out.max(), out.size())
 

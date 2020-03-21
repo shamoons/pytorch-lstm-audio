@@ -47,12 +47,13 @@ def load_audio_spectrogram(audio_path, transpose=True, normalize_spect=False):
                      win_length=n_fft, window=scipy.signal.hamming)
 
     spect, _ = librosa.magphase(D)
-    spect = np.log1p(spect)
+    
     # print('After LOG1p: ', spect.shape, spect.mean())
 
     if transpose:
         spect = np.swapaxes(spect, 0, 1)
     spect = torch.FloatTensor(spect)
+    spect = torch.log1p(spect)
     # print('After FloatTensor: ', spect.shape, spect.mean())
 
     if normalize_spect:
