@@ -29,7 +29,7 @@ def parse_args():
                         type=int, default=161)
 
     parser.add_argument(
-        '--base_lr', help='Base learning rate', type=float, default=1e-3)
+        '--base_lr', help='Base learning rate', type=float, default=5e-3)
     parser.add_argument('--learning-anneal', default=1.1, type=float,help='Annealing applied to learning rate every epoch')
 
     parser.add_argument(

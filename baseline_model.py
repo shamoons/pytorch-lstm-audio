@@ -9,38 +9,44 @@ class BaselineModel(torch.nn.Module):
         self.dropout = torch.nn.Dropout(p=0.25)
 
 
+        conv1_out_channels = int(feature_dim * 0.95)
+        conv2_out_channels = int(conv1_out_channels * 0.85)
+        conv3_out_channels = int(conv2_out_channels * 0.75)
+        conv4_out_channels = int(conv3_out_channels * 1.25)
+        conv5_out_channels = feature_dim
+
         self.conv1 = torch.nn.Conv1d(
             in_channels=feature_dim,
-            out_channels=feature_dim,
+            out_channels=conv1_out_channels,
             kernel_size=kernel_sizes[0],
             stride=1,
             padding=kernel_sizes[0] // 2)
 
 
         self.conv2 = torch.nn.Conv1d(
-            in_channels=feature_dim,
-            out_channels=feature_dim,
+            in_channels=conv1_out_channels,
+            out_channels=conv2_out_channels,
             kernel_size=kernel_sizes[1],
             stride=1,
             padding=kernel_sizes[1] // 2)
 
         self.conv3 = torch.nn.Conv1d(
-            in_channels=feature_dim,
-            out_channels=feature_dim,
+            in_channels=conv2_out_channels,
+            out_channels=conv3_out_channels,
             kernel_size=kernel_sizes[2],
             stride=1,
             padding=kernel_sizes[2] // 2)
 
         self.conv4 = torch.nn.Conv1d(
-            in_channels=feature_dim,
-            out_channels=feature_dim,
+            in_channels=conv3_out_channels,
+            out_channels=conv4_out_channels,
             kernel_size=kernel_sizes[3],
             stride=1,
             padding=kernel_sizes[3] // 2)
 
         self.conv5 = torch.nn.Conv1d(
-            in_channels=feature_dim,
-            out_channels=feature_dim,
+            in_channels=conv4_out_channels,
+            out_channels=conv5_out_channels,
             kernel_size=kernel_sizes[4],
             stride=1,
             padding=kernel_sizes[4] // 2)
@@ -52,11 +58,11 @@ class BaselineModel(torch.nn.Module):
             self.conv4.weight.data = torch.zeros(self.conv4.weight.data.size())
             self.conv5.weight.data = torch.zeros(self.conv5.weight.data.size())
 
-            # self.conv1.weight.data[:, :, 5] = 1.0
-            # self.conv2.weight.data[:, :, 4] = 1.0
-            # self.conv3.weight.data[:, :, 3] = 1.0
-            # self.conv4.weight.data[:, :, 2] = 1.0
-            # self.conv5.weight.data[:, :, 1] = 1.0
+            self.conv1.weight.data[:, :, 5] = 1.0
+            self.conv2.weight.data[:, :, 4] = 1.0
+            self.conv3.weight.data[:, :, 3] = 1.0
+            self.conv4.weight.data[:, :, 2] = 1.0
+            self.conv5.weight.data[:, :, 1] = 1.0
             
             self.conv1.bias.data = torch.zeros(self.conv1.bias.data.size())
             self.conv2.bias.data = torch.zeros(self.conv2.bias.data.size())
@@ -65,6 +71,8 @@ class BaselineModel(torch.nn.Module):
             self.conv5.bias.data = torch.zeros(self.conv5.bias.data.size())
 
         self.selu = torch.nn.SELU()
+        # print(self.conv1.weight.data[0][0])
+        # print(self.conv1.bias.data)
         
 
     def forward(self, x):
@@ -73,32 +81,34 @@ class BaselineModel(torch.nn.Module):
 
         
         inp = x.transpose(1, 2)
-        # print('inp', inp.size())
+        # print('\ninp', inp.min(), inp.mean(), inp.max(), inp.size())
+        
         out = self.conv1(inp)
         out = self.selu(out)
         # out = self.dropout(out)
-        # print('out1', out.size())
+        # print('\nout1', out.min(), out.mean(), out.max(), out.size())
 
         out = self.conv2(out)
         out = self.selu(out)
         # out = self.dropout(out)
-        # print('out2', out.size())
+        # print('\nout2', out.min(), out.mean(), out.max(), out.size())
 
         out = self.conv3(out)
         out = self.selu(out)
         # out = self.dropout(out)
-        # print('out3', out.size())
+        # print('\nout3', out.min(), out.mean(), out.max(), out.size())
 
         out = self.conv4(out)
         out = self.selu(out)
         # out = self.dropout(out)
-        # print('out4', out.size())
+        # print('\nout4', out.min(), out.mean(), out.max(), out.size())
+
 
         out = self.conv5(out)
         out = torch.nn.functional.relu(out)
         # out = self.dropout(out)
-        # print('out5', out.size())
-        
+        # print('\nout5', out.min(), out.mean(), out.max(), out.size())
+
         out = out.transpose(1, 2)
         if self.make_4d:
             out = out.reshape(out.size(0), 1, out.size(2), out.size(1))
