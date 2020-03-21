@@ -8,13 +8,12 @@ class BaselineModel(torch.nn.Module):
 
         self.dropout = torch.nn.Dropout(p=0.25)
 
-
         conv1_out_channels = int(feature_dim * 0.95)
         conv2_out_channels = int(conv1_out_channels * 0.85)
         conv3_out_channels = int(conv2_out_channels * 0.75)
         conv4_out_channels = int(conv3_out_channels * 1.25)
         conv5_out_channels = feature_dim
-        conv1_out_channels = conv2_out_channels = conv3_out_channels = conv4_out_channels = feature_dim
+        # conv1_out_channels = conv2_out_channels = conv3_out_channels = conv4_out_channels = feature_dim
 
         self.conv1 = torch.nn.Conv1d(
             in_channels=feature_dim,
@@ -59,11 +58,11 @@ class BaselineModel(torch.nn.Module):
             torch.nn.init.zeros_(self.conv4.weight)
             torch.nn.init.zeros_(self.conv5.weight)
 
-            self.conv1.weight.data[:, :, 5] = torch.eye(161)
-            self.conv2.weight.data[:, :, 4] = torch.eye(161)
-            self.conv3.weight.data[:, :, 3] = torch.eye(161)
-            self.conv4.weight.data[:, :, 2] = torch.eye(161)
-            self.conv5.weight.data[:, :, 1] = torch.eye(161)
+            self.conv1.weight.data[:, :, 5] = torch.eye(conv1_out_channels, feature_dim)
+            self.conv2.weight.data[:, :, 4] = torch.eye(conv2_out_channels, conv1_out_channels)
+            self.conv3.weight.data[:, :, 3] = torch.eye(conv3_out_channels, conv2_out_channels)
+            self.conv4.weight.data[:, :, 2] = torch.eye(conv4_out_channels, conv3_out_channels)
+            self.conv5.weight.data[:, :, 1] = torch.eye(conv5_out_channels, conv4_out_channels)
             # self.conv1.weight.data[:, :, 5] = 1.0
             # self.conv2.weight.data[:, :, 4] = 1.0
             # self.conv3.weight.data[:, :, 3] = 1.0
@@ -78,6 +77,7 @@ class BaselineModel(torch.nn.Module):
 
         self.selu = torch.nn.SELU()
         self.tanh = torch.nn.Tanh()
+        self.relu = torch.nn.ReLU6()
         # print(self.conv4.weight.data)
         # print(self.conv4.bias.data)
         
@@ -114,7 +114,7 @@ class BaselineModel(torch.nn.Module):
 
 
         out = self.conv5(out)
-        out = torch.nn.functional.relu(out)
+        out = self.relu(out)
         # out = self.dropout(out)
         # print('\nout5', out.min(), out.mean(), out.max(), out.size())
 

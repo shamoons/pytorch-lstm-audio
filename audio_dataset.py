@@ -3,7 +3,6 @@ import random
 import torch
 import numpy as np
 import os.path as path
-from sklearn.preprocessing import normalize
 from torch.utils.data import Dataset
 from utils.audio_util import load_audio_spectrogram
 

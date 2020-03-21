@@ -64,8 +64,10 @@ def main():
     # Model takes data of shape: torch.Size([BATCH_SIZE, SEQUENCE_LENGTH, FEATURE_DIM])
     output = model(input_spectrogram)
 
-    output = torch.expm1(output)
-    print('expm1 output\t\tMean: {:.4f} ± {:.4f}\tMin: {:.4f}\tMax: {:.4f}\tSize: {}'.format(torch.mean(output), torch.std(output), torch.min(output), torch.max(output), output.size()))
+    print('model output\t\tMean: {:.4f} ± {:.4f}\tMin: {:.4f}\tMax: {:.4f}\tSize: {}'.format(torch.mean(output), torch.std(output), torch.min(output), torch.max(output), output.size()))
+
+    # output = torch.expm1(output)
+    # print('expm1 output\t\tMean: {:.4f} ± {:.4f}\tMin: {:.4f}\tMax: {:.4f}\tSize: {}'.format(torch.mean(output), torch.std(output), torch.min(output), torch.max(output), output.size()))
 
     np_output = output.view(output.size(1), output.size(2)).detach().numpy()
 

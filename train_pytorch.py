@@ -28,11 +28,19 @@ def parse_args():
     parser.add_argument('--feature_dim', help='Feature dimension',
                         type=int, default=161)
 
-    parser.add_argument(
-        '--base_lr', help='Base learning rate', type=float, default=1e-3)
-    parser.add_argument('--learning-anneal', default=1.05, type=float,help='Annealing applied to learning rate every epoch')
+    parser.add_argument('--base_lr',
+                        help='Base learning rate', type=float, default=1e-3)
 
-    parser.add_argument('--lr_bump', default=10, type=float,help='Amount to bump up the learning rate by every epoch / 10 epochs')
+    parser.add_argument('--learning-anneal',
+                        default=1.05, type=float,
+                        help='Annealing applied to learning rate every epoch')
+
+    parser.add_argument('--lr_bump', default=5, type=float,
+                        help='Amount to bump up the learning rate by every lr_bump_partition epochs')
+
+    parser.add_argument('--lr_bump_partition', default=20, type=int,
+                        help='Number of partitions for bumps')
+
 
     parser.add_argument('--epochs', help='Epochs to run',
                         type=int, default=250)
@@ -46,7 +54,8 @@ def parse_args():
     parser.add_argument('--num_workers', help='Number of workers for data_loaders',
                         type=int, default=10)
 
-    parser.add_argument('--continue-from', default='',help='Continue from checkpoint model')
+    parser.add_argument('--continue-from', default='',
+                        help='Continue from checkpoint model')
 
     args = parser.parse_args()
 
@@ -91,14 +100,12 @@ def main():
 
     # model = BaselineModel(feature_dim=args.feature_dim,
     #                       hidden_size=args.hidden_size, seq_length=args.seq_length, num_layers=args.num_layers, dropout=0.5)
-    model = BaselineModel(feature_dim=args.feature_dim, initialize_weights=True)
+    model = BaselineModel(feature_dim=args.feature_dim,
+                          initialize_weights=True)
     if args.continue_from:
         state_dict = torch.load(args.continue_from, map_location=device)
         model.load_state_dict(state_dict)
         print('Loading saved model to continue from: {}'.format(args.continue_from))
-
-    # optimizer = optim.SGD(model.parameters(), lr=args.base_lr,
-    #                       momentum=0.9, weight_decay=0.1)
 
     optimizer = optim.Adam(
         model.parameters(), lr=args.base_lr, weight_decay=0.001)
@@ -119,11 +126,10 @@ def main():
     for epoch in range(args.epochs):
         model.train(True)  # Set model to training mode
 
-        print((epoch + 1) // 10)
-        # if epoch % (epoch // 10) == 0:
-        #     for g in optimizer.param_groups:
-        #         g['lr'] = g['lr'] * args.lr_bump
-        #     print('Bumping up LR to: {lr:.3e}'.format(lr=g['lr']))
+        if (epoch + 1) % (args.epochs // args.lr_bump_partition) == 0:
+            for g in optimizer.param_groups:
+                g['lr'] = g['lr'] * args.lr_bump
+            print('Bumping up LR to: {lr:.3e}'.format(lr=g['lr']))
 
         start_time = time.time()
         train_running_loss = 0.0
@@ -149,7 +155,6 @@ def main():
             # pred, hidden = model(inputs, hidden)
             pred = model(inputs)
 
-
             loss = loss_fn(pred, outputs)
 
             # torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -158,9 +163,12 @@ def main():
             optimizer.step()
 
             train_running_loss += loss.data
-        print('\ninput\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(torch.mean(inputs), torch.std(inputs), torch.min(inputs), torch.max(inputs)))
+        # print('\ninput\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
+        #     torch.mean(inputs), torch.std(inputs), torch.min(inputs), torch.max(inputs)))
 
-        print('\npred\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(torch.mean(pred), torch.std(pred), torch.min(pred), torch.max(pred)))
+        # print('\npred\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
+        #     torch.mean(pred), torch.std(pred), torch.min(pred), torch.max(pred)))
+
         model.eval()
         val_running_loss = 0.0
         for _, data in enumerate(data_loaders['val']):
@@ -207,7 +215,8 @@ def main():
 
         for g in optimizer.param_groups:
             g['lr'] = g['lr'] / args.learning_anneal
-        print('DeepSpeech Learning rate annealed to: {lr:.3e}'.format(lr=g['lr']))
+        print(
+            'DeepSpeech Learning rate annealed to: {lr:.3e}'.format(lr=g['lr']))
 
         if early_stop_count == 50:
             print('Early stopping because no val_loss improvement for 50 epochs')
