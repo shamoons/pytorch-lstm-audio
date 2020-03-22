@@ -1,6 +1,7 @@
 from audio_dataset import AudioDataset
 from barbar import Bar
 from baseline_model import BaselineModel
+
 import argparse
 import os.path as path
 import socket
@@ -69,6 +70,7 @@ def initialize(args):
     wandb.init(project="speech-reconstruction-baseline",
                tags=','.join(wandb_tags), config=args)
     wandb.save('*.pt')
+    wandb.save('*.onnx')
     np.random.seed(0)
 
 
@@ -197,6 +199,8 @@ def main():
             current_best_validation_loss = val_loss
         torch.save(model.state_dict(), path.join(
             wandb.run.dir, 'latest-model.pt'))
+        torch.onnx.export(model, inputs, path.join(
+            wandb.run.dir, 'latest-model.onnx'), verbose=True)
 
         if val_loss <= last_val_loss:
             early_stop_count = 0
