@@ -13,36 +13,13 @@ metric:
   name: val_loss
   goal: minimize
 parameters:
-  hidden_size:
+  final_kernel_size:
     distribution: q_uniform
-    min: 25
-    max: 100
-    q: 25
-  num_layers:
-    distribution: q_uniform
-    min: 2
-    max: 6
-    q: 1
-  seq_length:
-    distribution: q_uniform
-    min: 10
-    max: 50
-    q: 10
-  gamma:
-    distribution: q_uniform
-    min: 0.99
-    max: 0.999
-    q: 0.001
-  step_size_up:
-    distribution: q_uniform
-    min: 10
-    max: 50
-    q: 10
-  step_size_down:
-    distribution: q_uniform
-    min: 10
-    max: 110
-    q: 20
+    min: 3
+    max: 25
+    q: 2
+
+
 
 early_terminate:
   type: hyperband

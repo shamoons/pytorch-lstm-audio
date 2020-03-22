@@ -18,11 +18,12 @@ soundfile = "*"
 librosa = "*"
 barbar = "*"
 sklearn = "*"
-sru = "*"
 python-levenshtein = "*"
 visdom = "*"
 tqdm = "*"
 wget = "*"
+multiproc = "*"
+tensorboardx = "*"
 
 [requires]
 python_version = "3.6"
