@@ -24,8 +24,7 @@ tqdm = "*"
 wget = "*"
 multiproc = "*"
 tensorboardx = "*"
-graphviz = "*"
-torchviz = "*"
+fast-ctc-decode = "*"
 
 [requires]
 python_version = "3.6"

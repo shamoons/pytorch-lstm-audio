@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "65e2e07beae1b101841d2677b1035ec29fb91b99871a7138624cd5d69d9a68f3"
+            "sha256": "89e3914d42bc48f995d35197c25919a7c62177fb5b528e6aa367baf2cdcb715e"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -118,6 +118,20 @@
             ],
             "version": "==0.6.2"
         },
+        "fast-ctc-decode": {
+            "hashes": [
+                "sha256:1883cf02f5e5a85879136cca9be2894cc98f85edc296a6f753f2a9792f5254b5",
+                "sha256:19798db5feb73d02fc76390b50a418d42ca6d02c8208d18eb5e8e95fb61b2d5d",
+                "sha256:20aa7a30ee6023ed0c20f583c7af2c27f49a812700e9cf9f21f540650f6e62cb",
+                "sha256:8a29ed8ac28fe88adcb0fed548dca8fe585e1b2bbe4587aedbf4e2b8b9f8dfdf",
+                "sha256:94c55e783e5028f09e5c27c71eea68507465c3b9ea56786ab79610eacd2e83c8",
+                "sha256:ab4a890dd2a938c5635bdad6a0e980db189e7512e732034f95f5ca69c794cff0",
+                "sha256:ccfede87b2aed29200074139ef603a5826a0949ff4ae99e910ed36a49e478571",
+                "sha256:f4fa080eafbe3ad500d686097da206b3fd78f26736e5ff81f4a9587dddf5aa4c"
+            ],
+            "index": "pypi",
+            "version": "==0.2.3"
+        },
         "gitdb": {
             "hashes": [
                 "sha256:284a6a4554f954d6e737cddcff946404393e030b76a282c6640df8efd6b3da5e",
@@ -143,14 +157,6 @@
                 "sha256:63bb8593aeeadb0a53e14207b910027fe51158d017927fad87326dac806185ee"
             ],
             "version": "==1.1"
-        },
-        "graphviz": {
-            "hashes": [
-                "sha256:241fb099e32b8e8c2acca747211c8237e40c0b89f24b1622860075d59f4c4b25",
-                "sha256:60acbeee346e8c14555821eab57dbf68a169e6c10bce40e83c1bf44f63a62a01"
-            ],
-            "index": "pypi",
-            "version": "==0.13.2"
         },
         "idna": {
             "hashes": [
@@ -675,13 +681,6 @@
                 "sha256:a53dfe134b737845a9f2cb24fe0585317874f965932cebdb0439d13c8da4136e"
             ],
             "version": "==0.1.0"
-        },
-        "torchviz": {
-            "hashes": [
-                "sha256:6f5981d065e15e6c570e1177a31ab74fa38b71ba875feae262a0c6cd2e9a6667"
-            ],
-            "index": "pypi",
-            "version": "==0.0.1"
         },
         "tornado": {
             "hashes": [

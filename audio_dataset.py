@@ -49,8 +49,6 @@ class AudioDataset(Dataset):
             self.clean_file_paths = clean_audio_file_paths[cutoff_index:]
             self.corrupted_file_paths = corrupted_audio_file_paths[cutoff_index:]
 
-        # self.clean_file_paths = self.clean_file_paths[136:138]
-        # self.corrupted_file_paths = self.corrupted_file_paths[136:138]
 
         self.clean_file_paths = np.repeat(self.clean_file_paths, repeat_sample)
         self.corrupted_file_paths = np.repeat(

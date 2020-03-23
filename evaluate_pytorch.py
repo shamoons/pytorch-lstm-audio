@@ -43,20 +43,16 @@ def main():
             'wandb', '*' + args.wandb), recursive=False))[0]
         model_path = os.path.join(wandb_dir, 'best-model.pt')
         saved_model_path = wandb_dir
-        args_path = os.path.join(wandb_dir, 'args.json')
     else:
         model_path = args.model_path
         saved_model_path = args.saved_model_path
-        args_path = 'saved_models/args.json'
 
     model = torch.load(model_path, map_location=device)
 
-    saved_args = json.loads(open(args_path, 'r').read())
-    args.seq_length = saved_args['seq_length']
 
     sys.path.append(os.path.abspath(saved_model_path))
     model = importlib.import_module('saved_model').BaselineModel(
-        feature_dim=saved_args['feature_dim'])
+        feature_dim=161)
 
     state_dict = torch.load(model_path, map_location=device)
 
