@@ -34,24 +34,35 @@ warnings.filterwarnings("ignore", category=UserWarning)
 #     return log_spectrogram
 
 
-def load_audio_spectrogram(audio_path):
+def load_audio_spectrogram(audio_path, transpose=True, normalize_spect=False):
 
     sample_rate = librosa.get_samplerate(audio_path)
     samples, sample_rate = librosa.core.load(audio_path, sr=sample_rate)
 
     n_fft, hop_length = get_n_fft_overlap(sample_rate)
-
+    # print('n_fft: {}\thop_length: {}\twin_length: {}\twindow: {}'.format(
+    #     n_fft, hop_length, n_fft, scipy.signal.windows.hamming))
+    # print(samples.shape, samples.mean())
     D = librosa.stft(samples, n_fft=n_fft, hop_length=hop_length,
-                     win_length=n_fft, window=scipy.signal.hamming)
+                     win_length=n_fft, window=scipy.signal.windows.hamming)
 
     spect, _ = librosa.magphase(D)
+    
+    if transpose:
+        spect = np.swapaxes(spect, 0, 1)
+    spect = torch.FloatTensor(spect)
 
-    spect = np.swapaxes(spect, 0, 1)
+    # print('spect before log1p\tMean: {:.4f} ± {:.4f}\tMin: {:.4f}\tMax: {:.4f}\tSize: {}'.format(torch.mean(spect), torch.std(spect), torch.min(spect), torch.max(spect), spect.size()))
 
-    spect = np.log1p(spect)
-    spect = torch.FloatTensor(spect).contiguous()
+    spect = torch.log1p(spect)
 
-    return spect, len(samples), sample_rate, n_fft, hop_length
+    if normalize_spect:
+        mean = spect.mean()
+        std = spect.std()
+        spect.add_(-mean)
+        spect.div_(std)
+
+    return spect.contiguous(), len(samples), sample_rate, n_fft, hop_length
 
 # def load_audio_spectrogram_scipy(audio_path):
 #     samples, sample_rate = sf.read(audio_path)
@@ -86,7 +97,7 @@ def load_times_frequencies(audio_path):
 def create_audio_from_spectrogram(spectrogram, n_fft, hop_length, length):
     spectrogram = np.swapaxes(spectrogram, 0, 1)
     audio_signal = librosa.griffinlim(
-        spectrogram, n_iter=128, win_length=n_fft, hop_length=hop_length, window=scipy.signal.hamming, length=length)
+        spectrogram, n_iter=256, win_length=n_fft, hop_length=hop_length, window=scipy.signal.windows.hamming, length=length)
 
     return audio_signal
 

@@ -3,17 +3,17 @@ import random
 import torch
 import numpy as np
 import os.path as path
-from sklearn.preprocessing import normalize
 from torch.utils.data import Dataset
 from utils.audio_util import load_audio_spectrogram
 
 
 class AudioDataset(Dataset):
-    def __init__(self, corrupted_path, seq_length=10, feature_dim=5, train_set=False, test_set=False, repeat_sample=1):
+    def __init__(self, corrupted_path, seq_length=10, feature_dim=5, train_set=False, test_set=False, normalize=False, repeat_sample=1):
         torch.manual_seed(0)
         np.random.seed(0)
         self.seq_length = seq_length
         self.feature_dim = feature_dim
+        self.normalize = normalize
 
         corrupted_base_path = path.abspath(corrupted_path)
         corrupted_base_path_parts = corrupted_base_path.split('/')
@@ -57,10 +57,10 @@ class AudioDataset(Dataset):
         output_sliced = []
 
         input_spectrogram, _, _, _, _ = load_audio_spectrogram(
-            self.corrupted_file_paths[index])
+            self.corrupted_file_paths[index], normalize_spect=self.normalize)
 
         output_spectrogram, _, _, _, _ = load_audio_spectrogram(
-            self.clean_file_paths[index])
+            self.clean_file_paths[index], normalize_spect=self.normalize)
 
         averaged_time_energy_input = torch.mean(input_spectrogram, dim=1)
         soft_min_inputs = torch.nn.Softmin()(averaged_time_energy_input).detach().numpy()
@@ -72,7 +72,7 @@ class AudioDataset(Dataset):
         if mid_index > (len(input_spectrogram) - self.seq_length) // 2:
             mid_index = (len(input_spectrogram) - self.seq_length) // 2
 
-        start_index = mid_index - self.seq_length // 2
+        start_index = max(mid_index - self.seq_length // 2, 0)
         end_index = start_index + self.seq_length
 
         input_sliced = input_spectrogram[start_index:end_index]

@@ -23,6 +23,8 @@ python-levenshtein = "*"
 visdom = "*"
 tqdm = "*"
 wget = "*"
+apex = {editable = true,git = "https://github.com/NVIDIA/apex.git"}
+multiproc = "*"
 
 [requires]
 python_version = "3.6"
