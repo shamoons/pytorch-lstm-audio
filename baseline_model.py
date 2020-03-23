@@ -28,7 +28,7 @@ class BaselineModel(torch.nn.Module):
                 stride=1,
                 padding=final_kernel_size // 2
             ),
-            torch.nn.PReLU(num_parameters=feature_dim // 4),
+            # torch.nn.PReLU(num_parameters=feature_dim // 4),
             torch.nn.Conv1d(
                 in_channels=feature_dim // 4,
                 out_channels=feature_dim // 2,
@@ -36,7 +36,7 @@ class BaselineModel(torch.nn.Module):
                 stride=1,
                 padding=final_kernel_size // 2
             ),
-            torch.nn.PReLU(num_parameters=feature_dim // 2),
+            # torch.nn.PReLU(num_parameters=feature_dim // 2),
             torch.nn.Conv1d(
                 in_channels=feature_dim // 2,
                 out_channels=feature_dim,
@@ -179,7 +179,7 @@ class BaselineModel(torch.nn.Module):
                 stride=1,
                 padding=kernel_size // 2
             ),
-            torch.nn.PReLU(num_parameters=in_channels // 2),
+            # torch.nn.PReLU(num_parameters=in_channels // 2),
             torch.nn.Conv1d(
                 in_channels=in_channels // 2,
                 out_channels=in_channels // 4,
@@ -187,7 +187,7 @@ class BaselineModel(torch.nn.Module):
                 stride=1,
                 padding=kernel_size // 2
             ),
-            torch.nn.PReLU(num_parameters=in_channels // 4),
+            # torch.nn.PReLU(num_parameters=in_channels // 4),
             torch.nn.Conv1d(
                 in_channels=in_channels // 4,
                 out_channels=in_channels // 8,

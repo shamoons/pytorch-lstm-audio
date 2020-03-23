@@ -5,8 +5,8 @@ command:
   - ${program}
   - "--epochs=50"
   - "--audio_path=data/train-noise-subtractive-250ms-1"
-  - "--repeat_sample=10"
-  - "--base_lr=10e-4"
+  - "--repeat_sample=20"
+  - "--base_lr=5e-4"
   - ${args}
 method: bayes
 metric:
@@ -20,9 +20,12 @@ parameters:
     distribution: categorical
     values: [21, 25, 29, 33, 37, 41, 45]
   kernel_size_step:
-    distribution: int_uniform
-    min: -4
-    max: 0
+    distribution: categorical
+    values: [0, -2, -4]
+
+    # distribution: int_uniform
+    # min: -4
+    # max: 0
 
 early_terminate:
   type: hyperband
