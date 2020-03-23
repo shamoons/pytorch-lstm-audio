@@ -111,7 +111,7 @@ def main():
         print('Loading saved model to continue from: {}'.format(args.continue_from))
 
     optimizer = optim.Adam(
-        model.parameters(), lr=args.base_lr, weight_decay=0.001)
+        model.parameters(), lr=args.base_lr, weight_decay=0)
 
     loss_fn = torch.nn.L1Loss(reduction='mean')
 
@@ -140,7 +140,7 @@ def main():
             inputs = data[0]
 
             outputs = data[1]
-            outputs = inputs
+            # outputs = inputs
 
             if(torch.cuda.is_available()):
                 inputs = inputs.cuda()
@@ -167,7 +167,7 @@ def main():
         for _, data in enumerate(data_loaders['val']):
             inputs = data[0]
             outputs = data[1]
-            outputs = inputs
+            # outputs = inputs
 
             if(torch.cuda.is_available()):
                 inputs = inputs.cuda()
@@ -188,7 +188,7 @@ def main():
             'epoch': epoch,
             'sec_per_epoch': time_per_epoch,
         })
-        print('\tEpoch: {}\tLoss: {:.4g}\tVal Loss: {:.4g}\tTime per Epoch: {}s\n'.format(
+        print('\tEpoch: {}\tLoss: {:.4g}\tVal Loss: {:.4g}\tTime per Epoch: {:.4g}s\n'.format(
             epoch, train_loss, val_loss, time_per_epoch))
 
         if val_loss < current_best_validation_loss:
@@ -196,11 +196,13 @@ def main():
                   val_loss, '\tOld Loss was: ', current_best_validation_loss)
             torch.save(model.state_dict(), path.join(
                 wandb.run.dir, 'best-model.pt'))
+            torch.onnx.export(model, inputs, path.join(
+                wandb.run.dir, 'best-model.onnx'), verbose=False)
             current_best_validation_loss = val_loss
         torch.save(model.state_dict(), path.join(
             wandb.run.dir, 'latest-model.pt'))
         torch.onnx.export(model, inputs, path.join(
-            wandb.run.dir, 'latest-model.onnx'), verbose=True)
+            wandb.run.dir, 'latest-model.onnx'), verbose=False)
 
         if val_loss <= last_val_loss:
             early_stop_count = 0
@@ -210,8 +212,7 @@ def main():
 
         for g in optimizer.param_groups:
             g['lr'] = g['lr'] / args.learning_anneal
-        print(
-            'DeepSpeech Learning rate annealed to: {lr:.3e}'.format(lr=g['lr']))
+        print('DeepSpeech Learning rate annealed to: {lr:.3e}'.format(lr=g['lr']))
 
         if early_stop_count == 50:
             print('Early stopping because no val_loss improvement for 50 epochs')

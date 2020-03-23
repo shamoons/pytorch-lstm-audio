@@ -24,7 +24,7 @@ class BaselineModel(torch.nn.Module):
                 stride=1,
                 padding=kernel_sizes[0] // 2
             ),
-            torch.nn.ReLU6(),
+            torch.nn.PReLU(num_parameters=conv1_out_channels // 2),
             torch.nn.Conv1d(
                 in_channels=conv1_out_channels // 2,
                 out_channels=conv1_out_channels // 4,
@@ -32,7 +32,7 @@ class BaselineModel(torch.nn.Module):
                 stride=1,
                 padding=kernel_sizes[0] // 2
             ),
-            torch.nn.ReLU6()
+            torch.nn.PReLU(num_parameters=conv1_out_channels // 4)
         )
 
         self.conv2 = torch.nn.Sequential(
@@ -43,7 +43,7 @@ class BaselineModel(torch.nn.Module):
                 stride=1,
                 padding=kernel_sizes[1] // 2
             ),
-            torch.nn.ReLU6(),
+            torch.nn.PReLU(num_parameters=conv2_out_channels // 2),
             torch.nn.Conv1d(
                 in_channels=conv2_out_channels // 2,
                 out_channels=conv2_out_channels // 4,
@@ -51,7 +51,7 @@ class BaselineModel(torch.nn.Module):
                 stride=1,
                 padding=kernel_sizes[1] // 2
             ),
-            torch.nn.ReLU6()
+            torch.nn.PReLU(num_parameters=conv2_out_channels // 4)
         )
 
         self.conv3 = torch.nn.Sequential(
@@ -62,7 +62,7 @@ class BaselineModel(torch.nn.Module):
                 stride=1,
                 padding=kernel_sizes[2] // 2
             ),
-            torch.nn.ReLU6(),
+            torch.nn.PReLU(num_parameters=conv3_out_channels // 2),
             torch.nn.Conv1d(
                 in_channels=conv3_out_channels // 2,
                 out_channels=conv3_out_channels // 4,
@@ -70,7 +70,7 @@ class BaselineModel(torch.nn.Module):
                 stride=1,
                 padding=kernel_sizes[2] // 2
             ),
-            torch.nn.ReLU6()
+            torch.nn.PReLU(num_parameters=conv3_out_channels // 4)
         )
 
         self.conv4 = torch.nn.Sequential(
@@ -81,7 +81,7 @@ class BaselineModel(torch.nn.Module):
                 stride=1,
                 padding=kernel_sizes[3] // 2
             ),
-            torch.nn.ReLU6(),
+            torch.nn.PReLU(num_parameters=conv4_out_channels // 2),
             torch.nn.Conv1d(
                 in_channels=conv4_out_channels // 2,
                 out_channels=conv4_out_channels // 4,
@@ -89,7 +89,7 @@ class BaselineModel(torch.nn.Module):
                 stride=1,
                 padding=kernel_sizes[3] // 2
             ),
-            torch.nn.ReLU6()
+            torch.nn.PReLU(num_parameters=conv4_out_channels // 4)
         )
 
         self.conv5 = torch.nn.Sequential(
@@ -100,7 +100,7 @@ class BaselineModel(torch.nn.Module):
                 stride=1,
                 padding=kernel_sizes[4] // 2
             ),
-            torch.nn.ReLU6(),
+            torch.nn.PReLU(num_parameters=conv5_out_channels // 2),
             torch.nn.Conv1d(
                 in_channels=conv5_out_channels // 2,
                 out_channels=conv5_out_channels // 4,
@@ -108,12 +108,20 @@ class BaselineModel(torch.nn.Module):
                 stride=1,
                 padding=kernel_sizes[4] // 2
             ),
-            torch.nn.ReLU6()
+            torch.nn.PReLU(num_parameters=conv5_out_channels // 4)
         )
 
         self.final_conv = torch.nn.Sequential(
             torch.nn.Conv1d(
                 in_channels=(feature_dim // 4) * 5,
+                out_channels=feature_dim // 2,
+                kernel_size=final_kernel_size,
+                stride=1,
+                padding=final_kernel_size // 2
+            ),
+            torch.nn.PReLU(num_parameters=feature_dim // 2),
+            torch.nn.Conv1d(
+                in_channels=feature_dim // 2,
                 out_channels=feature_dim,
                 kernel_size=final_kernel_size,
                 stride=1,
@@ -151,19 +159,16 @@ class BaselineModel(torch.nn.Module):
             print('\nout4\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
                 torch.mean(out4), torch.std(out4), torch.min(out4), torch.max(out4), out4.size()))
 
-
         out5 = self.conv5(inp)
         if self.verbose:
             print('\nout5\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
                 torch.mean(out5), torch.std(out5), torch.min(out5), torch.max(out5), out5.size()))
-
 
         out = torch.cat((out1, out2, out3, out4, out5), dim=1)
         out = self.final_conv(out)
         if self.verbose:
             print('\nout\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
                 torch.mean(out), torch.std(out), torch.min(out), torch.max(out), out.size()))
-
 
         out = out.transpose(1, 2)
         if self.make_4d:
