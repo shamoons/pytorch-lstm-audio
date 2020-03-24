@@ -1,3 +1,4 @@
 [submodule "submodules/deepspeech2"]
 	path = submodules/deepspeech2
-	url = git@github.com:SeanNaren/deepspeech.pytorch.git
+	url = git@github.com:shamoons/deepspeech.pytorch.git
+	branch = "ctc_loss"

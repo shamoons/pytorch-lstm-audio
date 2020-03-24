@@ -137,3 +137,6 @@ data/train*/
 data/pretrained_models/*
 data/dev*/
 data/test*/
+data/librispeech*/
+models/
+visualize/
