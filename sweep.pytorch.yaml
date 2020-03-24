@@ -3,10 +3,10 @@ command:
   - ${env}
   - python
   - ${program}
-  - "--epochs=50"
+  - "--epochs=250"
   - "--audio_path=data/train-noise-subtractive-250ms-1"
-  - "--repeat_sample=20"
-  - "--base_lr=5e-4"
+  - "--repeat_sample=25"
+  - "--base_lr=1e-4"
   - ${args}
 method: bayes
 metric:
