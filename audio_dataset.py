@@ -38,26 +38,26 @@ class AudioDataset(Dataset):
         corrupted_audio_file_paths = np.array(
             sorted(glob.iglob(corrupted_base_path + '/**/*.flac', recursive=True)))
 
-        clean_audio_file_paths = np.array(
-            sorted(glob.iglob(clean_base_path + '/**/*.flac', recursive=True)))
+        # clean_audio_file_paths = np.array(
+        #     sorted(glob.iglob(clean_base_path + '/**/*.flac', recursive=True)))
 
 
         cutoff_index = int(len(corrupted_audio_file_paths) * 0.9)
 
         if train_set:
-            self.clean_file_paths = clean_audio_file_paths[0: cutoff_index]
+            # self.clean_file_paths = clean_audio_file_paths[0: cutoff_index]
             self.corrupted_file_paths = corrupted_audio_file_paths[0: cutoff_index]
         if test_set:
-            self.clean_file_paths = clean_audio_file_paths[cutoff_index:]
+            # self.clean_file_paths = clean_audio_file_paths[cutoff_index:]
             self.corrupted_file_paths = corrupted_audio_file_paths[cutoff_index:]
 
 
-        self.clean_file_paths = np.repeat(self.clean_file_paths, repeat_sample)
+        # self.clean_file_paths = np.repeat(self.clean_file_paths, repeat_sample)
         self.corrupted_file_paths = np.repeat(
             self.corrupted_file_paths, repeat_sample)
 
     def __len__(self):
-        return len(self.clean_file_paths) // self.batch_size
+        return len(self.corrupted_file_paths) // self.batch_size
 
     def __getitem__(self, index):
         if isinstance(self.seq_length, list):
@@ -68,7 +68,7 @@ class AudioDataset(Dataset):
         batched_inputs = []
         batched_outputs = []
 
-        indices = np.arange(0, len(self.clean_file_paths))
+        indices = np.arange(0, len(self.corrupted_file_paths))
         while len(batched_inputs) < self.batch_size:
             if self.shuffle:
                 np.random.seed(index)
@@ -132,7 +132,9 @@ class AudioDataset(Dataset):
         # batched_inputs = torch.stack(batched_inputs)
         batched_inputs = np.asarray(batched_inputs)
         batched_outputs = np.asarray(batched_outputs)
-        # print(batched_outputs.dtype)
+        if batched_outputs.dtype == 'object':
+            print(batched_outputs)
+        print(batched_outputs.dtype)
         batched_inputs = torch.from_numpy(batched_inputs)
         batched_outputs = torch.from_numpy(batched_outputs)
         # print('seq_length', seq_length)

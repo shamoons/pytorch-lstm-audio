@@ -130,8 +130,7 @@ def main():
 
     early_stop_count = 0
     last_val_loss = current_best_validation_loss
-    print('HERE', len(data_loaders['train']))
-    quit()
+
     saved_onnx = False
     for epoch in range(args.epochs):
         model.train(True)  # Set model to training mode
