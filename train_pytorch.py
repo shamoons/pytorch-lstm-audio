@@ -130,6 +130,9 @@ def main():
 
     early_stop_count = 0
     last_val_loss = current_best_validation_loss
+    print('HERE', len(data_loaders['train']))
+    quit()
+    saved_onnx = False
     for epoch in range(args.epochs):
         model.train(True)  # Set model to training mode
 
@@ -153,11 +156,11 @@ def main():
 
             optimizer.zero_grad()
 
-            print('\ninputs\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
-                torch.mean(inputs), torch.std(inputs), torch.min(inputs), torch.max(inputs), inputs.size()))
+            # print('\ninputs\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
+            #     torch.mean(inputs), torch.std(inputs), torch.min(inputs), torch.max(inputs), inputs.size()))
 
-            print('\noutputs\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
-                torch.mean(outputs), torch.std(outputs), torch.min(outputs), torch.max(outputs), outputs.size()))
+            # print('\noutputs\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
+            #     torch.mean(outputs), torch.std(outputs), torch.min(outputs), torch.max(outputs), outputs.size()))
 
             pred = model(inputs)
 
@@ -173,6 +176,11 @@ def main():
 
         # print('\npred\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
         #     torch.mean(pred), torch.std(pred), torch.min(pred), torch.max(pred)))
+
+            if not saved_onnx:
+                torch.onnx.export(model, inputs, path.join(wandb.run.dir, 'best-model.onnx'), verbose=False)
+                saved_onnx = True
+
 
         model.eval()
         val_running_loss = 0.0
@@ -208,13 +216,9 @@ def main():
                   val_loss, '\tOld Loss was: ', current_best_validation_loss)
             torch.save(model.state_dict(), path.join(
                 wandb.run.dir, 'best-model.pt'))
-            torch.onnx.export(model, inputs, path.join(
-                wandb.run.dir, 'best-model.onnx'), verbose=False)
             current_best_validation_loss = val_loss
         torch.save(model.state_dict(), path.join(
             wandb.run.dir, 'latest-model.pt'))
-        torch.onnx.export(model, inputs, path.join(
-            wandb.run.dir, 'latest-model.onnx'), verbose=False)
 
         if val_loss < last_val_loss:
             early_stop_count = 0

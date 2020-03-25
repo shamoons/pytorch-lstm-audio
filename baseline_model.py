@@ -29,146 +29,25 @@ class BaselineModel(torch.nn.Module):
                 padding=final_kernel_size // 2
             ),
             # torch.nn.PReLU(num_parameters=feature_dim // 4),
+            # torch.nn.Conv1d(
+            #     in_channels=feature_dim // 4,
+            #     out_channels=feature_dim // 2,
+            #     kernel_size=final_kernel_size,
+            #     stride=1,
+            #     padding=final_kernel_size // 2
+            # ),
+            # torch.nn.PReLU(num_parameters=feature_dim // 2),
+            torch.nn.ReLU(),
             torch.nn.Conv1d(
                 in_channels=feature_dim // 4,
-                out_channels=feature_dim // 2,
-                kernel_size=final_kernel_size,
-                stride=1,
-                padding=final_kernel_size // 2
-            ),
-            # torch.nn.PReLU(num_parameters=feature_dim // 2),
-            torch.nn.Conv1d(
-                in_channels=feature_dim // 2,
                 out_channels=1,
                 kernel_size=final_kernel_size,
                 stride=1,
                 padding=final_kernel_size // 2
             ),
-            torch.nn.ReLU6()
+            torch.nn.Sigmoid()
         )
 
-        return
-        self.conv1 = torch.nn.Sequential(
-            torch.nn.Conv1d(
-                in_channels=feature_dim,
-                out_channels=conv1_out_channels // 2,
-                kernel_size=kernel_sizes[0],
-                stride=1,
-                padding=kernel_sizes[0] // 2
-            ),
-            torch.nn.PReLU(num_parameters=conv1_out_channels // 2),
-            torch.nn.Conv1d(
-                in_channels=conv1_out_channels // 2,
-                out_channels=conv1_out_channels // 4,
-                kernel_size=kernel_sizes[0],
-                stride=1,
-                padding=kernel_sizes[0] // 2
-            ),
-            torch.nn.PReLU(num_parameters=conv1_out_channels // 4),
-            torch.nn.Conv1d(
-                in_channels=conv1_out_channels // 4,
-                out_channels=conv1_out_channels // 5,
-                kernel_size=kernel_sizes[0],
-                stride=1,
-                padding=kernel_sizes[0] // 2
-            ),
-            torch.nn.PReLU(num_parameters=conv1_out_channels // 4)
-        )
-
-        self.conv2 = torch.nn.Sequential(
-            torch.nn.Conv1d(
-                in_channels=conv1_out_channels,
-                out_channels=conv2_out_channels // 2,
-                kernel_size=kernel_sizes[1],
-                stride=1,
-                padding=kernel_sizes[1] // 2
-            ),
-            torch.nn.PReLU(num_parameters=conv2_out_channels // 2),
-            torch.nn.Conv1d(
-                in_channels=conv2_out_channels // 2,
-                out_channels=conv2_out_channels // 4,
-                kernel_size=kernel_sizes[1],
-                stride=1,
-                padding=kernel_sizes[1] // 2
-            ),
-            torch.nn.PReLU(num_parameters=conv2_out_channels // 4)
-        )
-
-        self.conv3 = torch.nn.Sequential(
-            torch.nn.Conv1d(
-                in_channels=conv2_out_channels,
-                out_channels=conv3_out_channels // 2,
-                kernel_size=kernel_sizes[2],
-                stride=1,
-                padding=kernel_sizes[2] // 2
-            ),
-            torch.nn.PReLU(num_parameters=conv3_out_channels // 2),
-            torch.nn.Conv1d(
-                in_channels=conv3_out_channels // 2,
-                out_channels=conv3_out_channels // 4,
-                kernel_size=kernel_sizes[2],
-                stride=1,
-                padding=kernel_sizes[2] // 2
-            ),
-            torch.nn.PReLU(num_parameters=conv3_out_channels // 4)
-        )
-
-        self.conv4 = torch.nn.Sequential(
-            torch.nn.Conv1d(
-                in_channels=conv3_out_channels,
-                out_channels=conv4_out_channels // 2,
-                kernel_size=kernel_sizes[3],
-                stride=1,
-                padding=kernel_sizes[3] // 2
-            ),
-            torch.nn.PReLU(num_parameters=conv4_out_channels // 2),
-            torch.nn.Conv1d(
-                in_channels=conv4_out_channels // 2,
-                out_channels=conv4_out_channels // 4,
-                kernel_size=kernel_sizes[3],
-                stride=1,
-                padding=kernel_sizes[3] // 2
-            ),
-            torch.nn.PReLU(num_parameters=conv4_out_channels // 4)
-        )
-
-        self.conv5 = torch.nn.Sequential(
-            torch.nn.Conv1d(
-                in_channels=conv4_out_channels,
-                out_channels=conv5_out_channels // 2,
-                kernel_size=kernel_sizes[4],
-                stride=1,
-                padding=kernel_sizes[4] // 2
-            ),
-            torch.nn.PReLU(num_parameters=conv5_out_channels // 2),
-            torch.nn.Conv1d(
-                in_channels=conv5_out_channels // 2,
-                out_channels=conv5_out_channels // 4,
-                kernel_size=kernel_sizes[4],
-                stride=1,
-                padding=kernel_sizes[4] // 2
-            ),
-            torch.nn.PReLU(num_parameters=conv5_out_channels // 4)
-        )
-
-        self.final_conv = torch.nn.Sequential(
-            torch.nn.Conv1d(
-                in_channels=(feature_dim // 4) * 5,
-                out_channels=feature_dim // 2,
-                kernel_size=final_kernel_size,
-                stride=1,
-                padding=final_kernel_size // 2
-            ),
-            torch.nn.PReLU(num_parameters=feature_dim // 2),
-            torch.nn.Conv1d(
-                in_channels=feature_dim // 2,
-                out_channels=feature_dim,
-                kernel_size=final_kernel_size,
-                stride=1,
-                padding=final_kernel_size // 2
-            ),
-            torch.nn.ReLU6()
-        )
 
     def conv_layer(self, in_channels, kernel_size):
         return torch.nn.Sequential(
@@ -179,23 +58,25 @@ class BaselineModel(torch.nn.Module):
                 stride=1,
                 padding=kernel_size // 2
             ),
+            torch.nn.ReLU(),
             # torch.nn.PReLU(num_parameters=in_channels // 2),
-            torch.nn.Conv1d(
-                in_channels=in_channels // 2,
-                out_channels=in_channels // 4,
-                kernel_size=kernel_size,
-                stride=1,
-                padding=kernel_size // 2
-            ),
+            # torch.nn.Conv1d(
+            #     in_channels=in_channels // 2,
+            #     out_channels=in_channels // 4,
+            #     kernel_size=kernel_size,
+            #     stride=1,
+            #     padding=kernel_size // 2
+            # ),
             # torch.nn.PReLU(num_parameters=in_channels // 4),
             torch.nn.Conv1d(
-                in_channels=in_channels // 4,
+                in_channels=in_channels // 2,
                 out_channels=in_channels // 8,
                 kernel_size=kernel_size,
                 stride=1,
                 padding=kernel_size // 2
             ),
-            torch.nn.PReLU(num_parameters=in_channels // 8)
+            torch.nn.ReLU()
+            # torch.nn.PReLU(num_parameters=in_channels // 8)
         )
 
     def forward(self, x):
