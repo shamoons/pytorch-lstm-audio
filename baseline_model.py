@@ -10,7 +10,6 @@ class BaselineModel(torch.nn.Module):
         self.dropout = torch.nn.Dropout(p=dropout)
 
         conv5_out_channels = feature_dim
-        conv1_out_channels = conv2_out_channels = conv3_out_channels = conv4_out_channels = conv5_out_channels
         kernel_sizes = [kernel_size, kernel_size + kernel_size_step, kernel_size + 2 *
                         kernel_size_step, kernel_size + 3 * kernel_size_step, kernel_size + 4 * kernel_size_step]
 
@@ -60,16 +59,17 @@ class BaselineModel(torch.nn.Module):
             ),
             torch.nn.ReLU(),
             # torch.nn.PReLU(num_parameters=in_channels // 2),
-            # torch.nn.Conv1d(
-            #     in_channels=in_channels // 2,
-            #     out_channels=in_channels // 4,
-            #     kernel_size=kernel_size,
-            #     stride=1,
-            #     padding=kernel_size // 2
-            # ),
-            # torch.nn.PReLU(num_parameters=in_channels // 4),
             torch.nn.Conv1d(
                 in_channels=in_channels // 2,
+                out_channels=in_channels // 4,
+                kernel_size=kernel_size,
+                stride=1,
+                padding=kernel_size // 2
+            ),
+            torch.nn.ReLU(),
+            # torch.nn.PReLU(num_parameters=in_channels // 4),
+            torch.nn.Conv1d(
+                in_channels=in_channels // 4,
                 out_channels=in_channels // 8,
                 kernel_size=kernel_size,
                 stride=1,

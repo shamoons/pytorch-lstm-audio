@@ -118,7 +118,8 @@ def main():
     optimizer = optim.Adam(
         model.parameters(), lr=args.base_lr, weight_decay=0)
 
-    loss_fn = torch.nn.L1Loss(reduction='mean')
+    # loss_fn = torch.nn.L1Loss(reduction='mean')
+    loss_fn = torch.nn.BCELoss(reduction='mean')
 
     wandb.watch(model)
 
@@ -147,19 +148,12 @@ def main():
             inputs = data[0][0]
 
             outputs = data[1][0]
-            # outputs = inputs
 
-            if(torch.cuda.is_available()):
+            if torch.cuda.is_available():
                 inputs = inputs.cuda()
                 outputs = outputs.cuda()
 
             optimizer.zero_grad()
-
-            # print('\ninputs\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
-            #     torch.mean(inputs), torch.std(inputs), torch.min(inputs), torch.max(inputs), inputs.size()))
-
-            # print('\noutputs\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
-            #     torch.mean(outputs), torch.std(outputs), torch.min(outputs), torch.max(outputs), outputs.size()))
 
             pred = model(inputs)
 
@@ -170,25 +164,24 @@ def main():
             optimizer.step()
 
             train_running_loss += loss.data
-        # print('\ninput\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
-        #     torch.mean(inputs), torch.std(inputs), torch.min(inputs), torch.max(inputs)))
 
-        # print('\npred\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
-        #     torch.mean(pred), torch.std(pred), torch.min(pred), torch.max(pred)))
 
             if not saved_onnx:
                 torch.onnx.export(model, inputs, path.join(wandb.run.dir, 'best-model.onnx'), verbose=False)
                 saved_onnx = True
+        print('\ninput\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
+            torch.mean(inputs), torch.std(inputs), torch.min(inputs), torch.max(inputs)))
 
+        print('\npred\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
+            torch.mean(pred), torch.std(pred), torch.min(pred), torch.max(pred)))
 
         model.eval()
         val_running_loss = 0.0
         for _, data in enumerate(data_loaders['val']):
             inputs = data[0][0]
             outputs = data[1][0]
-            # outputs = inputs
 
-            if(torch.cuda.is_available()):
+            if torch.cuda.is_available():
                 inputs = inputs.cuda()
                 outputs = outputs.cuda()
 
