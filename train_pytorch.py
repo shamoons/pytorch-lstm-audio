@@ -181,6 +181,7 @@ def main():
 
         model.eval()
         val_running_loss = 0.0
+        val_cos_similarity = 0.0
         for _, data in enumerate(data_loaders['val']):
             inputs = data[0][0]
             outputs = data[1][0]
@@ -193,10 +194,12 @@ def main():
 
             loss = loss_fn(pred, outputs)
             val_running_loss += loss.data
+            val_cos_similarity += torch.nn.CosineSimilarity(dim=0)(outputs, pred)
 
         time_per_epoch = int(time.time() - start_time)
         train_loss = train_running_loss / len(data_loaders['train'])
         val_loss = val_running_loss / len(data_loaders['val'])
+        val_cos_similarity = val_cos_similarity / len(data_loaders['val'])
 
         wandb.log({
             "train_loss": train_loss,
@@ -204,8 +207,9 @@ def main():
             'epoch': epoch,
             'sec_per_epoch': time_per_epoch,
         })
-        print('\tEpoch: {}\tLoss: {:.6g}\tVal Loss: {:.6g}\tTime per Epoch: {:.4g}s\n'.format(
-            epoch, train_loss, val_loss, time_per_epoch))
+        print(val_cos_similarity)
+        print('\tEpoch: {}\tLoss: {:.6g}\tVal Loss: {:.6g}\tVal Cos: {:.6g}\tTime per Epoch: {:.4g}s\n'.format(
+            epoch, train_loss, val_loss, val_cos_similarity, time_per_epoch))
 
         if val_loss < current_best_validation_loss:
             print('Saving new best model with val loss: ',
