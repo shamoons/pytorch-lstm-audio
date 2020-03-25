@@ -140,3 +140,4 @@ data/test*/
 data/librispeech*/
 models/
 visualize/
+data/train-*

@@ -39,7 +39,7 @@ class BaselineModel(torch.nn.Module):
             # torch.nn.PReLU(num_parameters=feature_dim // 2),
             torch.nn.Conv1d(
                 in_channels=feature_dim // 2,
-                out_channels=feature_dim,
+                out_channels=1,
                 kernel_size=final_kernel_size,
                 stride=1,
                 padding=final_kernel_size // 2
@@ -234,12 +234,13 @@ class BaselineModel(torch.nn.Module):
 
         out = torch.cat((out1, out2, out3, out4, out5), dim=1)
         out = self.final_conv(out)
+
+        out = out.view(out.size(0), out.size(2))
+
         if self.verbose:
             print('\nout\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
                 torch.mean(out), torch.std(out), torch.min(out), torch.max(out), out.size()))
 
-        # quit()
-        out = out.transpose(1, 2)
         if self.make_4d:
             out = out.reshape(out.size(0), 1, out.size(2), out.size(1))
 

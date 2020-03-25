@@ -1,6 +1,7 @@
 import glob
 import random
 import torch
+import math
 import numpy as np
 import os.path as path
 from torch.utils.data import Dataset
@@ -40,6 +41,7 @@ class AudioDataset(Dataset):
         clean_audio_file_paths = np.array(
             sorted(glob.iglob(clean_base_path + '/**/*.flac', recursive=True)))
 
+
         cutoff_index = int(len(corrupted_audio_file_paths) * 0.9)
 
         if train_set:
@@ -58,15 +60,13 @@ class AudioDataset(Dataset):
         return len(self.clean_file_paths) // self.batch_size
 
     def __getitem__(self, index):
-        input_sliced = []
-        output_sliced = []
         if isinstance(self.seq_length, list):
             seq_length = np.random.randint(self.seq_length[0], self.seq_length[1] + 1)
         else:
             seq_length = self.seq_length
-        
-        batched_inputs = torch.Tensor()
-        batched_outputs = torch.Tensor()
+
+        batched_inputs = []
+        batched_outputs = []
 
         indices = np.arange(0, len(self.clean_file_paths))
         while len(batched_inputs) < self.batch_size:
@@ -74,15 +74,32 @@ class AudioDataset(Dataset):
                 np.random.seed(index)
                 index = np.random.choice(indices)
 
-            input_spectrogram, _, _, _, _ = load_audio_spectrogram(
+            if index > len(self.corrupted_file_paths):
+                continue
+            input_spectrogram, _, sample_rate, n_fft, hop_length = load_audio_spectrogram(
                 self.corrupted_file_paths[index], normalize_spect=self.normalize)
+            sec_per_segment = (n_fft - hop_length) / sample_rate
+        
+            mask_filepath = path.splitext(self.corrupted_file_paths[index])[0] +'-mask.npy'
+            mask = np.loadtxt(mask_filepath, dtype=np.float32)
+            width = input_spectrogram.size(0)
+            # width = len(mask) / sample_rate
+            # width = math.ceil(width * 100)
+            max_size = (len(mask)//width) * width
+            mask_vector = mask[:max_size].reshape(width, -1).max(axis=1)
+            # print(mask.shape, mask.shape[0] // input_spectrogram.size(0))
+            mask_seconds = len(mask) / sample_rate
+            # print(mask.shape, mask_vector.shape)
+            # print(f"mask_filepath: {mask_filepath}\tfile: {self.corrupted_file_paths[index]}\tmask_len: {len(mask)}\tmask_seconds: {mask_seconds}\tinp_spect: {input_spectrogram.size()}\tsec_per_segment: {sec_per_segment}")
+            # quit()
+            # print(self.corrupted_file_paths[index], mask.mean(), len(mask), len(input_spectrogram))
 
-            output_spectrogram, _, _, _, _ = load_audio_spectrogram(
-                self.clean_file_paths[index], normalize_spect=self.normalize)
+            # output_spectrogram, _, _, _, _ = load_audio_spectrogram(
+            #     self.clean_file_paths[index], normalize_spect=self.normalize)
             
             if seq_length >= input_spectrogram.size(0):
                 input_spectrogram = input_spectrogram.repeat(1 + (seq_length // input_spectrogram.size(0)), 1)
-                output_spectrogram = output_spectrogram.repeat(1 + (seq_length // output_spectrogram.size(0)), 1)
+                # output_spectrogram = output_spectrogram.repeat(1 + (seq_length // output_spectrogram.size(0)), 1)
 
             averaged_time_energy_input = torch.mean(input_spectrogram, dim=1)
             soft_min_inputs = torch.nn.Softmin()(averaged_time_energy_input).detach().numpy()
@@ -99,10 +116,27 @@ class AudioDataset(Dataset):
             end_index = start_index + seq_length
 
             input_sliced = input_spectrogram[start_index:end_index]
-            output_sliced = output_spectrogram[start_index:end_index]
+            output_sliced = mask_vector[start_index:end_index]
 
-            batched_inputs = torch.cat((batched_inputs, input_sliced))
-            batched_outputs = torch.cat((batched_outputs, output_sliced))
+            input_sliced = input_sliced.numpy()
+
+            # print('batched_inputs.shape', batched_inputs.shape)
+            batched_inputs.append(input_sliced)
+            batched_outputs.append(output_sliced)
+            # print('batched_inputs.shape', batched_inputs)
+            # batched_outputs = np.append(batched_outputs, output_sliced, axis=0)
+
+        # print('batched_inputs', torch.FloatTensor(batched_inputs).size())
+        # print('batched_inputs', np.asarray(batched_inputs).shape)
+        # print('batched_outputs', np.asarray(batched_outputs).shape)
+        # batched_inputs = torch.stack(batched_inputs)
+        batched_inputs = torch.from_numpy(np.asarray(batched_inputs))
+        batched_outputs = torch.from_numpy(np.asarray(batched_outputs))
+        # print('seq_length', seq_length)
+        # print('batched_inputs', batched_inputs.size())
+        # print('batched_outputs', batched_outputs.size())
+
+        # quit()
 
 
         return batched_inputs, batched_outputs

@@ -142,9 +142,9 @@ def main():
         train_running_loss = 0.0
 
         for _, data in enumerate(Bar(data_loaders['train'])):
-            inputs = data[0]
+            inputs = data[0][0]
 
-            outputs = data[1]
+            outputs = data[1][0]
             # outputs = inputs
 
             if(torch.cuda.is_available()):
@@ -153,7 +153,14 @@ def main():
 
             optimizer.zero_grad()
 
+            print('\ninputs\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
+                torch.mean(inputs), torch.std(inputs), torch.min(inputs), torch.max(inputs), inputs.size()))
+
+            print('\noutputs\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
+                torch.mean(outputs), torch.std(outputs), torch.min(outputs), torch.max(outputs), outputs.size()))
+
             pred = model(inputs)
+
 
             loss = loss_fn(pred, outputs)
 
@@ -170,8 +177,8 @@ def main():
         model.eval()
         val_running_loss = 0.0
         for _, data in enumerate(data_loaders['val']):
-            inputs = data[0]
-            outputs = data[1]
+            inputs = data[0][0]
+            outputs = data[1][0]
             # outputs = inputs
 
             if(torch.cuda.is_available()):
