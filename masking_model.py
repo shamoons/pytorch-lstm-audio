@@ -22,23 +22,22 @@ class MaskingModel(torch.nn.Module):
         self.final_conv = torch.nn.Sequential(
             torch.nn.Conv1d(
                 in_channels=(feature_dim // 8) * 5,
-                out_channels=feature_dim // 4,
+                out_channels=feature_dim // 16,
                 kernel_size=final_kernel_size,
                 stride=1,
                 padding=final_kernel_size // 2
             ),
-            # torch.nn.PReLU(num_parameters=feature_dim // 4),
-            # torch.nn.Conv1d(
-            #     in_channels=feature_dim // 4,
-            #     out_channels=feature_dim // 2,
-            #     kernel_size=final_kernel_size,
-            #     stride=1,
-            #     padding=final_kernel_size // 2
-            # ),
-            # torch.nn.PReLU(num_parameters=feature_dim // 2),
-            torch.nn.ReLU(),
+            torch.nn.PReLU(num_parameters=feature_dim // 16),
             torch.nn.Conv1d(
-                in_channels=feature_dim // 4,
+                in_channels=feature_dim // 16,
+                out_channels=feature_dim // 32,
+                kernel_size=final_kernel_size,
+                stride=1,
+                padding=final_kernel_size // 2
+            ),
+            torch.nn.PReLU(num_parameters=feature_dim // 32),
+            torch.nn.Conv1d(
+                in_channels=feature_dim // 32,
                 out_channels=1,
                 kernel_size=final_kernel_size,
                 stride=1,
@@ -57,8 +56,7 @@ class MaskingModel(torch.nn.Module):
                 stride=1,
                 padding=kernel_size // 2
             ),
-            torch.nn.ReLU(),
-            # torch.nn.PReLU(num_parameters=in_channels // 2),
+            torch.nn.PReLU(num_parameters=in_channels // 2),
             torch.nn.Conv1d(
                 in_channels=in_channels // 2,
                 out_channels=in_channels // 4,
@@ -66,8 +64,7 @@ class MaskingModel(torch.nn.Module):
                 stride=1,
                 padding=kernel_size // 2
             ),
-            torch.nn.ReLU(),
-            # torch.nn.PReLU(num_parameters=in_channels // 4),
+            torch.nn.PReLU(num_parameters=in_channels // 4),
             torch.nn.Conv1d(
                 in_channels=in_channels // 4,
                 out_channels=in_channels // 8,
@@ -75,8 +72,7 @@ class MaskingModel(torch.nn.Module):
                 stride=1,
                 padding=kernel_size // 2
             ),
-            torch.nn.ReLU()
-            # torch.nn.PReLU(num_parameters=in_channels // 8)
+            torch.nn.PReLU(num_parameters=in_channels // 8)
         )
 
     def forward(self, x):
