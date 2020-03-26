@@ -1,6 +1,6 @@
 from audio_dataset import AudioDataset
 from barbar import Bar
-from baseline_model import BaselineModel
+from masking_model import MaskingModel
 
 import argparse
 import os.path as path
@@ -88,12 +88,12 @@ def main():
     args = parse_args()
     initialize(args)
 
-    baseline_model_file = open('baseline_model.py', 'r').read()
-    open(path.join(wandb.run.dir, 'saved_model.py'), 'w').write(
+    baseline_model_file = open('masking_model.py', 'r').read()
+    open(path.join(wandb.run.dir, 'masking_model.py'), 'w').write(
         baseline_model_file)
     open(path.join(wandb.run.dir, 'args.json'),
          'w').write(json.dumps(vars(args)))
-    wandb.save('saved_model.py')
+    wandb.save('masking_model.py')
     wandb.save('args.json')
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -112,7 +112,7 @@ def main():
 
     data_loaders = {'train': train_loader, 'val': val_loader}
 
-    model = BaselineModel(feature_dim=args.feature_dim,
+    model = MaskingModel(feature_dim=args.feature_dim,
                 verbose=args.verbose, kernel_size=args.kernel_size, kernel_size_step=args.kernel_size_step, final_kernel_size=args.final_kernel_size)
 
     if args.continue_from:

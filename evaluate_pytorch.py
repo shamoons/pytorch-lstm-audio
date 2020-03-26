@@ -54,7 +54,7 @@ def main():
 
 
     sys.path.append(os.path.abspath(saved_model_path))
-    model = importlib.import_module('saved_model').BaselineModel(
+    model = importlib.import_module('masking_model').MaskingModel(
         feature_dim=161, kernel_size=saved_args['kernel_size'], kernel_size_step=saved_args['kernel_size_step'], final_kernel_size=saved_args['final_kernel_size'])
 
     state_dict = torch.load(model_path, map_location=device)

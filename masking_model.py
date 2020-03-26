@@ -1,9 +1,9 @@
 import torch
 
 
-class BaselineModel(torch.nn.Module):
+class MaskingModel(torch.nn.Module):
     def __init__(self, feature_dim, kernel_size, kernel_size_step, final_kernel_size, make_4d=False, dropout=0.01, verbose=False):
-        super(BaselineModel, self).__init__()
+        super(MaskingModel, self).__init__()
         self.make_4d = make_4d
         self.verbose = verbose
 
