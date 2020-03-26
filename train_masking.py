@@ -1,6 +1,7 @@
 from audio_dataset import AudioDataset
 from barbar import Bar
 from masking_model import MaskingModel
+from ignite.metrics import Accuracy, Precision
 
 import argparse
 import os.path as path
@@ -25,7 +26,7 @@ def parse_args():
                         type=int, default=161)
 
     parser.add_argument('--base_lr',
-                        help='Base learning rate', type=float, default=1e-3)
+                        help='Base learning rate', type=float, default=1e-4)
 
     parser.add_argument('--learning-anneal',
                         default=1.1, type=float,
@@ -80,6 +81,7 @@ def initialize(args):
 
 def cos_similiarity_loss(inp, target):
     loss = 1 - torch.nn.CosineSimilarity(dim=1)(inp, target)
+    loss = loss.mean()
     return loss
 
 
@@ -158,7 +160,7 @@ def main():
             pred = model(inputs)
 
             loss = cos_similiarity_loss(pred, outputs)
-            print(outputs, pred, loss)
+
             loss.backward()
             optimizer.step()
 
@@ -190,6 +192,14 @@ def main():
             pred = model(inputs)
 
             loss = cos_similiarity_loss(pred, outputs)
+
+            pred_rounded = torch.tensor(pred)
+            pred_rounded[pred_rounded < 0.5] = 0
+            pred_rounded[pred_rounded >= 0.5] = 1
+            rounded_loss = cos_similiarity_loss(pred_rounded, outputs)
+            # prec = Precision()((preds, outputs))
+            print('\n', outputs, '\n', pred, '\n', pred_rounded, '\n', loss, '\n', rounded_loss)    
+
             val_running_loss += loss.data
 
         time_per_epoch = int(time.time() - start_time)
@@ -203,7 +213,7 @@ def main():
             'sec_per_epoch': time_per_epoch,
         })
 
-        print(f"Epoch: {epoch}\tLoss(t): {train_loss:.6g}\tLoss(v): {val_loss.mean():.6g} (best: {current_best_validation_loss.mean():.6g})\tTime (epoch): {time_per_epoch:d}s")
+        print(f"Epoch: {epoch}\tLoss(t): {train_loss:.6g}\tLoss(v): {val_loss:.6g} (best: {current_best_validation_loss:.6g})\tTime (epoch): {time_per_epoch:d}s")
 
         if val_loss < current_best_validation_loss:
             torch.save(model.state_dict(), path.join(

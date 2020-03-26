@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "89e3914d42bc48f995d35197c25919a7c62177fb5b528e6aa367baf2cdcb715e"
+            "sha256": "e198e6134663229bf4a5709ca2aac2d787a05506e3a0ed213b7976cd4aa47f80"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -86,10 +86,10 @@
         },
         "configparser": {
             "hashes": [
-                "sha256:254c1d9c79f60c45dfde850850883d5aaa7f19a23f13561243a050d5a7c3fe4c",
-                "sha256:c7d282687a5308319bf3d2e7706e575c635b0a470342641c93bea0ea3b5331df"
+                "sha256:2ca44140ee259b5e3d8aaf47c79c36a7ab0d5e94d70bd4105c03ede7a20ea5a1",
+                "sha256:cffc044844040c7ce04e9acd1838b5f2e5fa3170182f6fda4d2ea8b0099dbadd"
             ],
-            "version": "==4.0.2"
+            "version": "==5.0.0"
         },
         "cycler": {
             "hashes": [
@@ -475,6 +475,14 @@
             ],
             "index": "pypi",
             "version": "==0.12.0"
+        },
+        "pytorch-ignite": {
+            "hashes": [
+                "sha256:bea739029fa96059ee36ab3376a99fdd3930d7ad94151c6eef04d2b91bd217bd",
+                "sha256:d39ec25cf592308d6c30bb10f1bc5038fc68ad20c8639750ac504d9e8b25074c"
+            ],
+            "index": "pypi",
+            "version": "==0.3.0"
         },
         "pytz": {
             "hashes": [

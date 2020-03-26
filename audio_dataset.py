@@ -59,6 +59,7 @@ class AudioDataset(Dataset):
         self.corrupted_file_paths = np.repeat(
             self.corrupted_file_paths, repeat_sample)
 
+
     def __len__(self):
         return len(self.corrupted_file_paths) // self.batch_size
 
