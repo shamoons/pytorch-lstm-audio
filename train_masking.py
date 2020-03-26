@@ -31,7 +31,7 @@ def parse_args():
                         default=1.1, type=float,
                         help='Annealing applied to learning rate every epoch')
 
-    parser.add_argument('--lr_bump', default=5, type=float,
+    parser.add_argument('--lr_bump', default=2, type=float,
                         help='Amount to bump up the learning rate by every lr_bump_partition epochs')
 
     parser.add_argument('--lr_bump_partition', default=10, type=int,
@@ -80,7 +80,6 @@ def initialize(args):
 
 def cos_similiarity_loss(inp, target):
     loss = 1 - torch.nn.CosineSimilarity(dim=1)(inp, target)
-    loss = loss.mean()
     return loss
 
 
@@ -123,9 +122,6 @@ def main():
     optimizer = optim.Adam(
         model.parameters(), lr=args.base_lr, weight_decay=0)
 
-    # loss_fn = torch.nn.L1Loss(reduction='mean')
-    # loss_fn = torch.nn.BCELoss(reduction='mean')
-
     wandb.watch(model)
 
     current_best_validation_loss = 1
@@ -151,7 +147,6 @@ def main():
 
         for _, data in enumerate(Bar(data_loaders['train'])):
             inputs = data[0][0]
-
             outputs = data[1][0]
 
             if torch.cuda.is_available():
@@ -163,11 +158,11 @@ def main():
             pred = model(inputs)
 
             loss = cos_similiarity_loss(pred, outputs)
+            print(outputs, pred, loss)
             loss.backward()
             optimizer.step()
 
             train_running_loss += loss.data
-
 
             if not saved_onnx:
                 torch.onnx.export(model, inputs, path.join(wandb.run.dir, 'best-model.onnx'), verbose=False)
@@ -184,7 +179,6 @@ def main():
 
         model.eval()
         val_running_loss = 0.0
-        # val_cos_similarity = 0.0
         for _, data in enumerate(data_loaders['val']):
             inputs = data[0][0]
             outputs = data[1][0]
@@ -195,16 +189,12 @@ def main():
 
             pred = model(inputs)
 
-            # loss = loss_fn(pred, outputs)
             loss = cos_similiarity_loss(pred, outputs)
             val_running_loss += loss.data
-
-            # val_cos_similarity += torch.nn.CosineSimilarity(dim=1)(outputs, pred).mean()
 
         time_per_epoch = int(time.time() - start_time)
         train_loss = train_running_loss / len(data_loaders['train'])
         val_loss = val_running_loss / len(data_loaders['val'])
-        # val_cos_similarity = val_cos_similarity / len(data_loaders['val'])
 
         wandb.log({
             "train_loss": train_loss,
@@ -213,9 +203,7 @@ def main():
             'sec_per_epoch': time_per_epoch,
         })
 
-        print(f"Epoch: {epoch}\tLoss(t): {train_loss:.6g}\tLoss(v): {val_loss:.6g} (best: {current_best_validation_loss:.6g})\tTime (epoch): {time_per_epoch:d}s")
-        # print('\tEpoch: {}\tLoss: {:.6g}\tVal Loss: {:.6g}\tVal Cos: {:.6g}\tTime per Epoch: {:.4g}s\n'.format(
-        #     epoch, train_loss, val_loss, val_cos_similarity, time_per_epoch))
+        print(f"Epoch: {epoch}\tLoss(t): {train_loss:.6g}\tLoss(v): {val_loss.mean():.6g} (best: {current_best_validation_loss.mean():.6g})\tTime (epoch): {time_per_epoch:d}s")
 
         if val_loss < current_best_validation_loss:
             torch.save(model.state_dict(), path.join(

@@ -111,7 +111,7 @@ class AudioDataset(Dataset):
 
             # averaged_time_energy_input = torch.mean(input_spectrogram, dim=1)
             # soft_min_inputs = torch.nn.Softmin()(averaged_time_energy_input).detach().numpy()
-            # input_indices = np.arange(0, input_spectrogram.size(0))
+            input_indices = np.arange(0, input_spectrogram.size(0))
             # mid_index = np.random.choice(input_indices, p=soft_min_inputs)
             mid_index = np.random.choice(input_indices)
 
