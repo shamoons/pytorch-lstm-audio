@@ -77,7 +77,7 @@ class AudioDataset(Dataset):
             if index > len(self.corrupted_file_paths):
                 continue
 
-            input_spectrogram, _, sample_rate, n_fft, hop_length = load_audio_spectrogram(
+            input_spectrogram, _, _, _, _ = load_audio_spectrogram(
                 self.corrupted_file_paths[index], normalize_spect=self.normalize)
 
             mask_filepath = path.splitext(self.corrupted_file_paths[index])[

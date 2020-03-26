@@ -113,14 +113,17 @@ class BaselineModel(torch.nn.Module):
             print('\nout5\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
                 torch.mean(out5), torch.std(out5), torch.min(out5), torch.max(out5), out5.size()))
 
-        out = torch.cat((out1, out2, out3, out4, out5), dim=1)
-        out = self.final_conv(out)
+        # out = torch.cat((out1, out2, out3, out4, out5), dim=1)
+        stacked = torch.stack((out1, out2, out3, out4, out5), dim=2)
+        out = torch.flatten(stacked, start_dim=1, end_dim=2)
 
+        out = self.final_conv(out)
         out = out.view(out.size(0), out.size(2))
 
         if self.verbose:
             print('\nout\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
                 torch.mean(out), torch.std(out), torch.min(out), torch.max(out), out.size()))
+        
 
         if self.make_4d:
             out = out.reshape(out.size(0), 1, out.size(2), out.size(1))
