@@ -24,7 +24,7 @@ def parse_args():
         '--masking_model', help='Path for the trained masking model', required=True)
 
     parser.add_argument('--seq_length', help='Length of sequences of the spectrogram',
-                        nargs='+', type=int, default=[8, 256])
+                        nargs='+', type=int, default=[16, 256])
 
     parser.add_argument('--feature_dim', help='Feature dimension',
                         type=int, default=161)
@@ -69,6 +69,10 @@ def parse_args():
     parser.add_argument('--verbose', default=False,
                         type=bool, help='Verbose mode')
 
+    parser.add_argument('--seed', default=1,
+                        type=int, help='Seed')
+
+
     args = parser.parse_args()
 
     return args
@@ -81,7 +85,7 @@ def initialize(args):
                tags=','.join(wandb_tags), config=args)
     wandb.save('*.pt')
     wandb.save('*.onnx')
-    np.random.seed(2)
+    np.random.seed(args.seed)
 
 def main():
     args = parse_args()
@@ -120,6 +124,7 @@ def main():
                               kernel_size_step=masked_args['kernel_size_step'], final_kernel_size=masked_args['final_kernel_size'])
     mask_state_dict = torch.load(args.masking_model, map_location=device)
     mask_model.load_state_dict(mask_state_dict)
+    mask_model.eval()
 
     reconstruct_model = ReconstructionModel(feature_dim=args.feature_dim,
                                             verbose=args.verbose, kernel_size=args.kernel_size, kernel_size_step=args.kernel_size_step, final_kernel_size=args.final_kernel_size)
@@ -158,10 +163,10 @@ def main():
 
         start_time = time.time()
         train_running_loss = 0.0
+        train_count = 0
         for _, data in enumerate(Bar(data_loaders['train'])):
             inputs = data[0][0]
             outputs = data[1][0]
-            print(inputs.size(), outputs.size())
 
             if torch.cuda.is_available():
                 inputs = inputs.cuda()
@@ -169,24 +174,37 @@ def main():
 
             optimizer.zero_grad()
             mask = mask_model(inputs)
-            # print(mask)
+
             mask[mask < 0.5] = 0
             mask[mask >= 0.5] = 1
-            print((mask != 0).nonzero())
-            print(mask)
-            print(mask.size())
-            quit()
-            pred = reconstruct_model(inputs)
+            if torch.sum(mask) == 0:
+                continue
 
-            loss = loss_fn(pred, outputs)
+            expanded_mask = []
+            for i, m in enumerate(mask):
+                start_1 = (m != 0).nonzero()[0][0]
+                end_1 = (m != 0).nonzero()[-1][0]
+                mask_length = end_1 - start_1
+                new_mask = np.zeros(m.size())
+                new_mask[max(0, start_1 - mask_length):min(end_1 + mask_length, inputs.size(1))] = 1
+                expanded_mask.append(new_mask)
+
+            expanded_mask = torch.tensor(expanded_mask, device=device).float()
+            masked_inputs = expanded_mask.unsqueeze(2) * inputs
+            masked_outputs = expanded_mask.unsqueeze(2) * outputs
+
+            pred = reconstruct_model(masked_inputs)
+
+            loss = loss_fn(pred, masked_outputs)
 
             loss.backward()
             optimizer.step()
 
             train_running_loss += loss.data
+            train_count += 1
 
             if not saved_onnx:
-                torch.onnx.export(model, inputs, path.join(
+                torch.onnx.export(reconstruct_model, masked_inputs, path.join(
                     wandb.run.dir, 'best-model.onnx'), verbose=False)
                 saved_onnx = True
 
@@ -201,7 +219,8 @@ def main():
 
         reconstruct_model.eval()
         val_running_loss = 0.0
-        # val_cos_similarity = 0.0
+        val_count = 0
+
         for _, data in enumerate(data_loaders['val']):
             inputs = data[0][0]
             outputs = data[1][0]
@@ -210,16 +229,37 @@ def main():
                 inputs = inputs.cuda()
                 outputs = outputs.cuda()
 
-            pred = reconstruct_model(inputs)
+            mask = mask_model(inputs)
 
-            loss = loss_fn(pred, outputs)
+            mask[mask < 0.5] = 0
+            mask[mask >= 0.5] = 1
+            if torch.sum(mask) == 0:
+                continue
+
+            expanded_mask = []
+            for i, m in enumerate(mask):
+                start_1 = (m != 0).nonzero()[0][0]
+                end_1 = (m != 0).nonzero()[-1][0]
+                mask_length = end_1 - start_1
+                new_mask = np.zeros(m.size())
+                new_mask[max(0, start_1 - mask_length):min(end_1 + mask_length, inputs.size(1))] = 1
+                expanded_mask.append(new_mask)
+
+            expanded_mask = torch.tensor(expanded_mask, device=device).float()
+            masked_inputs = expanded_mask.unsqueeze(2) * inputs
+            masked_outputs = expanded_mask.unsqueeze(2) * outputs
+
+            pred = reconstruct_model(masked_inputs)
+
+            loss = loss_fn(pred, masked_outputs)
 
             val_running_loss += loss.data
+            val_count += 1
 
 
         time_per_epoch = int(time.time() - start_time)
-        train_loss = train_running_loss / len(data_loaders['train'])
-        val_loss = val_running_loss / len(data_loaders['val'])
+        train_loss = train_running_loss / train_count
+        val_loss = val_running_loss / val_count
 
         wandb.log({
             "train_loss": train_loss,

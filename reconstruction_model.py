@@ -39,7 +39,7 @@ class ReconstructionModel(torch.nn.Module):
             torch.nn.ReLU(),
             torch.nn.Conv1d(
                 in_channels=feature_dim // 4,
-                out_channels=1,
+                out_channels=feature_dim,
                 kernel_size=final_kernel_size,
                 stride=1,
                 padding=final_kernel_size // 2
@@ -83,6 +83,10 @@ class ReconstructionModel(torch.nn.Module):
         if self.make_4d:
             x = x.view(x.size(0), x.size(3), x.size(2))
 
+        if self.verbose:
+            print('\nx\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
+                torch.mean(x), torch.std(x), torch.min(x), torch.max(x), x.size()))
+
         inp = x.transpose(1, 2)
         if self.verbose:
             print('\ninp\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
@@ -116,13 +120,16 @@ class ReconstructionModel(torch.nn.Module):
         # out = torch.cat((out1, out2, out3, out4, out5), dim=1)
         stacked = torch.stack((out1, out2, out3, out4, out5), dim=2)
         out = torch.flatten(stacked, start_dim=1, end_dim=2)
-
+        
         out = self.final_conv(out)
-        out = out.view(out.size(0), out.size(2))
+        
+        out = out.transpose(1, 2)
 
         if self.verbose:
             print('\nout\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
                 torch.mean(out), torch.std(out), torch.min(out), torch.max(out), out.size()))
+        
+        # quit()
         
 
         if self.make_4d:
