@@ -195,13 +195,12 @@ def main():
 
             val_running_loss += loss.data
 
-            pred_rounded = torch.tensor(pred)
-            pred_rounded[pred_rounded < 0.5] = 0
-            pred_rounded[pred_rounded >= 0.5] = 1
-            rounded_loss = cos_similiarity_loss(pred_rounded, outputs)
+            # pred_rounded = torch.tensor(pred)
+            # pred_rounded[pred_rounded < 0.5] = 0
+            # pred_rounded[pred_rounded >= 0.5] = 1
+            # rounded_loss = cos_similiarity_loss(pred_rounded, outputs)
 
-            # print('\n', epoch,'\n', outputs, '\n', pred_rounded, '\n', loss, '\n', rounded_loss, '\n', val_running_loss, len(data_loaders['val']))    
-
+            # print(f"Epoch: {epoch}\tLoss: {loss:.4g}\tRounded Loss: {rounded_loss:.4g}\tValRunningLoss: {val_running_loss:.4g}\tSize: {pred.size(1)}\tLen: {len(data_loaders['val'])}")
 
         time_per_epoch = int(time.time() - start_time)
         train_loss = train_running_loss / len(data_loaders['train'])

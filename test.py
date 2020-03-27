@@ -5,7 +5,7 @@ import torch
 def cos_similiarity_loss(inp, target):
     # loss = 1 - torch.nn.CosineSimilarity(dim=1)(inp, target)
     # loss = loss.mean()
-    loss = torch.nn.CosineSimilarity(dim=1)(inp + 1, target + 1)
+    loss = torch.nn.CosineSimilarity(dim=1)(inp, target)
     return loss
 
 [[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
