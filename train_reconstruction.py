@@ -81,7 +81,7 @@ def initialize(args):
                tags=','.join(wandb_tags), config=args)
     wandb.save('*.pt')
     wandb.save('*.onnx')
-    np.random.seed(0)
+    np.random.seed(2)
 
 def main():
     args = parse_args()
@@ -147,7 +147,7 @@ def main():
     last_val_loss = current_best_validation_loss
 
     saved_onnx = False
-    print('SHAMOON1')
+
     for epoch in range(args.epochs):
         reconstruct_model.train(True)  # Set model to training mode
 
@@ -158,9 +158,7 @@ def main():
 
         start_time = time.time()
         train_running_loss = 0.0
-        print('SHAMOON2')
         for _, data in enumerate(Bar(data_loaders['train'])):
-            print('SHAMOON3')
             inputs = data[0][0]
             outputs = data[1][0]
             print(inputs.size(), outputs.size())
@@ -168,14 +166,13 @@ def main():
             if torch.cuda.is_available():
                 inputs = inputs.cuda()
                 outputs = outputs.cuda()
-            print('SHAMOON4')
 
             optimizer.zero_grad()
-            print('ere')
             mask = mask_model(inputs)
-            print(mask)
+            # print(mask)
             mask[mask < 0.5] = 0
             mask[mask >= 0.5] = 1
+            print((mask != 0).nonzero())
             print(mask)
             print(mask.size())
             quit()
