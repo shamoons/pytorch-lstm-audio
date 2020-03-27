@@ -42,7 +42,7 @@ def parse_args():
                         type=int, default=250)
 
     parser.add_argument('--batch_size', help='Batch size',
-                        type=int, default=64)
+                        type=int, default=16)
 
     parser.add_argument('--repeat_sample', help='How many times to sample each file',
                         type=int, default=1)
@@ -80,7 +80,7 @@ def initialize(args):
     np.random.seed(0)
 
 def cos_similiarity_loss(inp, target):
-    loss = 1 - torch.nn.CosineSimilarity(dim=1)(inp, target)
+    loss = 1 - torch.nn.CosineSimilarity(dim=1)(inp + 1, target + 1)
     loss = loss.mean()
     return loss
 
@@ -193,14 +193,15 @@ def main():
 
             loss = cos_similiarity_loss(pred, outputs)
 
+            val_running_loss += loss.data
+
             pred_rounded = torch.tensor(pred)
             pred_rounded[pred_rounded < 0.5] = 0
             pred_rounded[pred_rounded >= 0.5] = 1
             rounded_loss = cos_similiarity_loss(pred_rounded, outputs)
-            # prec = Precision()((preds, outputs))
-            print('\n', outputs, '\n', pred, '\n', pred_rounded, '\n', loss, '\n', rounded_loss)    
 
-            val_running_loss += loss.data
+            # print('\n', epoch,'\n', outputs, '\n', pred_rounded, '\n', loss, '\n', rounded_loss, '\n', val_running_loss, len(data_loaders['val']))    
+
 
         time_per_epoch = int(time.time() - start_time)
         train_loss = train_running_loss / len(data_loaders['train'])
