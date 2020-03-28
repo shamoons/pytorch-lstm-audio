@@ -25,6 +25,10 @@ def parse_args():
         "--audio_path", help="Audio file", type=str)
 
     parser.add_argument(
+        "--clean_audio_path", help="Clean audio file", type=str)
+
+
+    parser.add_argument(
         "--seq_length", help="Sequence Length", type=int, default=20)
 
     parser.add_argument('--saved_model_path', help='File of the saved model',
@@ -88,28 +92,41 @@ def main():
     print('input_spectrogram\tMean: {:.4f} ± {:.4f}\tMin: {:.4f}\tMax: {:.4f}\tSize: {}'.format(torch.mean(input_spectrogram), torch.std(
         input_spectrogram), torch.min(input_spectrogram), torch.max(input_spectrogram), input_spectrogram.size()))
 
+    if args.clean_audio_path:
+        clean_input_spectrogram, _, _, _, _ = load_audio_spectrogram(
+            args.audio_path)
+
+        clean_input_spectrogram = clean_input_spectrogram.view(
+            1, clean_input_spectrogram.size(0), clean_input_spectrogram.size(1))
+
+        print('clean_input_spectrogram\tMean: {:.4f} ± {:.4f}\tMin: {:.4f}\tMax: {:.4f}\tSize: {}'.format(torch.mean(clean_input_spectrogram), torch.std(
+            clean_input_spectrogram), torch.min(clean_input_spectrogram), torch.max(clean_input_spectrogram), clean_input_spectrogram.size()))
+
+
     mask = mask_model(input_spectrogram)
     mask = torch.round(mask).float()
     expanded_mask = mask_model.expand_mask(mask, seq_length=input_spectrogram.size(1))
     masked_input = input_spectrogram * expanded_mask[..., None]
 
-    # torch.set_printoptions(profile='full', precision=4)
-    # print(expanded_mask.size(), input_spectrogram.size(), masked_input.size())
-    # print(expanded_mask[0], expanded_mask[0].size())
-    # print(input_spectrogram[0,:,0], input_spectrogram[0,:,0].size())
-    # print(masked_input[0,:,0], masked_input[0,:,0].size())
-    # quit()
-
     # Model takes data of shape: torch.Size([BATCH_SIZE, SEQUENCE_LENGTH, FEATURE_DIM])
     output = model(masked_input)
 
-    output[mask == 0] = input_spectrogram[mask == 0] 
+    output[mask == 0] = input_spectrogram[mask == 0]
 
     print('model output\t\tMean: {:.4f} ± {:.4f}\tMin: {:.4f}\tMax: {:.4f}\tSize: {}'.format(
         torch.mean(output), torch.std(output), torch.min(output), torch.max(output), output.size()))
 
     output = torch.expm1(output)
     print('expm1 output\t\tMean: {:.4f} ± {:.4f}\tMin: {:.4f}\tMax: {:.4f}\tSize: {}'.format(torch.mean(output), torch.std(output), torch.min(output), torch.max(output), output.size()))
+
+    print(masked_input[mask == 0][0])
+    print(input_spectrogram[mask == 0][0])
+    print('Clean')
+    print(clean_input_spectrogram[mask == 0][0])
+    print('Input')
+    print(input_spectrogram[mask == 0][0])
+    print('Output')
+    print(output[mask == 0][0]) 
 
     np_output = output.view(output.size(1), output.size(2)).detach().numpy()
 

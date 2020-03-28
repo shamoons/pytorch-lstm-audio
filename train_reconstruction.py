@@ -36,7 +36,7 @@ def parse_args():
                         default=1.1, type=float,
                         help='Annealing applied to learning rate every epoch')
 
-    parser.add_argument('--lr_bump', default=5, type=float,
+    parser.add_argument('--lr_bump', default=2, type=float,
                         help='Amount to bump up the learning rate by every lr_bump_partition epochs')
 
     parser.add_argument('--lr_bump_partition', default=10, type=int,
@@ -194,7 +194,8 @@ def main():
 
             pred = reconstruct_model(masked_inputs)
 
-            loss = loss_fn(pred, masked_outputs)
+            loss = loss_fn(pred[mask != 0], masked_outputs[mask != 0])
+            # loss = loss_fn(pred, masked_outputs)
             # loss = cos_similiarity_loss(pred, masked_outputs)
 
             loss.backward()
@@ -208,14 +209,14 @@ def main():
                     wandb.run.dir, 'best-model.onnx'), verbose=False)
                 saved_onnx = True
 
-            # print('\ninput\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
-            #     torch.mean(inputs), torch.std(inputs), torch.min(inputs), torch.max(inputs)))
+            print('\ninput\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
+                torch.mean(inputs), torch.std(inputs), torch.min(inputs), torch.max(inputs)))
 
-            # print('\noutputs\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
-            #     torch.mean(outputs), torch.std(outputs), torch.min(outputs), torch.max(outputs)))
+            print('\noutputs\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
+                torch.mean(outputs), torch.std(outputs), torch.min(outputs), torch.max(outputs)))
 
-            # print('\npred\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
-            #     torch.mean(pred), torch.std(pred), torch.min(pred), torch.max(pred)))
+            print('\npred\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
+                torch.mean(pred), torch.std(pred), torch.min(pred), torch.max(pred)))
 
         reconstruct_model.eval()
         val_running_loss = 0.0
@@ -276,7 +277,7 @@ def main():
             early_stop_count = early_stop_count + 1
         last_val_loss = val_loss
 
-        if epoch % 5 == 0:
+        if epoch % 3 == 0:
             for g in optimizer.param_groups:
                 g['lr'] = g['lr'] / args.learning_anneal
             print(

@@ -44,7 +44,7 @@ class ReconstructionModel(torch.nn.Module):
                 stride=1,
                 padding=final_kernel_size // 2
             ),
-            torch.nn.Sigmoid()
+            torch.nn.ReLU6()
         )
 
 
