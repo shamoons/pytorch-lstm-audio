@@ -20,9 +20,25 @@ class ReconstructionModel(torch.nn.Module):
         self.conv5 = self.conv_layer(in_channels=feature_dim, kernel_size=kernel_sizes[4])
         self.conv6 = self.conv_layer(in_channels=feature_dim, kernel_size=kernel_sizes[5])
 
-        self.final_conv = torch.nn.Sequential(
+        self.upscale_conv = torch.nn.Sequential(
             torch.nn.Conv1d(
-                in_channels=(feature_dim // 8) * 6,
+                in_channels=6,
+                out_channels=feature_dim // 16,
+                kernel_size=final_kernel_size,
+                stride=1,
+                padding=final_kernel_size // 2
+            ),
+            torch.nn.PReLU(num_parameters=feature_dim // 16),
+            torch.nn.Conv1d(
+                in_channels=feature_dim // 16,
+                out_channels=feature_dim // 8,
+                kernel_size=final_kernel_size,
+                stride=1,
+                padding=final_kernel_size // 2
+            ),
+            torch.nn.PReLU(num_parameters=feature_dim // 8),
+            torch.nn.Conv1d(
+                in_channels=feature_dim // 8,
                 out_channels=feature_dim // 4,
                 kernel_size=final_kernel_size,
                 stride=1,
@@ -39,6 +55,17 @@ class ReconstructionModel(torch.nn.Module):
             torch.nn.PReLU(num_parameters=feature_dim // 2),
             torch.nn.Conv1d(
                 in_channels=feature_dim // 2,
+                out_channels=feature_dim,
+                kernel_size=final_kernel_size,
+                stride=1,
+                padding=final_kernel_size // 2
+            ),
+            torch.nn.PReLU(num_parameters=feature_dim)
+        )
+
+        self.final_conv = torch.nn.Sequential(
+            torch.nn.Conv1d(
+                in_channels=feature_dim,
                 out_channels=feature_dim,
                 kernel_size=final_kernel_size,
                 stride=1,
@@ -73,7 +100,15 @@ class ReconstructionModel(torch.nn.Module):
                 stride=1,
                 padding=kernel_size // 2
             ),
-            torch.nn.PReLU(num_parameters=in_channels // 8)
+            torch.nn.PReLU(num_parameters=in_channels // 8),
+            torch.nn.Conv1d(
+                in_channels=in_channels // 8,
+                out_channels=1,
+                kernel_size=kernel_size,
+                stride=1,
+                padding=kernel_size // 2
+            ),
+            torch.nn.PReLU(num_parameters=1)
         )
 
     def forward(self, x):
@@ -124,18 +159,51 @@ class ReconstructionModel(torch.nn.Module):
         stacked = torch.stack((out1, out2, out3, out4, out5, out6), dim=2)
         out = torch.flatten(stacked, start_dim=1, end_dim=2)
         
+        out = self.upscale_conv(out)
+
+        if self.verbose:
+            print('\nupscale conv\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
+                torch.mean(out), torch.std(out), torch.min(out), torch.max(out), out.size()))
+
+        out += inp
+
         out = self.final_conv(out)
-        
-        out = out.transpose(1, 2)
 
         if self.verbose:
             print('\nout\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
                 torch.mean(out), torch.std(out), torch.min(out), torch.max(out), out.size()))
-        
-        # quit()
-        
+
+        out = out.transpose(1, 2)
 
         if self.make_4d:
             out = out.reshape(out.size(0), 1, out.size(2), out.size(1))
 
         return out
+
+    def model_summary(self, model):
+        print("model_summary")
+        print()
+        print("Layer_name"+"\t"*7+"Number of Parameters")
+        print("="*100)
+        model_parameters = [layer for layer in model.parameters() if layer.requires_grad]
+        layer_name = [child for child in model.children()]
+        j = 0
+        total_params = 0
+        print("\t"*10)
+        for i in layer_name:
+            print()
+            param = 0
+            try:
+                bias = (i.bias is not None)
+            except:
+                bias = False  
+            if not bias:
+                param =model_parameters[j].numel()+model_parameters[j+1].numel()
+                j = j+2
+            else:
+                param =model_parameters[j].numel()
+                j = j+1
+            print(str(i)+"\t"*3+str(param))
+            total_params+=param
+        print("="*100)
+        print(f"Total Params:{total_params}")  

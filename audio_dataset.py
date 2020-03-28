@@ -58,10 +58,6 @@ class AudioDataset(Dataset):
             self.clean_file_paths = np.repeat(self.clean_file_paths, repeat_sample)
         self.corrupted_file_paths = np.repeat(
             self.corrupted_file_paths, repeat_sample)
-        
-        self.corrupted_file_paths = self.corrupted_file_paths[0:64]
-        self.clean_file_paths = self.clean_file_paths[0:64]
-
 
 
     def __len__(self):
@@ -87,15 +83,21 @@ class AudioDataset(Dataset):
             if index > len(self.corrupted_file_paths):
                 continue
             index = 2
-            # print(self.corrupted_file_paths[index])
+            corrupted_file_path = self.corrupted_file_paths[index]
+            corrupted_file_path = 'home/shamoon/speech-enhancement-asr/data/LibriSpeech/dev-noise-subtractive-250ms-1/84/121123/84-121123-0000.flac'
+
+            clean_file_path = 'home/shamoon/speech-enhancement-asr/data/LibriSpeech/dev-clean/84/121123/84-121123-0000.flac'
+
+
             input_spectrogram, _, _, _, _ = load_audio_spectrogram(
                 self.corrupted_file_paths[index], normalize_spect=self.normalize)
 
             if not self.mask:
+                clean_file_path = self.clean_file_paths[index]
                 output_spectrogram, _, _, _, _ = load_audio_spectrogram(
-                    self.clean_file_paths[index], normalize_spect=self.normalize)
+                    clean_file_path, normalize_spect=self.normalize)
             else:
-                mask_filepath = path.splitext(self.corrupted_file_paths[index])[
+                mask_filepath = path.splitext(corrupted_file_path)[
                     0] + '-mask.npy'
                 mask = np.loadtxt(mask_filepath, dtype=np.float32)
 

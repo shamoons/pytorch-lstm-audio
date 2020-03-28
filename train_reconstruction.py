@@ -134,6 +134,7 @@ def main():
     reconstruct_model = ReconstructionModel(feature_dim=args.feature_dim,
                                             verbose=args.verbose, kernel_size=args.kernel_size, kernel_size_step=args.kernel_size_step, final_kernel_size=args.final_kernel_size)
 
+    reconstruct_model.model_summary(reconstruct_model)
     if args.continue_from:
         state_dict = torch.load(args.continue_from, map_location=device)
         reconstruct_model.load_state_dict(state_dict)
@@ -196,7 +197,7 @@ def main():
 
             loss = loss_fn(pred[mask != 0], masked_outputs[mask != 0])
             # loss = loss_fn(pred, masked_outputs)
-            # loss = cos_similiarity_loss(pred, masked_outputs)
+
 
             loss.backward()
             optimizer.step()
@@ -209,14 +210,14 @@ def main():
                     wandb.run.dir, 'best-model.onnx'), verbose=False)
                 saved_onnx = True
 
-            print('\ninput\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
-                torch.mean(inputs), torch.std(inputs), torch.min(inputs), torch.max(inputs)))
+            # print('\ninput\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
+            #     torch.mean(inputs), torch.std(inputs), torch.min(inputs), torch.max(inputs)))
 
-            print('\noutputs\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
-                torch.mean(outputs), torch.std(outputs), torch.min(outputs), torch.max(outputs)))
+            # print('\noutputs\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
+            #     torch.mean(outputs), torch.std(outputs), torch.min(outputs), torch.max(outputs)))
 
-            print('\npred\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
-                torch.mean(pred), torch.std(pred), torch.min(pred), torch.max(pred)))
+            # print('\npred\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
+            #     torch.mean(pred), torch.std(pred), torch.min(pred), torch.max(pred)))
 
         reconstruct_model.eval()
         val_running_loss = 0.0
