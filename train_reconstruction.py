@@ -88,7 +88,7 @@ def initialize(args):
     np.random.seed(args.seed)
 
 def cos_similiarity_loss(inp, target):
-    loss = 1 - torch.nn.CosineSimilarity(dim=1)(inp + 1, target + 1)
+    loss = 1 - torch.nn.CosineSimilarity(dim=2)(inp + 1, target + 1)
     loss = loss.mean()
     return loss
 
@@ -141,7 +141,7 @@ def main():
 
     optimizer = optim.Adam(reconstruct_model.parameters(), lr=args.base_lr, weight_decay=0)
 
-    # loss_fn = torch.nn.MSELoss(reduction='mean')
+    loss_fn = torch.nn.MSELoss(reduction='mean')
 
     wandb.watch(reconstruct_model)
 
@@ -168,6 +168,7 @@ def main():
         start_time = time.time()
         train_running_loss = 0.0
         train_count = 0
+
         for _, data in enumerate(Bar(data_loaders['train'])):
             inputs = data[0][0]
             outputs = data[1][0]
@@ -177,20 +178,24 @@ def main():
                 outputs = outputs.cuda()
 
             optimizer.zero_grad()
+
             mask = mask_model(inputs)
+
             mask = torch.round(mask)
 
             if torch.sum(mask) == 0:
+                print('continue')
                 continue
 
             expanded_mask = mask_model.expand_mask(mask, seq_length=inputs.size(1))
-            masked_inputs = expanded_mask.unsqueeze(2) * inputs
-            masked_outputs = expanded_mask.unsqueeze(2) * outputs
+
+            masked_inputs = inputs * expanded_mask[..., None]
+            masked_outputs = outputs * expanded_mask[..., None]
 
             pred = reconstruct_model(masked_inputs)
 
-            # loss = loss_fn(pred, masked_outputs)
-            loss = cos_similiarity_loss(pred, masked_outputs)
+            loss = loss_fn(pred, masked_outputs)
+            # loss = cos_similiarity_loss(pred, masked_outputs)
 
             loss.backward()
             optimizer.step()
@@ -216,46 +221,38 @@ def main():
         val_running_loss = 0.0
         val_count = 0
 
-        for _, data in enumerate(data_loaders['val']):
-            inputs = data[0][0]
-            outputs = data[1][0]
+    
+        # for _, data in enumerate(data_loaders['val']):
+        #     inputs = data[0][0]
+        #     outputs = data[1][0]
 
-            if torch.cuda.is_available():
-                inputs = inputs.cuda()
-                outputs = outputs.cuda()
+        #     if torch.cuda.is_available():
+        #         inputs = inputs.cuda()
+        #         outputs = outputs.cuda()
 
-            mask = mask_model(inputs)
+        #     mask = mask_model(inputs)
 
-            mask[mask < 0.5] = 0
-            mask[mask >= 0.5] = 1
-            if torch.sum(mask) == 0:
-                continue
+        #     mask = torch.round(mask)
+        #     if torch.sum(mask) == 0:
+        #         continue
 
-            expanded_mask = []
-            for i, m in enumerate(mask):
-                start_1 = (m != 0).nonzero()[0][0]
-                end_1 = (m != 0).nonzero()[-1][0]
-                mask_length = end_1 - start_1
-                new_mask = np.zeros(m.size())
-                new_mask[max(0, start_1 - mask_length):min(end_1 + mask_length, inputs.size(1))] = 1
-                expanded_mask.append(new_mask)
+        #     expanded_mask = mask_model.expand_mask(mask, seq_length=inputs.size(1))
+        #     masked_inputs = expanded_mask.unsqueeze(2) * inputs
+        #     masked_outputs = expanded_mask.unsqueeze(2) * outputs
 
-            expanded_mask = torch.tensor(expanded_mask, device=device).float()
-            masked_inputs = expanded_mask.unsqueeze(2) * inputs
-            masked_outputs = expanded_mask.unsqueeze(2) * outputs
+        #     pred = reconstruct_model(masked_inputs)
 
-            pred = reconstruct_model(masked_inputs)
+        #     loss = loss_fn(pred, masked_outputs)
+        #     # loss = cos_similiarity_loss(pred, masked_outputs)
 
-            # loss = loss_fn(pred, masked_outputs)
-            loss = cos_similiarity_loss(pred, masked_outputs)
-
-            val_running_loss += loss.data
-            val_count += 1
+        #     val_running_loss += loss.data
+        #     val_count += 1
 
 
         time_per_epoch = int(time.time() - start_time)
         train_loss = train_running_loss / train_count
-        val_loss = val_running_loss / val_count
+        val_loss = train_loss
+        # val_loss = val_running_loss / val_count
 
         wandb.log({
             "train_loss": train_loss,

@@ -11,10 +11,8 @@ class MaskingModel(torch.nn.Module):
 
         self.dropout = torch.nn.Dropout(p=dropout)
 
-        conv5_out_channels = feature_dim
         kernel_sizes = [kernel_size, kernel_size + kernel_size_step, kernel_size + 2 *
                         kernel_size_step, kernel_size + 3 * kernel_size_step, kernel_size + 4 * kernel_size_step]
-
 
         self.conv1 = self.conv_layer(in_channels=feature_dim, kernel_size=kernel_sizes[0])
         self.conv2 = self.conv_layer(in_channels=feature_dim, kernel_size=kernel_sizes[1])
@@ -75,6 +73,7 @@ class MaskingModel(torch.nn.Module):
                 padding=kernel_size // 2
             ),
             torch.nn.PReLU(num_parameters=in_channels // 8)
+            # torch.nn.Dropout(p: self.dropout)
         )
 
     def forward(self, x):
@@ -133,11 +132,22 @@ class MaskingModel(torch.nn.Module):
         expanded_mask = []
 
         for _, m in enumerate(mask):
-            start_1 = (m != 0).nonzero()[0][0]
-            end_1 = (m != 0).nonzero()[-1][0]
-            mask_length = end_1 - start_1
+            # print('m', m, (m != 0).nonzero())
+            nonzero = (m != 0).nonzero()
+            # print(m)
+            # print('nonzero', nonzero)
+            # print(nonzero[0])
+            # print(nonzero[-1])
+            # print('before')
+
             new_mask = np.zeros(m.size())
-            new_mask[max(0, start_1 - mask_length):min(end_1 + mask_length, seq_length)] = 1
+            if nonzero.size(0) > 0:
+                # print('here')
+                start_1 = (m != 0).nonzero()[0][0]
+                end_1 = (m != 0).nonzero()[-1][0]
+                mask_length = end_1 - start_1
+                new_mask[max(0, start_1 - mask_length):min(end_1 + mask_length, seq_length)] = 1
+
             expanded_mask.append(new_mask)
 
         expanded_mask = torch.tensor(expanded_mask, device=self.device).float()

@@ -37,15 +37,13 @@ def parse_args():
 def load_masking_model(wandb_id, device):
     wandb_dir = list(glob.iglob(os.path.join('wandb', '*' + wandb_id), recursive=False))[0]
     model_path = os.path.join(wandb_dir, 'best-model.pt')
-    wandb_dir = wandb_dir
 
     (head, tail) = os.path.split(model_path)
     mask_args_path = os.path.join(head, tail.replace('best-model.pt', 'args.json'))
     masked_args = json.loads(open(mask_args_path, 'r').read())
 
-    sys.path.append(os.path.abspath(wandb_dir))
     model = importlib.import_module('masking_model').MaskingModel(
-        feature_dim=161, kernel_size=masked_args['kernel_size'], kernel_size_step=masked_args['kernel_size_step'], final_kernel_size=masked_args['final_kernel_size'], device=device)
+        feature_dim=161, kernel_size=masked_args['kernel_size'], kernel_size_step=masked_args['kernel_size_step'], final_kernel_size=masked_args['final_kernel_size'], device='cpu')
 
     state_dict = torch.load(model_path, map_location=device)
 
@@ -92,19 +90,20 @@ def main():
 
     mask = mask_model(input_spectrogram)
     mask = torch.round(mask).float()
-    expanded_mask = mask_model(mask, seq_length=input_spectrogram.size(1))
+    expanded_mask = mask_model.expand_mask(mask, seq_length=input_spectrogram.size(1))
+    masked_input = input_spectrogram * expanded_mask[..., None]
 
-    masked_input = input_spectrogram * mask[..., None]
-
-    torch.set_printoptions(precision=4)
-    print(mask.size(), input_spectrogram.size(), masked_input.size())
-    print(mask[0][-40:], mask[0].size())
-    print(input_spectrogram[0,:,0][-40:], input_spectrogram[0,:,0].size())
-    print(masked_input[0,:,0][-40:], masked_input[0,:,0].size())
-    quit()
+    # torch.set_printoptions(profile='full', precision=4)
+    # print(expanded_mask.size(), input_spectrogram.size(), masked_input.size())
+    # print(expanded_mask[0], expanded_mask[0].size())
+    # print(input_spectrogram[0,:,0], input_spectrogram[0,:,0].size())
+    # print(masked_input[0,:,0], masked_input[0,:,0].size())
+    # quit()
 
     # Model takes data of shape: torch.Size([BATCH_SIZE, SEQUENCE_LENGTH, FEATURE_DIM])
-    output = model(input_spectrogram)
+    output = model(masked_input)
+
+    output[mask == 0] = input_spectrogram[mask == 0] 
 
     print('model output\t\tMean: {:.4f} ± {:.4f}\tMin: {:.4f}\tMax: {:.4f}\tSize: {}'.format(
         torch.mean(output), torch.std(output), torch.min(output), torch.max(output), output.size()))

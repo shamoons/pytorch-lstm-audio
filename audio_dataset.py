@@ -58,6 +58,10 @@ class AudioDataset(Dataset):
             self.clean_file_paths = np.repeat(self.clean_file_paths, repeat_sample)
         self.corrupted_file_paths = np.repeat(
             self.corrupted_file_paths, repeat_sample)
+        
+        self.corrupted_file_paths = self.corrupted_file_paths[0:64]
+        self.clean_file_paths = self.clean_file_paths[0:64]
+
 
 
     def __len__(self):
@@ -82,7 +86,8 @@ class AudioDataset(Dataset):
 
             if index > len(self.corrupted_file_paths):
                 continue
-            
+            index = 2
+            # print(self.corrupted_file_paths[index])
             input_spectrogram, _, _, _, _ = load_audio_spectrogram(
                 self.corrupted_file_paths[index], normalize_spect=self.normalize)
 
@@ -114,6 +119,8 @@ class AudioDataset(Dataset):
             soft_min_inputs = torch.nn.Softmin()(averaged_time_energy_input).detach().numpy()
             input_indices = np.arange(0, input_spectrogram.size(0))
             mid_index = np.random.choice(input_indices, p=soft_min_inputs)
+
+            mid_index = input_spectrogram.size(0) // 2 #TODO: Remove this hardcoding
 
             if mid_index < seq_length // 2:
                 mid_index = seq_length // 2
