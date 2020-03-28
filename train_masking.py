@@ -114,7 +114,7 @@ def main():
     data_loaders = {'train': train_loader, 'val': val_loader}
 
     model = MaskingModel(feature_dim=args.feature_dim,
-                verbose=args.verbose, kernel_size=args.kernel_size, kernel_size_step=args.kernel_size_step, final_kernel_size=args.final_kernel_size)
+                verbose=args.verbose, kernel_size=args.kernel_size, kernel_size_step=args.kernel_size_step, final_kernel_size=args.final_kernel_size, device=device)
 
     if args.continue_from:
         state_dict = torch.load(args.continue_from, map_location=device)

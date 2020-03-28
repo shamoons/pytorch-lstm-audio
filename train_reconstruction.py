@@ -87,6 +87,11 @@ def initialize(args):
     wandb.save('*.onnx')
     np.random.seed(args.seed)
 
+def cos_similiarity_loss(inp, target):
+    loss = 1 - torch.nn.CosineSimilarity(dim=1)(inp + 1, target + 1)
+    loss = loss.mean()
+    return loss
+
 def main():
     args = parse_args()
     initialize(args)
@@ -121,7 +126,7 @@ def main():
     masked_args = json.loads(open(mask_args_path, 'r').read())
 
     mask_model = MaskingModel(feature_dim=masked_args['feature_dim'], kernel_size=masked_args['kernel_size'],
-                              kernel_size_step=masked_args['kernel_size_step'], final_kernel_size=masked_args['final_kernel_size'])
+                              kernel_size_step=masked_args['kernel_size_step'], final_kernel_size=masked_args['final_kernel_size'], device=device)
     mask_state_dict = torch.load(args.masking_model, map_location=device)
     mask_model.load_state_dict(mask_state_dict)
     mask_model.eval()
@@ -134,10 +139,9 @@ def main():
         reconstruct_model.load_state_dict(state_dict)
         print('Loading saved model to continue from: {}'.format(args.continue_from))
 
-    optimizer = optim.Adam(
-        reconstruct_model.parameters(), lr=args.base_lr, weight_decay=0)
+    optimizer = optim.Adam(reconstruct_model.parameters(), lr=args.base_lr, weight_decay=0)
 
-    loss_fn = torch.nn.MSELoss(reduction='mean')
+    # loss_fn = torch.nn.MSELoss(reduction='mean')
 
     wandb.watch(reconstruct_model)
 
@@ -174,28 +178,19 @@ def main():
 
             optimizer.zero_grad()
             mask = mask_model(inputs)
+            mask = torch.round(mask)
 
-            mask[mask < 0.5] = 0
-            mask[mask >= 0.5] = 1
             if torch.sum(mask) == 0:
                 continue
 
-            expanded_mask = []
-            for i, m in enumerate(mask):
-                start_1 = (m != 0).nonzero()[0][0]
-                end_1 = (m != 0).nonzero()[-1][0]
-                mask_length = end_1 - start_1
-                new_mask = np.zeros(m.size())
-                new_mask[max(0, start_1 - mask_length):min(end_1 + mask_length, inputs.size(1))] = 1
-                expanded_mask.append(new_mask)
-
-            expanded_mask = torch.tensor(expanded_mask, device=device).float()
+            expanded_mask = mask_model.expand_mask(mask, seq_length=inputs.size(1))
             masked_inputs = expanded_mask.unsqueeze(2) * inputs
             masked_outputs = expanded_mask.unsqueeze(2) * outputs
 
             pred = reconstruct_model(masked_inputs)
 
-            loss = loss_fn(pred, masked_outputs)
+            # loss = loss_fn(pred, masked_outputs)
+            loss = cos_similiarity_loss(pred, masked_outputs)
 
             loss.backward()
             optimizer.step()
@@ -251,7 +246,8 @@ def main():
 
             pred = reconstruct_model(masked_inputs)
 
-            loss = loss_fn(pred, masked_outputs)
+            # loss = loss_fn(pred, masked_outputs)
+            loss = cos_similiarity_loss(pred, masked_outputs)
 
             val_running_loss += loss.data
             val_count += 1

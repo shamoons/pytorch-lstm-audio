@@ -1,11 +1,13 @@
 import torch
+import numpy as np
 
 
 class MaskingModel(torch.nn.Module):
-    def __init__(self, feature_dim, kernel_size, kernel_size_step, final_kernel_size, make_4d=False, dropout=0.01, verbose=False):
+    def __init__(self, feature_dim, kernel_size, kernel_size_step, final_kernel_size, device, make_4d=False, dropout=0.01, verbose=False):
         super(MaskingModel, self).__init__()
         self.make_4d = make_4d
         self.verbose = verbose
+        self.device = device
 
         self.dropout = torch.nn.Dropout(p=dropout)
 
@@ -125,3 +127,19 @@ class MaskingModel(torch.nn.Module):
             out = out.reshape(out.size(0), 1, out.size(2), out.size(1))
 
         return out
+
+
+    def expand_mask(self, mask, seq_length, multiple=3):
+        expanded_mask = []
+
+        for _, m in enumerate(mask):
+            start_1 = (m != 0).nonzero()[0][0]
+            end_1 = (m != 0).nonzero()[-1][0]
+            mask_length = end_1 - start_1
+            new_mask = np.zeros(m.size())
+            new_mask[max(0, start_1 - mask_length):min(end_1 + mask_length, seq_length)] = 1
+            expanded_mask.append(new_mask)
+
+        expanded_mask = torch.tensor(expanded_mask, device=self.device).float()
+
+        return expanded_mask

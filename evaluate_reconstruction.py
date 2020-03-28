@@ -17,6 +17,8 @@ def parse_args():
     parser.add_argument(
         "--model_path", help="Model to Load", type=str)
 
+    parser.add_argument('--mask_wandb', type=str, help='Run mask based on a wandb id')
+
     parser.add_argument('--wandb', type=str, help='Run based on a wandb id')
 
     parser.add_argument(
@@ -32,29 +34,43 @@ def parse_args():
 
     return args
 
+def load_masking_model(wandb_id, device):
+    wandb_dir = list(glob.iglob(os.path.join('wandb', '*' + wandb_id), recursive=False))[0]
+    model_path = os.path.join(wandb_dir, 'best-model.pt')
+    wandb_dir = wandb_dir
+
+    (head, tail) = os.path.split(model_path)
+    mask_args_path = os.path.join(head, tail.replace('best-model.pt', 'args.json'))
+    masked_args = json.loads(open(mask_args_path, 'r').read())
+
+    sys.path.append(os.path.abspath(wandb_dir))
+    model = importlib.import_module('masking_model').MaskingModel(
+        feature_dim=161, kernel_size=masked_args['kernel_size'], kernel_size_step=masked_args['kernel_size_step'], final_kernel_size=masked_args['final_kernel_size'], device=device)
+
+    state_dict = torch.load(model_path, map_location=device)
+
+    model.load_state_dict(state_dict)
+
+    model = model.float()
+    model.eval()
+
+    return model
 
 def main():
     args = parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    mask_model = load_masking_model(args.mask_wandb, device)
 
-    if args.wandb:
-        wandb_dir = list(glob.iglob(os.path.join(
-            'wandb', '*' + args.wandb), recursive=False))[0]
-        model_path = os.path.join(wandb_dir, 'best-model.pt')
-        saved_model_path = wandb_dir
-        args_path = os.path.join(wandb_dir, 'args.json')
-    else:
-        model_path = args.model_path
-        saved_model_path = args.saved_model_path
-        args_path = 'saved_models/args.json'
-
+    wandb_dir = list(glob.iglob(os.path.join('wandb', '*' + args.wandb), recursive=False))[0]
+    model_path = os.path.join(wandb_dir, 'best-model.pt')
+    saved_model_path = wandb_dir
+    args_path = os.path.join(wandb_dir, 'args.json')
     saved_args = json.loads(open(args_path, 'r').read())
 
-
     sys.path.append(os.path.abspath(saved_model_path))
-    model = importlib.import_module('masking_model').MaskingModel(
-        feature_dim=161, kernel_size=saved_args['kernel_size'], kernel_size_step=saved_args['kernel_size_step'], final_kernel_size=saved_args['final_kernel_size'])
+    model = importlib.import_module('reconstruction_model').ReconstructionModel(
+        feature_dim=saved_args['feature_dim'], kernel_size=saved_args['kernel_size'], kernel_size_step=saved_args['kernel_size_step'], final_kernel_size=saved_args['final_kernel_size'])
 
     state_dict = torch.load(model_path, map_location=device)
 
@@ -73,6 +89,19 @@ def main():
 
     print('input_spectrogram\tMean: {:.4f} ± {:.4f}\tMin: {:.4f}\tMax: {:.4f}\tSize: {}'.format(torch.mean(input_spectrogram), torch.std(
         input_spectrogram), torch.min(input_spectrogram), torch.max(input_spectrogram), input_spectrogram.size()))
+
+    mask = mask_model(input_spectrogram)
+    mask = torch.round(mask).float()
+    expanded_mask = mask_model(mask, seq_length=input_spectrogram.size(1))
+
+    masked_input = input_spectrogram * mask[..., None]
+
+    torch.set_printoptions(precision=4)
+    print(mask.size(), input_spectrogram.size(), masked_input.size())
+    print(mask[0][-40:], mask[0].size())
+    print(input_spectrogram[0,:,0][-40:], input_spectrogram[0,:,0].size())
+    print(masked_input[0,:,0][-40:], masked_input[0,:,0].size())
+    quit()
 
     # Model takes data of shape: torch.Size([BATCH_SIZE, SEQUENCE_LENGTH, FEATURE_DIM])
     output = model(input_spectrogram)
