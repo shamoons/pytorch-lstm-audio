@@ -95,11 +95,11 @@ def main():
     initialize(args)
 
     baseline_model_file = open('masking_model.py', 'r').read()
-    open(path.join(wandb.run.dir, 'masking_model.py'), 'w').write(
+    open(path.join(wandb.run.dir, 'saved_masking_model.py'), 'w').write(
         baseline_model_file)
     open(path.join(wandb.run.dir, 'args.json'),
          'w').write(json.dumps(vars(args)))
-    wandb.save('masking_model.py')
+    wandb.save('saved_masking_model.py')
     wandb.save('args.json')
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -163,8 +163,10 @@ def main():
             optimizer.zero_grad()
 
             pred = model(inputs)
+            
 
             loss = cos_mse_similiarity_loss(pred, outputs)
+            print(pred[0], outputs[0], loss)
 
             loss.backward()
             optimizer.step()

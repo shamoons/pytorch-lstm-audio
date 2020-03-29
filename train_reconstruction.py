@@ -1,11 +1,13 @@
 from audio_dataset import AudioDataset
 from audio_dataset import pad_samples
 from barbar import Bar
-from masking_model import MaskingModel
 from reconstruction_model import ReconstructionModel
 
 import argparse
+import importlib
+import sys
 import os.path as path
+import glob
 import socket
 import torch
 import torch.optim as optim
@@ -22,7 +24,7 @@ def parse_args():
         '--audio_path', help='Path for corrupted audio', required=True)
 
     parser.add_argument(
-        '--masking_model', help='Path for the trained masking model', required=True)
+        '--mask_wandb', help='Path for the trained masking model', required=True)
 
     parser.add_argument('--feature_dim', help='Feature dimension',
                         type=int, default=161)
@@ -70,7 +72,6 @@ def parse_args():
     parser.add_argument('--seed', default=1,
                         type=int, help='Seed')
 
-
     args = parser.parse_args()
 
     return args
@@ -85,10 +86,33 @@ def initialize(args):
     wandb.save('*.onnx')
     np.random.seed(args.seed)
 
+
+def load_masking_model(wandb_id, device):
+    wandb_dir = list(glob.iglob(path.join('wandb', '*' + wandb_id), recursive=False))[0]
+    model_path = path.join(wandb_dir, 'best-model.pt')
+
+    (head, tail) = path.split(model_path)
+    mask_args_path = path.join(head, tail.replace('best-model.pt', 'args.json'))
+    masked_args = json.loads(open(mask_args_path, 'r').read())
+    sys.path.append(path.abspath(head))
+
+    model = importlib.import_module('saved_masking_model').MaskingModel(
+        feature_dim=161, kernel_size=masked_args['kernel_size'], kernel_size_step=masked_args['kernel_size_step'], final_kernel_size=masked_args['final_kernel_size'], device=device)
+
+    state_dict = torch.load(model_path, map_location=device)
+
+    model.load_state_dict(state_dict)
+
+    model = model.float()
+    model.eval()
+
+    return model
+
 def cos_similiarity_loss(inp, target):
     loss = 1 - torch.nn.CosineSimilarity(dim=2)(inp, target)
     loss = loss.mean()
     return loss
+
 
 def main():
     args = parse_args()
@@ -106,39 +130,31 @@ def main():
     params = {'pin_memory': True} if device == 'cuda' else {}
 
     train_set = AudioDataset(
-        args.audio_path, train_set=True, batch_size=args.batch_size, feature_dim=args.feature_dim, repeat_sample=args.repeat_sample, shuffle=True, normalize=False, mask=False)
+        args.audio_path, train_set=True, feature_dim=args.feature_dim, repeat_sample=args.repeat_sample, shuffle=True, normalize=False, mask=False)
 
     val_set = AudioDataset(
-        args.audio_path, test_set=True, batch_size=args.batch_size, feature_dim=args.feature_dim, shuffle=True, normalize=False, mask=False)
+        args.audio_path, test_set=True, feature_dim=args.feature_dim, shuffle=True, normalize=False, mask=False)
 
     train_loader = torch.utils.data.DataLoader(
-        train_set, batch_size=args.batch_size, num_workers=args.num_workers, **params)
+        train_set, batch_size=args.batch_size, num_workers=args.num_workers, collate_fn=pad_samples, **params)
     val_loader = torch.utils.data.DataLoader(
-        val_set, batch_size=args.batch_size, num_workers=args.num_workers, **params)
+        val_set, batch_size=args.batch_size, num_workers=args.num_workers, collate_fn=pad_samples, **params)
 
     data_loaders = {'train': train_loader, 'val': val_loader}
 
-    (head, tail) = path.split(args.masking_model)
-    mask_args_path = path.join(
-        head, tail.replace('best-model.pt', 'args.json'))
-    masked_args = json.loads(open(mask_args_path, 'r').read())
-
-    mask_model = MaskingModel(feature_dim=masked_args['feature_dim'], kernel_size=masked_args['kernel_size'],
-                              kernel_size_step=masked_args['kernel_size_step'], final_kernel_size=masked_args['final_kernel_size'], device=device)
-    mask_state_dict = torch.load(args.masking_model, map_location=device)
-    mask_model.load_state_dict(mask_state_dict)
-    mask_model.eval()
+    mask_model = load_masking_model(args.mask_wandb, device)
 
     reconstruct_model = ReconstructionModel(feature_dim=args.feature_dim,
                                             verbose=args.verbose, kernel_size=args.kernel_size, kernel_size_step=args.kernel_size_step, final_kernel_size=args.final_kernel_size)
 
-    reconstruct_model.model_summary(reconstruct_model)
+    # reconstruct_model.model_summary(reconstruct_model)
     if args.continue_from:
         state_dict = torch.load(args.continue_from, map_location=device)
         reconstruct_model.load_state_dict(state_dict)
         print('Loading saved model to continue from: {}'.format(args.continue_from))
 
-    optimizer = optim.Adam(reconstruct_model.parameters(), lr=args.base_lr, weight_decay=0)
+    optimizer = optim.Adam(reconstruct_model.parameters(),
+                           lr=args.base_lr, weight_decay=0)
 
     loss_fn = torch.nn.MSELoss(reduction='mean')
 
@@ -169,8 +185,8 @@ def main():
         train_count = 0
 
         for _, data in enumerate(Bar(data_loaders['train'])):
-            inputs = data[0][0]
-            outputs = data[1][0]
+            inputs = data[0]
+            outputs = data[1]
 
             if torch.cuda.is_available():
                 inputs = inputs.cuda()
@@ -182,19 +198,22 @@ def main():
 
             mask = torch.round(mask)
 
-            if torch.sum(mask) == 0:
-                continue
+            if torch.sum(mask) > 0:
+                print(inputs[0])
+                print(mask[0])
 
-            expanded_mask = mask_model.expand_mask(mask, seq_length=inputs.size(1))
+
+            expanded_mask = mask_model.expand_mask(
+                mask, seq_length=inputs.size(1))
 
             masked_inputs = inputs * expanded_mask[..., None]
             masked_outputs = outputs * expanded_mask[..., None]
 
             pred = reconstruct_model(masked_inputs)
+            # print(pred)
 
             loss = loss_fn(pred[mask != 0], masked_outputs[mask != 0])
             # loss = loss_fn(pred, masked_outputs)
-
 
             loss.backward()
             optimizer.step()
@@ -220,10 +239,9 @@ def main():
         val_running_loss = 0.0
         val_count = 0
 
-    
         # for _, data in enumerate(data_loaders['val']):
-        #     inputs = data[0][0]
-        #     outputs = data[1][0]
+        #     inputs = data[0]
+        #     outputs = data[1]
 
         #     if torch.cuda.is_available():
         #         inputs = inputs.cuda()
@@ -246,7 +264,6 @@ def main():
 
         #     val_running_loss += loss.data
         #     val_count += 1
-
 
         time_per_epoch = int(time.time() - start_time)
         train_loss = train_running_loss / train_count
