@@ -1,4 +1,5 @@
 from audio_dataset import AudioDataset
+from audio_dataset import pad_samples
 from barbar import Bar
 from masking_model import MaskingModel
 from reconstruction_model import ReconstructionModel
@@ -22,9 +23,6 @@ def parse_args():
 
     parser.add_argument(
         '--masking_model', help='Path for the trained masking model', required=True)
-
-    parser.add_argument('--seq_length', help='Length of sequences of the spectrogram',
-                        nargs='+', type=int, default=[16, 256])
 
     parser.add_argument('--feature_dim', help='Feature dimension',
                         type=int, default=161)
@@ -108,15 +106,15 @@ def main():
     params = {'pin_memory': True} if device == 'cuda' else {}
 
     train_set = AudioDataset(
-        args.audio_path, train_set=True, seq_length=args.seq_length, batch_size=args.batch_size, feature_dim=args.feature_dim, repeat_sample=args.repeat_sample, shuffle=True, normalize=False, mask=False)
+        args.audio_path, train_set=True, batch_size=args.batch_size, feature_dim=args.feature_dim, repeat_sample=args.repeat_sample, shuffle=True, normalize=False, mask=False)
 
     val_set = AudioDataset(
-        args.audio_path, test_set=True, seq_length=args.seq_length, batch_size=args.batch_size, feature_dim=args.feature_dim, shuffle=True, normalize=False, mask=False)
+        args.audio_path, test_set=True, batch_size=args.batch_size, feature_dim=args.feature_dim, shuffle=True, normalize=False, mask=False)
 
     train_loader = torch.utils.data.DataLoader(
-        train_set, batch_size=1, num_workers=args.num_workers, **params)
+        train_set, batch_size=args.batch_size, num_workers=args.num_workers, **params)
     val_loader = torch.utils.data.DataLoader(
-        val_set, batch_size=1, num_workers=args.num_workers, **params)
+        val_set, batch_size=args.batch_size, num_workers=args.num_workers, **params)
 
     data_loaders = {'train': train_loader, 'val': val_loader}
 

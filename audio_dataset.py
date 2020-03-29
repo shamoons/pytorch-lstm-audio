@@ -5,16 +5,16 @@ import math
 import numpy as np
 import os.path as path
 from torch.utils.data import Dataset
+from torch.nn.utils.rnn import pad_sequence
 from utils.audio_util import load_audio_spectrogram
 
 
 class AudioDataset(Dataset):
-    def __init__(self, corrupted_path, mask, feature_dim=5, train_set=False, test_set=False, normalize=False, repeat_sample=1, batch_size=64, shuffle=True):
+    def __init__(self, corrupted_path, mask, feature_dim=5, train_set=False, test_set=False, normalize=False, repeat_sample=1, shuffle=True):
         torch.manual_seed(0)
 
         self.feature_dim = feature_dim
         self.normalize = normalize
-        self.batch_size = batch_size
         self.shuffle = shuffle
         self.mask = mask
 
@@ -55,7 +55,7 @@ class AudioDataset(Dataset):
 
 
     def __len__(self):
-        return len(self.corrupted_file_paths) // self.batch_size
+        return len(self.corrupted_file_paths)
 
     def __getitem__(self, index):
         # if self.shuffle:
@@ -67,14 +67,14 @@ class AudioDataset(Dataset):
 
         corrupted_file_path = self.corrupted_file_paths[index]
 
-        corrupted_file_path = '/home/shamoon/speech-enhancement-asr/data/LibriSpeech/dev-noise-subtractive-250ms-1/84/121123/84-121123-0000.flac'
+        # corrupted_file_path = '/home/shamoon/speech-enhancement-asr/data/LibriSpeech/dev-noise-subtractive-250ms-1/84/121123/84-121123-0000.flac'
 
         input_spectrogram, _, _, _, _ = load_audio_spectrogram(
             corrupted_file_path, normalize_spect=self.normalize)
 
         if not self.mask:
             clean_file_path = self.clean_file_paths[index]
-            clean_file_path = '/home/shamoon/speech-enhancement-asr/data/LibriSpeech/dev-clean/84/121123/84-121123-0000.flac'
+            # clean_file_path = '/home/shamoon/speech-enhancement-asr/data/LibriSpeech/dev-clean/84/121123/84-121123-0000.flac'
             output_spectrogram, _, _, _, _ = load_audio_spectrogram(
                 clean_file_path, normalize_spect=self.normalize)
         else:
@@ -113,23 +113,25 @@ class AudioDataset(Dataset):
         # end_index = start_index + seq_length
 
         # input_sliced = input_spectrogram[start_index:end_index].numpy()
-        input_sliced = input_spectrogram.numpy()
+        input_sliced = input_spectrogram
         if self.mask:
             output_sliced = mask_vector
         else:
-            output_sliced = output_spectrogram.numpy()
+            output_sliced = output_spectrogram
         
-        input_sliced = np.array(input_sliced, dtype=np.float32)
-        output_sliced = np.array(output_sliced, dtype=np.float32)
+        output_sliced = torch.Tensor(output_sliced)
+        # input_sliced = np.array(input_sliced, dtype=np.float32)
+        # output_sliced = np.array(output_sliced, dtype=np.float32)
+
         return input_sliced, output_sliced
 
-        # batched_inputs.append(input_sliced)
-        # batched_outputs.append(output_sliced)
+def pad_samples(batched_data):
+    (xx, yy) = zip(*batched_data)
 
-        # batched_inputs = np.array(batched_inputs, dtype=np.float32)
-        # batched_outputs = np.array(batched_outputs, dtype=np.float32)
+    x_lens = [len(x) for x in xx]
+    y_lens = [len(y) for y in yy]
 
-        # batched_inputs = torch.from_numpy(batched_inputs)
-        # batched_outputs = torch.from_numpy(batched_outputs)
+    xx_pad = pad_sequence(xx, batch_first=True, padding_value=0)
+    yy_pad = pad_sequence(yy, batch_first=True, padding_value=0)
 
-        # return batched_inputs, batched_outputs
+    return xx_pad, yy_pad

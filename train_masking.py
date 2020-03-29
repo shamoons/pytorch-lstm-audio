@@ -1,4 +1,5 @@
 from audio_dataset import AudioDataset
+from audio_dataset import pad_samples
 from barbar import Bar
 from masking_model import MaskingModel
 from ignite.metrics import Accuracy, Precision
@@ -17,7 +18,8 @@ import numpy as np
 def parse_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--audio_path', help='Path for corrupted audio', required=True)
+    parser.add_argument(
+        '--audio_path', help='Path for corrupted audio', required=True)
 
     parser.add_argument('--feature_dim', help='Feature dimension',
                         type=int, default=161)
@@ -39,13 +41,13 @@ def parse_args():
                         type=int, default=250)
 
     parser.add_argument('--batch_size', help='Batch size',
-                        type=int, default=16)
+                        type=int, default=64)
 
     parser.add_argument('--repeat_sample', help='How many times to sample each file',
                         type=int, default=1)
 
     parser.add_argument('--num_workers', help='Number of workers for data_loaders',
-                        type=int, default=16)
+                        type=int, default=4)
 
     parser.add_argument('--continue-from', default='',
                         help='Continue from checkpoint model')
@@ -75,6 +77,7 @@ def initialize(args):
     wandb.save('*.pt')
     wandb.save('*.onnx')
     np.random.seed(0)
+
 
 def cos_mse_similiarity_loss(inp, target):
     cos_loss = 1 - torch.nn.CosineSimilarity(dim=1)(inp + 1, target + 1)
@@ -109,14 +112,14 @@ def main():
         args.audio_path, test_set=True, feature_dim=args.feature_dim, shuffle=True, normalize=False, mask=True)
 
     train_loader = torch.utils.data.DataLoader(
-        train_set, batch_size=args.batch_size, num_workers=args.num_workers, **params)
+        train_set, batch_size=args.batch_size, num_workers=args.num_workers, collate_fn=pad_samples, **params)
     val_loader = torch.utils.data.DataLoader(
-        val_set, batch_size=args.batch_size, num_workers=args.num_workers, **params)
+        val_set, batch_size=args.batch_size, num_workers=args.num_workers, collate_fn=pad_samples, **params)
 
     data_loaders = {'train': train_loader, 'val': val_loader}
 
     model = MaskingModel(feature_dim=args.feature_dim,
-                verbose=args.verbose, kernel_size=args.kernel_size, kernel_size_step=args.kernel_size_step, final_kernel_size=args.final_kernel_size, device=device)
+                         verbose=args.verbose, kernel_size=args.kernel_size, kernel_size_step=args.kernel_size_step, final_kernel_size=args.final_kernel_size, device=device)
 
     if args.continue_from:
         state_dict = torch.load(args.continue_from, map_location=device)
@@ -169,7 +172,8 @@ def main():
             train_running_loss += loss.data
 
             if not saved_onnx:
-                torch.onnx.export(model, inputs, path.join(wandb.run.dir, 'best-model.onnx'), verbose=False)
+                torch.onnx.export(model, inputs, path.join(
+                    wandb.run.dir, 'best-model.onnx'), verbose=False)
                 saved_onnx = True
 
             # print('\ninput\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
@@ -233,7 +237,8 @@ def main():
         if epoch % 5 == 0:
             for g in optimizer.param_groups:
                 g['lr'] = g['lr'] / args.learning_anneal
-            print('DeepSpeech Learning rate annealed to: {lr:.3e}'.format(lr=g['lr']))
+            print(
+                'DeepSpeech Learning rate annealed to: {lr:.3e}'.format(lr=g['lr']))
 
         if early_stop_count == 50:
             print('Early stopping because no val_loss improvement for 50 epochs')
