@@ -52,12 +52,12 @@ def parse_args():
                         type=int, default=1)
 
     parser.add_argument('--num_workers', help='Number of workers for data_loaders',
-                        type=int, default=16)
+                        type=int, default=4)
 
     parser.add_argument('--continue-from', default='',
                         help='Continue from checkpoint model')
 
-    parser.add_argument('--final_kernel_size', default=11,
+    parser.add_argument('--final_kernel_size', default=15,
                         type=int, help='Final kernel size')
 
     parser.add_argument('--kernel_size', default=25,
@@ -88,7 +88,7 @@ def initialize(args):
     np.random.seed(args.seed)
 
 def cos_similiarity_loss(inp, target):
-    loss = 1 - torch.nn.CosineSimilarity(dim=2)(inp + 1, target + 1)
+    loss = 1 - torch.nn.CosineSimilarity(dim=2)(inp, target)
     loss = loss.mean()
     return loss
 
@@ -185,7 +185,6 @@ def main():
             mask = torch.round(mask)
 
             if torch.sum(mask) == 0:
-                print('continue')
                 continue
 
             expanded_mask = mask_model.expand_mask(mask, seq_length=inputs.size(1))

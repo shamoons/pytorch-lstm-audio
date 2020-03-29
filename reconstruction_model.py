@@ -63,7 +63,20 @@ class ReconstructionModel(torch.nn.Module):
             torch.nn.PReLU(num_parameters=feature_dim)
         )
 
+        self.linear = torch.nn.Sequential(
+            torch.nn.Linear(feature_dim, feature_dim),
+            torch.nn.PReLU(num_parameters=feature_dim)
+        )
+
         self.final_conv = torch.nn.Sequential(
+            torch.nn.Conv1d(
+                in_channels=feature_dim,
+                out_channels=feature_dim,
+                kernel_size=final_kernel_size,
+                stride=1,
+                padding=final_kernel_size // 2
+            ),
+            torch.nn.PReLU(num_parameters=feature_dim),
             torch.nn.Conv1d(
                 in_channels=feature_dim,
                 out_channels=feature_dim,
@@ -77,6 +90,15 @@ class ReconstructionModel(torch.nn.Module):
 
     def conv_layer(self, in_channels, kernel_size):
         return torch.nn.Sequential(
+            torch.nn.Conv1d(
+                in_channels=in_channels,
+                out_channels=in_channels,
+                kernel_size=kernel_size,
+                stride=1,
+                padding=kernel_size // 2,
+                groups=in_channels
+            ),
+            torch.nn.PReLU(num_parameters=in_channels),
             torch.nn.Conv1d(
                 in_channels=in_channels,
                 out_channels=in_channels // 2,
@@ -155,10 +177,12 @@ class ReconstructionModel(torch.nn.Module):
                 torch.mean(out6), torch.std(out6), torch.min(out6), torch.max(out6), out6.size()))
 
 
-        # out = torch.cat((out1, out2, out3, out4, out5), dim=1)
         stacked = torch.stack((out1, out2, out3, out4, out5, out6), dim=2)
         out = torch.flatten(stacked, start_dim=1, end_dim=2)
-        
+        if self.verbose:
+            print('\nstacked\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
+                torch.mean(out6), torch.std(out6), torch.min(out6), torch.max(out6), out6.size()))
+
         out = self.upscale_conv(out)
 
         if self.verbose:
@@ -166,6 +190,12 @@ class ReconstructionModel(torch.nn.Module):
                 torch.mean(out), torch.std(out), torch.min(out), torch.max(out), out.size()))
 
         out += inp
+
+        # out = self.linear(out.transpose(1, 2))
+        # out = out.transpose(1, 2)
+        # if self.verbose:
+        #     print('\nlinear out\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
+        #         torch.mean(out), torch.std(out), torch.min(out), torch.max(out), out.size()))
 
         out = self.final_conv(out)
 

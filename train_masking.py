@@ -19,9 +19,6 @@ def parse_args():
 
     parser.add_argument('--audio_path', help='Path for corrupted audio', required=True)
 
-    parser.add_argument('--seq_length', help='Length of sequences of the spectrogram',
-                        nargs='+', type=int, default=[8, 256])
-
     parser.add_argument('--feature_dim', help='Feature dimension',
                         type=int, default=161)
 
@@ -79,9 +76,14 @@ def initialize(args):
     wandb.save('*.onnx')
     np.random.seed(0)
 
-def cos_similiarity_loss(inp, target):
-    loss = 1 - torch.nn.CosineSimilarity(dim=1)(inp + 1, target + 1)
-    loss = loss.mean()
+def cos_mse_similiarity_loss(inp, target):
+    cos_loss = 1 - torch.nn.CosineSimilarity(dim=1)(inp + 1, target + 1)
+    cos_loss = cos_loss.mean()
+
+    mse_loss = torch.nn.MSELoss(reduction='mean')(inp, target)
+
+    loss = mse_loss + cos_loss
+
     return loss
 
 
@@ -101,15 +103,15 @@ def main():
     params = {'pin_memory': True} if device == 'cuda' else {}
 
     train_set = AudioDataset(
-        args.audio_path, train_set=True, seq_length=args.seq_length, batch_size=args.batch_size, feature_dim=args.feature_dim, repeat_sample=args.repeat_sample, shuffle=True, normalize=False, mask=True)
+        args.audio_path, train_set=True, feature_dim=args.feature_dim, repeat_sample=args.repeat_sample, shuffle=True, normalize=False, mask=True)
 
     val_set = AudioDataset(
-        args.audio_path, test_set=True, seq_length=args.seq_length, batch_size=args.batch_size, feature_dim=args.feature_dim, shuffle=True, normalize=False, mask=True)
+        args.audio_path, test_set=True, feature_dim=args.feature_dim, shuffle=True, normalize=False, mask=True)
 
     train_loader = torch.utils.data.DataLoader(
-        train_set, batch_size=1, num_workers=args.num_workers, **params)
+        train_set, batch_size=args.batch_size, num_workers=args.num_workers, **params)
     val_loader = torch.utils.data.DataLoader(
-        val_set, batch_size=1, num_workers=args.num_workers, **params)
+        val_set, batch_size=args.batch_size, num_workers=args.num_workers, **params)
 
     data_loaders = {'train': train_loader, 'val': val_loader}
 
@@ -148,8 +150,8 @@ def main():
         train_running_loss = 0.0
 
         for _, data in enumerate(Bar(data_loaders['train'])):
-            inputs = data[0][0]
-            outputs = data[1][0]
+            inputs = data[0]
+            outputs = data[1]
 
             if torch.cuda.is_available():
                 inputs = inputs.cuda()
@@ -159,7 +161,7 @@ def main():
 
             pred = model(inputs)
 
-            loss = cos_similiarity_loss(pred, outputs)
+            loss = cos_mse_similiarity_loss(pred, outputs)
 
             loss.backward()
             optimizer.step()
@@ -182,8 +184,8 @@ def main():
         model.eval()
         val_running_loss = 0.0
         for _, data in enumerate(data_loaders['val']):
-            inputs = data[0][0]
-            outputs = data[1][0]
+            inputs = data[0]
+            outputs = data[1]
 
             if torch.cuda.is_available():
                 inputs = inputs.cuda()
@@ -191,14 +193,14 @@ def main():
 
             pred = model(inputs)
 
-            loss = cos_similiarity_loss(pred, outputs)
+            loss = cos_mse_similiarity_loss(pred, outputs)
 
             val_running_loss += loss.data
 
             # pred_rounded = torch.tensor(pred)
             # pred_rounded[pred_rounded < 0.5] = 0
             # pred_rounded[pred_rounded >= 0.5] = 1
-            # rounded_loss = cos_similiarity_loss(pred_rounded, outputs)
+            # rounded_loss = cos_mse_similiarity_loss(pred_rounded, outputs)
 
             # print(f"Epoch: {epoch}\tLoss: {loss:.4g}\tRounded Loss: {rounded_loss:.4g}\tValRunningLoss: {val_running_loss:.4g}\tSize: {pred.size(1)}\tLen: {len(data_loaders['val'])}")
 

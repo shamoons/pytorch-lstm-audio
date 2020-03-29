@@ -46,5 +46,10 @@ tensor2 = torch.tensor([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
 print(tensor1, tensor1.size())
 print(tensor2, tensor2.size())
 
+tensor1 = torch.tensor([[1, 1, 1]]).float()
+tensor2 = torch.tensor([[2, 2, 2]]).float()
+print(tensor1, tensor1.size())
+print(tensor2, tensor2.size())
+
 cos = cos_similiarity_loss(tensor1, tensor2)
 print(cos)
