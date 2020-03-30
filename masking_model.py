@@ -152,13 +152,7 @@ class MaskingModel(torch.nn.Module):
         expanded_mask = []
 
         for _, m in enumerate(mask):
-            # print('m', m, (m != 0).nonzero())
             nonzero = (m != 0).nonzero()
-            # print(m)
-            # print('nonzero', nonzero)
-            # print(nonzero[0])
-            # print(nonzero[-1])
-            # print('before')
 
             new_mask = np.zeros(m.size())
             if nonzero.size(0) > 0:

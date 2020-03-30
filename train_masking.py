@@ -33,9 +33,9 @@ def parse_args():
                         help='Annealing applied to learning rate every epoch')
 
     parser.add_argument('--lr_bump', default=2, type=float,
-                        help='Amount to bump up the learning rate by every lr_bump_partition epochs')
+                        help='Amount to bump up the learning rate by every lr_bump_patience epochs of no improvement')
 
-    parser.add_argument('--lr_bump_partition', default=10, type=int,
+    parser.add_argument('--lr_bump_patience', default=10, type=int,
                         help='Number of partitions for bumps')
 
     parser.add_argument('--epochs', help='Epochs to run',
@@ -79,6 +79,9 @@ def initialize(args):
     wandb.save('*.onnx')
     np.random.seed(0)
 
+def sigmoid(x):
+    return torch.nn.Sigmoid()(x)
+
 def loss_fn(inp, target):
     zeros_sum = (target == 0).sum(dim = 0).float()
     one_sum = (target == 1).sum(dim = 0).float()
@@ -86,16 +89,7 @@ def loss_fn(inp, target):
     pos_weight = zeros_sum / (one_sum + 1e-2)
     loss_fn = torch.nn.BCEWithLogitsLoss(reduction='mean', pos_weight=pos_weight)
 
-    # print(zeros_sum)
-    # print(one_sum)
-    # print(pos_weight)
-    # print(target.size())
-    # print(zeros_sum.size())
-    # print(one_sum.size())
-    
     loss = loss_fn(inp, target)
-    # print(loss)
-    # quit()
 
     return loss
 
@@ -154,13 +148,12 @@ def main():
 
     saved_onnx = False
     torch.set_printoptions(profile='full', precision=3, sci_mode=False, linewidth=180)
+
+    print(f"Training Samples: {len(train_set)}")
+    print(f"Validation Samples: {len(val_set)}")
+
     for epoch in range(args.epochs):
         model.train(True)  # Set model to training mode
-
-        if (epoch + 1) % (args.epochs // args.lr_bump_partition) == 0:
-            for g in optimizer.param_groups:
-                g['lr'] = g['lr'] * args.lr_bump
-            print('Bumping up LR to: {lr:.3e}'.format(lr=g['lr']))
 
         start_time = time.time()
         train_running_loss = 0.0
@@ -198,7 +191,7 @@ def main():
             # print('\npred\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
             #     torch.mean(pred), torch.std(pred), torch.min(pred), torch.max(pred)))
 
-        print(pred[0])
+        print(sigmoid(pred[0]))
         print(outputs[0])
         print(loss)
 
@@ -256,6 +249,12 @@ def main():
                 g['lr'] = g['lr'] / args.learning_anneal
             print(
                 'DeepSpeech Learning rate annealed to: {lr:.3e}'.format(lr=g['lr']))
+
+        if early_stop_count == args.lr_bump_patience:
+            for g in optimizer.param_groups:
+                g['lr'] = g['lr'] * args.lr_bump
+            print('Bumping up LR to: {lr:.3e}'.format(lr=g['lr']))
+            break
 
         if early_stop_count == 50:
             print('Early stopping because no val_loss improvement for 50 epochs')
