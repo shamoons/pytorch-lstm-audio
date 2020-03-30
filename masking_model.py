@@ -20,6 +20,15 @@ class MaskingModel(torch.nn.Module):
         self.conv4 = self.conv_layer(in_channels=feature_dim, kernel_size=kernel_sizes[3])
         self.conv5 = self.conv_layer(in_channels=feature_dim, kernel_size=kernel_sizes[4])
         self.final_conv = torch.nn.Sequential(
+            # torch.nn.Conv1d(
+            #     in_channels=(feature_dim // 8) * 5,
+            #     out_channels=(feature_dim // 8) * 5,
+            #     kernel_size=final_kernel_size,
+            #     stride=1,
+            #     padding=final_kernel_size // 2,
+            #     groups=(feature_dim // 8) * 5
+            # ),
+            # torch.nn.PReLU(num_parameters=(feature_dim // 8) * 5),
             torch.nn.Conv1d(
                 in_channels=(feature_dim // 8) * 5,
                 out_channels=feature_dim // 16,
@@ -27,7 +36,8 @@ class MaskingModel(torch.nn.Module):
                 stride=1,
                 padding=final_kernel_size // 2
             ),
-            torch.nn.PReLU(num_parameters=feature_dim // 16),
+            torch.nn.ReLU(),
+            # torch.nn.PReLU(num_parameters=feature_dim // 16),
             torch.nn.Conv1d(
                 in_channels=feature_dim // 16,
                 out_channels=feature_dim // 32,
@@ -35,20 +45,29 @@ class MaskingModel(torch.nn.Module):
                 stride=1,
                 padding=final_kernel_size // 2
             ),
-            torch.nn.PReLU(num_parameters=feature_dim // 32),
+            torch.nn.ReLU(),
+            # torch.nn.PReLU(num_parameters=feature_dim // 32),
             torch.nn.Conv1d(
                 in_channels=feature_dim // 32,
                 out_channels=1,
                 kernel_size=final_kernel_size,
                 stride=1,
                 padding=final_kernel_size // 2
-            ),
-            torch.nn.Sigmoid()
+            )
         )
 
 
     def conv_layer(self, in_channels, kernel_size):
         return torch.nn.Sequential(
+            # torch.nn.Conv1d(
+            #     in_channels=in_channels,
+            #     out_channels=in_channels,
+            #     kernel_size=kernel_size,
+            #     stride=1,
+            #     padding=kernel_size // 2,
+            #     groups=in_channels
+            # ),
+            # torch.nn.PReLU(num_parameters=in_channels),
             torch.nn.Conv1d(
                 in_channels=in_channels,
                 out_channels=in_channels // 2,
@@ -56,7 +75,8 @@ class MaskingModel(torch.nn.Module):
                 stride=1,
                 padding=kernel_size // 2
             ),
-            torch.nn.PReLU(num_parameters=in_channels // 2),
+            torch.nn.ReLU(),
+            # torch.nn.PReLU(num_parameters=in_channels // 2),
             torch.nn.Conv1d(
                 in_channels=in_channels // 2,
                 out_channels=in_channels // 4,
@@ -64,7 +84,8 @@ class MaskingModel(torch.nn.Module):
                 stride=1,
                 padding=kernel_size // 2
             ),
-            torch.nn.PReLU(num_parameters=in_channels // 4),
+            torch.nn.ReLU(),
+            # torch.nn.PReLU(num_parameters=in_channels // 4),
             torch.nn.Conv1d(
                 in_channels=in_channels // 4,
                 out_channels=in_channels // 8,
@@ -72,8 +93,8 @@ class MaskingModel(torch.nn.Module):
                 stride=1,
                 padding=kernel_size // 2
             ),
-            torch.nn.PReLU(num_parameters=in_channels // 8)
-            # torch.nn.Dropout(p: self.dropout)
+            torch.nn.ReLU()
+            # torch.nn.PReLU(num_parameters=in_channels // 8)
         )
 
     def forward(self, x):
@@ -127,7 +148,6 @@ class MaskingModel(torch.nn.Module):
 
         return out
 
-
     def expand_mask(self, mask, seq_length, multiple=3):
         expanded_mask = []
 
@@ -150,6 +170,6 @@ class MaskingModel(torch.nn.Module):
 
             expanded_mask.append(new_mask)
 
-        expanded_mask = torch.tensor(expanded_mask, device=self.device).float()
+        expanded_mask = torch.Tensor(expanded_mask, device=self.device)
 
         return expanded_mask

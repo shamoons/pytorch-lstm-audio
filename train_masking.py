@@ -3,6 +3,7 @@ from audio_dataset import pad_samples
 from barbar import Bar
 from masking_model import MaskingModel
 from ignite.metrics import Accuracy, Precision
+from utils.model import init_weights
 
 import argparse
 import os.path as path
@@ -53,7 +54,7 @@ def parse_args():
                         help='Continue from checkpoint model')
 
     parser.add_argument('--final_kernel_size',
-                        default=11, type=int, help='Final kernel size')
+                        default=25, type=int, help='Final kernel size')
 
     parser.add_argument('--kernel_size',
                         default=25, type=int, help='Kernel size start')
@@ -78,17 +79,25 @@ def initialize(args):
     wandb.save('*.onnx')
     np.random.seed(0)
 
+def loss_fn(inp, target):
+    zeros_sum = (target == 0).sum(dim = 0).float()
+    one_sum = (target == 1).sum(dim = 0).float()
 
-def cos_mse_similiarity_loss(inp, target):
-    cos_loss = 1 - torch.nn.CosineSimilarity(dim=1)(inp + 1, target + 1)
-    cos_loss = cos_loss.mean()
+    pos_weight = zeros_sum / (one_sum + 1e-2)
+    loss_fn = torch.nn.BCEWithLogitsLoss(reduction='mean', pos_weight=pos_weight)
 
-    mse_loss = torch.nn.MSELoss(reduction='mean')(inp, target)
-
-    loss = mse_loss + cos_loss
+    # print(zeros_sum)
+    # print(one_sum)
+    # print(pos_weight)
+    # print(target.size())
+    # print(zeros_sum.size())
+    # print(one_sum.size())
+    
+    loss = loss_fn(inp, target)
+    # print(loss)
+    # quit()
 
     return loss
-
 
 def main():
     args = parse_args()
@@ -106,15 +115,15 @@ def main():
     params = {'pin_memory': True} if device == 'cuda' else {}
 
     train_set = AudioDataset(
-        args.audio_path, train_set=True, feature_dim=args.feature_dim, repeat_sample=args.repeat_sample, shuffle=True, normalize=False, mask=True)
+        args.audio_path, train_set=True, feature_dim=args.feature_dim, repeat_sample=args.repeat_sample, normalize=False, mask=True)
 
     val_set = AudioDataset(
-        args.audio_path, test_set=True, feature_dim=args.feature_dim, shuffle=True, normalize=False, mask=True)
+        args.audio_path, test_set=True, feature_dim=args.feature_dim, normalize=False, mask=True)
 
     train_loader = torch.utils.data.DataLoader(
-        train_set, batch_size=args.batch_size, num_workers=args.num_workers, collate_fn=pad_samples, **params)
+        train_set, shuffle=True, batch_size=args.batch_size, num_workers=args.num_workers, collate_fn=pad_samples, **params)
     val_loader = torch.utils.data.DataLoader(
-        val_set, batch_size=args.batch_size, num_workers=args.num_workers, collate_fn=pad_samples, **params)
+        val_set, shuffle=True, batch_size=args.batch_size, num_workers=args.num_workers, collate_fn=pad_samples, **params)
 
     data_loaders = {'train': train_loader, 'val': val_loader}
 
@@ -125,6 +134,9 @@ def main():
         state_dict = torch.load(args.continue_from, map_location=device)
         model.load_state_dict(state_dict)
         print('Loading saved model to continue from: {}'.format(args.continue_from))
+    # else:
+    #     model.apply(init_weights)
+    #     print('Initializing weights')
 
     optimizer = optim.Adam(
         model.parameters(), lr=args.base_lr, weight_decay=0)
@@ -141,6 +153,7 @@ def main():
     last_val_loss = current_best_validation_loss
 
     saved_onnx = False
+    torch.set_printoptions(profile='full', precision=3, sci_mode=False, linewidth=180)
     for epoch in range(args.epochs):
         model.train(True)  # Set model to training mode
 
@@ -164,9 +177,7 @@ def main():
 
             pred = model(inputs)
             
-
-            loss = cos_mse_similiarity_loss(pred, outputs)
-            print(pred[0], outputs[0], loss)
+            loss = loss_fn(pred, outputs)
 
             loss.backward()
             optimizer.step()
@@ -187,6 +198,10 @@ def main():
             # print('\npred\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
             #     torch.mean(pred), torch.std(pred), torch.min(pred), torch.max(pred)))
 
+        print(pred[0])
+        print(outputs[0])
+        print(loss)
+
         model.eval()
         val_running_loss = 0.0
         for _, data in enumerate(data_loaders['val']):
@@ -199,7 +214,7 @@ def main():
 
             pred = model(inputs)
 
-            loss = cos_mse_similiarity_loss(pred, outputs)
+            loss = loss_fn(pred, outputs)
 
             val_running_loss += loss.data
 

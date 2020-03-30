@@ -10,12 +10,11 @@ from utils.audio_util import load_audio_spectrogram
 
 
 class AudioDataset(Dataset):
-    def __init__(self, corrupted_path, mask, feature_dim=5, train_set=False, test_set=False, normalize=False, repeat_sample=1, shuffle=True):
+    def __init__(self, corrupted_path, mask, feature_dim=5, train_set=False, test_set=False, normalize=False, repeat_sample=1):
         torch.manual_seed(0)
 
         self.feature_dim = feature_dim
         self.normalize = normalize
-        self.shuffle = shuffle
         self.mask = mask
 
         corrupted_base_path = path.abspath(corrupted_path)
@@ -58,13 +57,8 @@ class AudioDataset(Dataset):
         return len(self.corrupted_file_paths)
 
     def __getitem__(self, index):
-        # if self.shuffle:
-        #     np.random.seed(index)
-        #     index = np.random.choice(indices)
-
-        # if index > len(self.corrupted_file_paths):
-        #     continue
-
+        indices = np.arange(0, 100)
+        index = np.random.choice(indices)
         corrupted_file_path = self.corrupted_file_paths[index]
 
         # corrupted_file_path = '/home/shamoon/speech-enhancement-asr/data/LibriSpeech/dev-noise-subtractive-250ms-1/84/121123/84-121123-0000.flac'
@@ -86,33 +80,6 @@ class AudioDataset(Dataset):
             max_size = (len(mask) // width) * width
             mask_vector = mask[:max_size].reshape(width, -1).max(axis=1)
 
-        # if seq_length >= input_spectrogram.size(0):
-        #     input_spectrogram = input_spectrogram.repeat(
-        #         1 + (seq_length // input_spectrogram.size(0)), 1)
-            
-        #     if self.mask:
-        #         mask_vector = mask_vector.repeat(
-        #             1 + (seq_length // len(mask_vector)), 0)
-        #     else:
-        #         output_spectrogram = output_spectrogram.repeat(
-        #             1 + (seq_length // output_spectrogram.size(0)), 1)
-
-        # averaged_time_energy_input = torch.mean(input_spectrogram, dim=1)
-        # soft_min_inputs = torch.nn.Softmin()(averaged_time_energy_input).detach().numpy()
-        # input_indices = np.arange(0, input_spectrogram.size(0))
-        # mid_index = np.random.choice(input_indices, p=soft_min_inputs)
-
-        # mid_index = input_spectrogram.size(0) // 2 #TODO: Remove this hardcoding
-
-        # if mid_index < seq_length // 2:
-        #     mid_index = seq_length // 2
-        # if mid_index > (input_spectrogram.size(0) - seq_length) // 2:
-        #     mid_index = (input_spectrogram.size(0) - seq_length) // 2
-
-        # start_index = max(mid_index - seq_length // 2, 0)
-        # end_index = start_index + seq_length
-
-        # input_sliced = input_spectrogram[start_index:end_index].numpy()
         input_sliced = input_spectrogram
         if self.mask:
             output_sliced = mask_vector
@@ -120,8 +87,6 @@ class AudioDataset(Dataset):
             output_sliced = output_spectrogram
         
         output_sliced = torch.Tensor(output_sliced)
-        # input_sliced = np.array(input_sliced, dtype=np.float32)
-        # output_sliced = np.array(output_sliced, dtype=np.float32)
 
         return input_sliced, output_sliced
 
