@@ -25,6 +25,7 @@ wget = "*"
 multiproc = "*"
 tensorboardx = "*"
 fast-ctc-decode = "*"
+pytorch-ignite = "*"
 
 [requires]
 python_version = "3.6"

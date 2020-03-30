@@ -47,7 +47,7 @@ def load_audio_spectrogram(audio_path, transpose=True, normalize_spect=False):
                      win_length=n_fft, window=scipy.signal.windows.hamming)
 
     spect, _ = librosa.magphase(D)
-    
+
     if transpose:
         spect = np.swapaxes(spect, 0, 1)
     spect = torch.FloatTensor(spect)
@@ -83,21 +83,10 @@ def load_audio_spectrogram(audio_path, transpose=True, normalize_spect=False):
 #     return log_spectrogram
 
 
-def load_times_frequencies(audio_path):
-    samples, sample_rate = sf.read(audio_path)
-    # Taken from https://github.com/PaddlePaddle/DeepSpeech/blob/766e96e600795cea4187123b9ed76dcd250f2d04/data_utils/featurizer/audio_featurizer.py#L121
-    n_fft, hop_length = get_n_fft_overlap(sample_rate)
-
-    frequencies, times, _ = scipy.signal.spectrogram(
-        samples, fs=sample_rate, nperseg=n_fft, noverlap=hop_length, window=scipy.signal.hann(n_fft))
-
-    return times, frequencies
-
-
 def create_audio_from_spectrogram(spectrogram, n_fft, hop_length, length):
     spectrogram = np.swapaxes(spectrogram, 0, 1)
-    audio_signal = librosa.griffinlim(
-        spectrogram, n_iter=256, win_length=n_fft, hop_length=hop_length, window=scipy.signal.windows.hamming, length=length)
+    audio_signal = librosa.griffinlim(spectrogram, n_iter=1024, win_length=n_fft,
+                                      hop_length=hop_length, window=scipy.signal.windows.hamming, length=length)
 
     return audio_signal
 

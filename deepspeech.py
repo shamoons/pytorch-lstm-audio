@@ -6,7 +6,7 @@ from submodules import GreedyDecoder
 import torch
 import numpy as np
 
-model_path = 'data/pretrained_models/librispeech_pretrained_v2-2.pth'
+model_path = 'data/pretrained_models/librispeech_pretrained_v2.pth'
 lm_path = 'data/saved_models/3-gram.pruned.3e-7.arpa'
 
 
@@ -53,9 +53,10 @@ def transcribe():
     # return model
 
     # model = utils.load_model(
-    #     'cpu', 'data/pretrained_models/librispeech_pretrained_v2-2.pth', False)
-    # print(model)
-    # print(model.audio_conf)
+    #     'cpu', 'data/pretrained_models/librispeech_pretrained_v2.pth', False)
+    print(model)
+    print(model.audio_conf)
+    quit()
 
     spect, _, _, _, _ = load_audio_spectrogram(
         audio_path, transpose=False, normalize_spect=True)
