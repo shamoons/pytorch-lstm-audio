@@ -7,7 +7,7 @@ import os
 import glob
 from pathlib import Path
 import soundfile as sf
-from utils.audio_util import load_audio_spectrogram, load_times_frequencies, create_audio_from_spectrogram
+from utils.audio_util import load_audio_spectrogram, create_audio_from_spectrogram
 import numpy as np
 
 
@@ -143,7 +143,7 @@ def main():
     print(torch.mean(input_spectrogram, 2)[0])
 
     print('Output')
-    output = torch.tensor(output, requires_grad=False)
+    output = torch.Tensor(output)
     print(torch.mean(output, 2)[0])
 
     print('Diff')
@@ -152,6 +152,7 @@ def main():
     print('MSE: ', mse)
 
     np_output = output.view(output.size(1), output.size(2)).detach().numpy()
+    # np_output = input_spectrogram.view(input_spectrogram.size(1), input_spectrogram.size(2)).detach().numpy()
 
     # output requires shape of [SEQUENCE_LEN, FEATURE_DIM]
     audio = create_audio_from_spectrogram(

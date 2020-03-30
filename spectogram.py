@@ -38,7 +38,7 @@ else:
     time_per_segment_ms = 20
     nperseg = int(sample_rate * 0.001 * time_per_segment_ms)
     # https://stackoverflow.com/questions/46635958/python-scipy-how-to-set-the-time-frame-for-a-spectrogram
-    overlap = nperseg // 4
+    overlap = nperseg // 2
 
     seconds_per_segment = (nperseg - overlap) / sample_rate
     ms_per_segment = int(seconds_per_segment * 1000)
@@ -46,12 +46,17 @@ else:
     print(nperseg, 'nperseg')
     print(overlap, 'overlap')
     print(ms_per_segment, 'ms_per_segment')
-    frequencies, times, spectrogram = signal.spectrogram(
-        samples, sample_rate, nperseg=nperseg, window=signal.hann(nperseg), noverlap=overlap, mode='magnitude')
+    D = librosa.stft(samples, n_fft=nperseg, hop_length=overlap,
+                     win_length=nperseg, window=scipy.signal.windows.hamming)
 
-    print(times)
-    print('times.shape', times.shape)
-    print('spectrogram.shape', spectrogram.shape)
+    spect, _ = librosa.magphase(D)
+
+    # frequencies, times, spectrogram = signal.spectrogram(
+    #     samples, sample_rate, nperseg=nperseg, window=signal.windows.hamming, noverlap=overlap, mode='magnitude')
+
+    # print(times)
+    # print('times.shape', times.shape)
+    # print('spectrogram.shape', spectrogram.shape)
 
     # plt.pcolormesh(times, frequencies, spectrogram)
     # plt.imshow(spectrogram)
@@ -60,7 +65,7 @@ else:
     # plt.show()
 
     audio_signal = librosa.griffinlim(
-        spectrogram, n_iter=128, win_length=nperseg, hop_length=overlap, window=signal.hann(nperseg))
+        spect, n_iter=1024, win_length=nperseg, hop_length=overlap, window=signal.windows.hamming)
     print(audio_signal, audio_signal.shape)
 
     sf.write('test.wav', audio_signal, sample_rate)
