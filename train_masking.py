@@ -193,10 +193,10 @@ def main():
 
         print(sigmoid(pred[0]))
         print(outputs[0])
-        print(loss)
 
         model.eval()
         val_running_loss = 0.0
+        rounded_val_running_loss = 0.0
         for _, data in enumerate(data_loaders['val']):
             inputs = data[0]
             outputs = data[1]
@@ -210,6 +210,7 @@ def main():
             loss = loss_fn(pred, outputs)
 
             val_running_loss += loss.data
+            rounded_val_running_loss += loss_fn(torch.round(pred), outputs).data
 
             # pred_rounded = torch.tensor(pred)
             # pred_rounded[pred_rounded < 0.5] = 0
@@ -221,15 +222,17 @@ def main():
         time_per_epoch = int(time.time() - start_time)
         train_loss = train_running_loss / len(data_loaders['train'])
         val_loss = val_running_loss / len(data_loaders['val'])
+        rounded_val_loss = rounded_val_running_loss / len(data_loaders['val'])
 
         wandb.log({
             "train_loss": train_loss,
             'val_loss': val_loss,
             'epoch': epoch,
             'sec_per_epoch': time_per_epoch,
+            'rounded_val_loss': rounded_val_loss
         })
 
-        print(f"Epoch: {epoch}\tLoss(t): {train_loss:.6g}\tLoss(v): {val_loss:.6g} (best: {current_best_validation_loss:.6g})\tTime (epoch): {time_per_epoch:d}s")
+        print(f"Epoch: {epoch}\tLoss(t): {train_loss:.6g}\tLoss(v): {val_loss:.6g} (best: {current_best_validation_loss:.6g})\tRounded Loss (v): {rounded_val_loss:.6g}\tTime (epoch): {time_per_epoch:d}s")
 
         if val_loss < current_best_validation_loss:
             torch.save(model.state_dict(), path.join(
@@ -254,7 +257,7 @@ def main():
             for g in optimizer.param_groups:
                 g['lr'] = g['lr'] * args.lr_bump
             print('Bumping up LR to: {lr:.3e}'.format(lr=g['lr']))
-            break
+            continue
 
         if early_stop_count == 50:
             print('Early stopping because no val_loss improvement for 50 epochs')

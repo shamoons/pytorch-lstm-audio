@@ -54,11 +54,10 @@ class AudioDataset(Dataset):
 
 
     def __len__(self):
-        return len(self.corrupted_file_paths) // 4 
+        # return 1
+        return len(self.corrupted_file_paths)
 
     def __getitem__(self, index):
-        # indices = np.arange(0, 256)
-        # index = np.random.choice(indices)
         corrupted_file_path = self.corrupted_file_paths[index]
 
         # corrupted_file_path = '/home/shamoon/speech-enhancement-asr/data/LibriSpeech/dev-noise-subtractive-250ms-1/84/121123/84-121123-0000.flac'

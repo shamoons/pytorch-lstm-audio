@@ -2,12 +2,12 @@ from audio_dataset import AudioDataset
 from audio_dataset import pad_samples
 from barbar import Bar
 from reconstruction_model import ReconstructionModel
+from utils.model_loader import load_masking_model
 
 import argparse
-import importlib
-import sys
+# import importlib
+# import sys
 import os.path as path
-import glob
 import socket
 import torch
 import torch.optim as optim
@@ -37,9 +37,9 @@ def parse_args():
                         help='Annealing applied to learning rate every epoch')
 
     parser.add_argument('--lr_bump', default=2, type=float,
-                        help='Amount to bump up the learning rate by every lr_bump_partition epochs')
+                        help='Amount to bump up the learning rate by every lr_bump_patience epochs')
 
-    parser.add_argument('--lr_bump_partition', default=10, type=int,
+    parser.add_argument('--lr_bump_patience', default=10, type=int,
                         help='Number of partitions for bumps')
 
     parser.add_argument('--epochs', help='Epochs to run',
@@ -57,7 +57,7 @@ def parse_args():
     parser.add_argument('--continue-from', default='',
                         help='Continue from checkpoint model')
 
-    parser.add_argument('--final_kernel_size', default=15,
+    parser.add_argument('--final_kernel_size', default=25,
                         type=int, help='Final kernel size')
 
     parser.add_argument('--kernel_size', default=25,
@@ -87,30 +87,33 @@ def initialize(args):
     np.random.seed(args.seed)
 
 
-def load_masking_model(wandb_id, device):
-    wandb_dir = list(glob.iglob(path.join('wandb', '*' + wandb_id), recursive=False))[0]
-    model_path = path.join(wandb_dir, 'best-model.pt')
+# def load_masking_model(wandb_id, device):
+#     wandb_dir = list(glob.iglob(
+#         path.join('wandb', '*' + wandb_id), recursive=False))[0]
+#     model_path = path.join(wandb_dir, 'best-model.pt')
 
-    (head, tail) = path.split(model_path)
-    mask_args_path = path.join(head, tail.replace('best-model.pt', 'args.json'))
-    masked_args = json.loads(open(mask_args_path, 'r').read())
-    sys.path.append(path.abspath(head))
+#     (head, tail) = path.split(model_path)
+#     mask_args_path = path.join(
+#         head, tail.replace('best-model.pt', 'args.json'))
+#     masked_args = json.loads(open(mask_args_path, 'r').read())
+#     sys.path.append(path.abspath(head))
 
-    model = importlib.import_module('saved_masking_model').MaskingModel(
-        feature_dim=161, kernel_size=masked_args['kernel_size'], kernel_size_step=masked_args['kernel_size_step'], final_kernel_size=masked_args['final_kernel_size'], device=device)
+#     model = importlib.import_module('saved_masking_model').MaskingModel(
+#         feature_dim=161, kernel_size=masked_args['kernel_size'], kernel_size_step=masked_args['kernel_size_step'], final_kernel_size=masked_args['final_kernel_size'], device=device)
 
-    state_dict = torch.load(model_path, map_location=device)
+#     state_dict = torch.load(model_path, map_location=device)
 
-    model.load_state_dict(state_dict)
+#     model.load_state_dict(state_dict)
 
-    model = model.float()
-    model.eval()
+#     model = model.float()
+#     model.eval()
 
-    return model
+#     return model
 
-def cos_similiarity_loss(inp, target):
-    loss = 1 - torch.nn.CosineSimilarity(dim=2)(inp, target)
-    loss = loss.mean()
+
+def loss_fn(inp, target):
+    loss = torch.nn.MSELoss(reduction='mean')(inp, target)
+
     return loss
 
 
@@ -119,26 +122,26 @@ def main():
     initialize(args)
 
     reconstruction_model_file = open('reconstruction_model.py', 'r').read()
-    open(path.join(wandb.run.dir, 'reconstruction_model.py'), 'w').write(
+    open(path.join(wandb.run.dir, 'saved_reconstruction_model.py'), 'w').write(
         reconstruction_model_file)
     open(path.join(wandb.run.dir, 'args.json'),
          'w').write(json.dumps(vars(args)))
-    wandb.save('reconstruction_model.py')
+    wandb.save('saved_reconstruction_model.py')
     wandb.save('args.json')
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     params = {'pin_memory': True} if device == 'cuda' else {}
 
     train_set = AudioDataset(
-        args.audio_path, train_set=True, feature_dim=args.feature_dim, repeat_sample=args.repeat_sample, shuffle=True, normalize=False, mask=False)
+        args.audio_path, train_set=True, feature_dim=args.feature_dim, repeat_sample=args.repeat_sample, normalize=False, mask=False)
 
     val_set = AudioDataset(
-        args.audio_path, test_set=True, feature_dim=args.feature_dim, shuffle=True, normalize=False, mask=False)
+        args.audio_path, test_set=True, feature_dim=args.feature_dim, normalize=False, mask=False)
 
     train_loader = torch.utils.data.DataLoader(
-        train_set, batch_size=args.batch_size, num_workers=args.num_workers, collate_fn=pad_samples, **params)
+        train_set, shuffle=True, batch_size=args.batch_size, num_workers=args.num_workers, collate_fn=pad_samples, **params)
     val_loader = torch.utils.data.DataLoader(
-        val_set, batch_size=args.batch_size, num_workers=args.num_workers, collate_fn=pad_samples, **params)
+        val_set, shuffle=True, batch_size=args.batch_size, num_workers=args.num_workers, collate_fn=pad_samples, **params)
 
     data_loaders = {'train': train_loader, 'val': val_loader}
 
@@ -153,10 +156,7 @@ def main():
         reconstruct_model.load_state_dict(state_dict)
         print('Loading saved model to continue from: {}'.format(args.continue_from))
 
-    optimizer = optim.Adam(reconstruct_model.parameters(),
-                           lr=args.base_lr, weight_decay=0)
-
-    loss_fn = torch.nn.MSELoss(reduction='mean')
+    optimizer = optim.Adam(reconstruct_model.parameters(),lr=args.base_lr, weight_decay=0)
 
     wandb.watch(reconstruct_model)
 
@@ -172,13 +172,13 @@ def main():
 
     saved_onnx = False
 
+    torch.set_printoptions(profile='full', precision=3,
+                           sci_mode=False, linewidth=180)
+    print(f"Training Samples: {len(train_set)}")
+    print(f"Validation Samples: {len(val_set)}")
+
     for epoch in range(args.epochs):
         reconstruct_model.train(True)  # Set model to training mode
-
-        if (epoch + 1) % (args.epochs // args.lr_bump_partition) == 0:
-            for g in optimizer.param_groups:
-                g['lr'] = g['lr'] * args.lr_bump
-            print('Bumping up LR to: {lr:.3e}'.format(lr=g['lr']))
 
         start_time = time.time()
         train_running_loss = 0.0
@@ -195,13 +195,9 @@ def main():
             optimizer.zero_grad()
 
             mask = mask_model(inputs)
+            mask = torch.nn.Sigmoid()(mask)
 
             mask = torch.round(mask)
-
-            if torch.sum(mask) > 0:
-                print(inputs[0])
-                print(mask[0])
-
 
             expanded_mask = mask_model.expand_mask(
                 mask, seq_length=inputs.size(1))
@@ -210,10 +206,8 @@ def main():
             masked_outputs = outputs * expanded_mask[..., None]
 
             pred = reconstruct_model(masked_inputs)
-            # print(pred)
 
             loss = loss_fn(pred[mask != 0], masked_outputs[mask != 0])
-            # loss = loss_fn(pred, masked_outputs)
 
             loss.backward()
             optimizer.step()
@@ -239,36 +233,33 @@ def main():
         val_running_loss = 0.0
         val_count = 0
 
-        # for _, data in enumerate(data_loaders['val']):
-        #     inputs = data[0]
-        #     outputs = data[1]
+        for _, data in enumerate(data_loaders['val']):
+            inputs = data[0]
+            outputs = data[1]
 
-        #     if torch.cuda.is_available():
-        #         inputs = inputs.cuda()
-        #         outputs = outputs.cuda()
+            if torch.cuda.is_available():
+                inputs = inputs.cuda()
+                outputs = outputs.cuda()
 
-        #     mask = mask_model(inputs)
+            mask = torch.nn.Sigmoid()(mask_model(inputs))
 
-        #     mask = torch.round(mask)
-        #     if torch.sum(mask) == 0:
-        #         continue
+            mask = torch.round(mask)
 
-        #     expanded_mask = mask_model.expand_mask(mask, seq_length=inputs.size(1))
-        #     masked_inputs = expanded_mask.unsqueeze(2) * inputs
-        #     masked_outputs = expanded_mask.unsqueeze(2) * outputs
+            expanded_mask = mask_model.expand_mask(
+                mask, seq_length=inputs.size(1))
+            masked_inputs = expanded_mask.unsqueeze(2) * inputs
+            masked_outputs = expanded_mask.unsqueeze(2) * outputs
 
-        #     pred = reconstruct_model(masked_inputs)
+            pred = reconstruct_model(masked_inputs)
 
-        #     loss = loss_fn(pred, masked_outputs)
-        #     # loss = cos_similiarity_loss(pred, masked_outputs)
+            loss = loss_fn(pred[mask != 0], masked_outputs[mask != 0])
 
-        #     val_running_loss += loss.data
-        #     val_count += 1
+            val_running_loss += loss.data
+            val_count += 1
 
         time_per_epoch = int(time.time() - start_time)
         train_loss = train_running_loss / train_count
-        val_loss = train_loss
-        # val_loss = val_running_loss / val_count
+        val_loss = val_running_loss / val_count
 
         wandb.log({
             "train_loss": train_loss,
@@ -291,6 +282,12 @@ def main():
         else:
             early_stop_count = early_stop_count + 1
         last_val_loss = val_loss
+
+        if early_stop_count == args.lr_bump_patience:
+            for g in optimizer.param_groups:
+                g['lr'] = g['lr'] * args.lr_bump
+            print('Bumping up LR to: {lr:.3e}'.format(lr=g['lr']))
+            continue
 
         if epoch % 3 == 0:
             for g in optimizer.param_groups:

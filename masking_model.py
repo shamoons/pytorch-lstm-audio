@@ -148,7 +148,7 @@ class MaskingModel(torch.nn.Module):
 
         return out
 
-    def expand_mask(self, mask, seq_length, multiple=3):
+    def expand_mask(self, mask, seq_length):
         expanded_mask = []
 
         for _, m in enumerate(mask):
@@ -156,7 +156,6 @@ class MaskingModel(torch.nn.Module):
 
             new_mask = np.zeros(m.size())
             if nonzero.size(0) > 0:
-                # print('here')
                 start_1 = (m != 0).nonzero()[0][0]
                 end_1 = (m != 0).nonzero()[-1][0]
                 mask_length = end_1 - start_1
@@ -164,6 +163,6 @@ class MaskingModel(torch.nn.Module):
 
             expanded_mask.append(new_mask)
 
-        expanded_mask = torch.Tensor(expanded_mask, device=self.device)
+        expanded_mask = torch.Tensor(expanded_mask).to(self.device)
 
         return expanded_mask
