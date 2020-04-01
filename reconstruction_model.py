@@ -96,7 +96,6 @@ class ReconstructionModel(torch.nn.Module):
                 groups=in_channels
             ),
             torch.nn.ReLU(),
-            torch.nn.BatchNorm1d(in_channels),
             torch.nn.Conv1d(
                 in_channels=in_channels,
                 out_channels=in_channels // 2,
@@ -105,7 +104,6 @@ class ReconstructionModel(torch.nn.Module):
                 padding=kernel_size // 2
             ),
             torch.nn.ReLU(),
-            torch.nn.BatchNorm1d(in_channels // 2),
             torch.nn.Conv1d(
                 in_channels=in_channels // 2,
                 out_channels=in_channels // 4,
@@ -114,7 +112,6 @@ class ReconstructionModel(torch.nn.Module):
                 padding=kernel_size // 2
             ),
             torch.nn.ReLU(),
-            torch.nn.BatchNorm1d(in_channels // 4),
             torch.nn.Conv1d(
                 in_channels=in_channels // 4,
                 out_channels=in_channels // 8,
@@ -123,7 +120,6 @@ class ReconstructionModel(torch.nn.Module):
                 padding=kernel_size // 2
             ),
             torch.nn.ReLU(),
-            torch.nn.BatchNorm1d(in_channels // 8),
             torch.nn.Conv1d(
                 in_channels=in_channels // 8,
                 out_channels=1,

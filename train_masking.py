@@ -83,12 +83,6 @@ def sigmoid(x):
     return torch.nn.Sigmoid()(x)
 
 def loss_fn(inp, target):
-    # zeros_sum = (target == 0).sum(dim = 0).float()
-    # one_sum = (target == 1).sum(dim = 0).float()
-
-    # pos_weight = zeros_sum / (one_sum + 1e-2)
-    # loss_fn = torch.nn.BCEWithLogitsLoss(reduction='mean', pos_weight=pos_weight)
-    # loss_fn = torch.nn.BCEWithLogitsLoss(reduction='mean')
     loss_fn = torch.nn.BCELoss(reduction='mean')
 
     inp = torch.nn.Sigmoid()(inp)
