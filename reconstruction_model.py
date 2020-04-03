@@ -20,8 +20,6 @@ class ReconstructionModel(torch.nn.Module):
         self.conv5 = self.conv_layer(in_channels=feature_dim, kernel_size=kernel_sizes[4])
         self.conv6 = self.conv_layer(in_channels=feature_dim, kernel_size=kernel_sizes[5])
 
-        self.batchnorm1 = torch.nn.BatchNorm1d(feature_dim // 16)
-
         self.upscale_conv = torch.nn.Sequential(
             torch.nn.Conv1d(
                 in_channels=6,
@@ -36,7 +34,8 @@ class ReconstructionModel(torch.nn.Module):
                 out_channels=feature_dim // 8,
                 kernel_size=final_kernel_size,
                 stride=1,
-                padding=final_kernel_size // 2
+                padding=final_kernel_size // 2,
+                # groups=feature_dim // 16
             ),
             torch.nn.PReLU(num_parameters=feature_dim // 8),
             torch.nn.Conv1d(
@@ -44,7 +43,8 @@ class ReconstructionModel(torch.nn.Module):
                 out_channels=feature_dim // 4,
                 kernel_size=final_kernel_size,
                 stride=1,
-                padding=final_kernel_size // 2
+                padding=final_kernel_size // 2,
+                # groups=feature_dim // 8
             ),
             torch.nn.PReLU(num_parameters=feature_dim // 4),
             torch.nn.Conv1d(
@@ -52,7 +52,8 @@ class ReconstructionModel(torch.nn.Module):
                 out_channels=feature_dim // 2,
                 kernel_size=final_kernel_size,
                 stride=1,
-                padding=final_kernel_size // 2
+                padding=final_kernel_size // 2,
+                # groups=feature_dim // 4
             ),
             torch.nn.PReLU(num_parameters=feature_dim // 2),
             torch.nn.Conv1d(
@@ -71,7 +72,8 @@ class ReconstructionModel(torch.nn.Module):
                 out_channels=feature_dim,
                 kernel_size=final_kernel_size,
                 stride=1,
-                padding=final_kernel_size // 2
+                padding=final_kernel_size // 2,
+                groups=23
             ),
             torch.nn.PReLU(num_parameters=feature_dim),
             torch.nn.Conv1d(
@@ -79,7 +81,8 @@ class ReconstructionModel(torch.nn.Module):
                 out_channels=feature_dim,
                 kernel_size=final_kernel_size,
                 stride=1,
-                padding=final_kernel_size // 2
+                padding=final_kernel_size // 2,
+                groups=7
             ),
             torch.nn.ReLU6()
         )
@@ -96,6 +99,7 @@ class ReconstructionModel(torch.nn.Module):
                 groups=in_channels
             ),
             torch.nn.ReLU(),
+            torch.nn.BatchNorm1d(in_channels),
             torch.nn.Conv1d(
                 in_channels=in_channels,
                 out_channels=in_channels // 2,
@@ -127,8 +131,7 @@ class ReconstructionModel(torch.nn.Module):
                 stride=1,
                 padding=kernel_size // 2
             ),
-            torch.nn.ReLU(),
-            torch.nn.BatchNorm1d(1)
+            torch.nn.ReLU()
         )
 
     def forward(self, x):

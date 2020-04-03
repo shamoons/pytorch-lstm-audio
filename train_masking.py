@@ -134,7 +134,7 @@ def main():
 
     wandb.watch(model)
 
-    current_best_validation_loss = 1
+    current_best_validation_loss = 10
     model = model.float()
 
     if torch.cuda.is_available():

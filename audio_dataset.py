@@ -4,6 +4,7 @@ import torch
 import math
 import numpy as np
 import os.path as path
+from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset
 from torch.nn.utils.rnn import pad_sequence
 from utils.audio_util import load_audio_spectrogram
@@ -36,26 +37,33 @@ class AudioDataset(Dataset):
             clean_audio_file_paths = np.array(
                 sorted(glob.iglob(clean_base_path + '/**/*.flac', recursive=True)))
 
-        cutoff_index = int(len(corrupted_audio_file_paths) * 0.9)
+            x_train, x_test, y_train, y_test = train_test_split(
+                corrupted_audio_file_paths, clean_audio_file_paths, test_size=0.1)
+        else:
+            np.random.shuffle(corrupted_audio_file_paths)
+            cutoff = len(corrupted_audio_file_paths)
+            x_train = corrupted_audio_file_paths[0:int(cutoff * 0.9)]
+            x_test = corrupted_audio_file_paths[int(cutoff * 0.9):]
 
         if train_set:
             if not self.mask:
-                self.clean_file_paths = clean_audio_file_paths[0: cutoff_index]
-            self.corrupted_file_paths = corrupted_audio_file_paths[0: cutoff_index]
+                self.clean_file_paths = y_train
+            self.corrupted_file_paths = x_train
+
         if test_set:
             if not self.mask:
-                self.clean_file_paths = clean_audio_file_paths[cutoff_index:]
-            self.corrupted_file_paths = corrupted_audio_file_paths[cutoff_index:]
+                self.clean_file_paths = y_test
+            self.corrupted_file_paths = x_test
+
 
         if not self.mask:
-            self.clean_file_paths = np.repeat(self.clean_file_paths, repeat_sample)
+            self.clean_file_paths = np.repeat(
+                self.clean_file_paths, repeat_sample)
         self.corrupted_file_paths = np.repeat(
             self.corrupted_file_paths, repeat_sample)
 
-
     def __len__(self):
-        # return 1
-        return len(self.corrupted_file_paths)
+        return min(len(self.corrupted_file_paths), 1000000)
 
     def __getitem__(self, index):
         corrupted_file_path = self.corrupted_file_paths[index]
@@ -84,16 +92,14 @@ class AudioDataset(Dataset):
             output_sliced = mask_vector
         else:
             output_sliced = output_spectrogram
-        
+
         output_sliced = torch.Tensor(output_sliced)
 
         return input_sliced, output_sliced
 
+
 def pad_samples(batched_data):
     (xx, yy) = zip(*batched_data)
-
-    x_lens = [len(x) for x in xx]
-    y_lens = [len(y) for y in yy]
 
     xx_pad = pad_sequence(xx, batch_first=True, padding_value=0)
     yy_pad = pad_sequence(yy, batch_first=True, padding_value=0)

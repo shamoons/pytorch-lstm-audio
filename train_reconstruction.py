@@ -85,10 +85,35 @@ def initialize(args):
     np.random.seed(args.seed)
 
 
-def loss_fn(inp, target):
-    loss = torch.nn.MSELoss(reduction='mean')(inp, target)
+def loss_fn(inp, target, mask, loss_weights=None):
+    masked_inp = mask.unsqueeze(2) * inp
+    masked_target = mask.unsqueeze(2) * target
 
-    return loss
+    loss = torch.nn.MSELoss(reduction='none')(masked_inp, masked_target)
+    channel_loss = torch.sum(loss, dim=1)
+    channel_loss = torch.mean(channel_loss, dim=0)
+
+    # torch.set_printoptions(precision=2, sci_mode=True)
+    # print(loss.size())
+    # print('channel_loss', channel_loss.size())
+    # print(channel_loss)
+    # print('loss_weights', loss_weights.sum())
+    # print(loss_weights)
+
+    if loss_weights is None:
+        loss_weights = 0
+
+    weighted_loss = loss * (loss_weights)
+
+    softmax_weights = torch.nn.Softmax()(channel_loss).detach()
+    
+    # Instead of dividing by the number of elements. Divide by the number of non-zero mask elements in the batch
+    loss = loss.sum() / (torch.sum(mask))
+    # loss = weighted_loss.sum() / (torch.sum(mask))
+
+    # print(softmax_weights.min(), softmax_weights.mean(), softmax_weights.max())
+    # quit()
+    return loss, softmax_weights
 
 
 def main():
@@ -130,11 +155,12 @@ def main():
         reconstruct_model.load_state_dict(state_dict)
         print('Loading saved model to continue from: {}'.format(args.continue_from))
 
-    optimizer = optim.Adam(reconstruct_model.parameters(),lr=args.base_lr, weight_decay=0)
+    optimizer = optim.Adam(reconstruct_model.parameters(),
+                           lr=args.base_lr, weight_decay=0)
 
     wandb.watch(reconstruct_model)
 
-    current_best_validation_loss = 1
+    current_best_validation_loss = 10
     reconstruct_model = reconstruct_model.float()
 
     if torch.cuda.is_available():
@@ -150,6 +176,7 @@ def main():
                            sci_mode=False, linewidth=180)
     print(f"Training Samples: {len(train_set)}")
     print(f"Validation Samples: {len(val_set)}")
+    loss_weights = None
 
     for epoch in range(args.epochs):
         reconstruct_model.train(True)  # Set model to training mode
@@ -169,7 +196,7 @@ def main():
             optimizer.zero_grad()
 
             mask = mask_model(inputs)
-            mask = torch.nn.Sigmoid()(mask)
+            mask = mask
 
             mask = torch.round(mask)
 
@@ -181,7 +208,8 @@ def main():
 
             pred = reconstruct_model(masked_inputs)
 
-            loss = loss_fn(pred[mask != 0], masked_outputs[mask != 0])
+            loss, loss_weights = loss_fn(
+                pred, masked_outputs, mask, loss_weights=loss_weights)
 
             loss.backward()
             optimizer.step()
@@ -215,8 +243,7 @@ def main():
                 inputs = inputs.cuda()
                 outputs = outputs.cuda()
 
-            mask = torch.nn.Sigmoid()(mask_model(inputs))
-
+            mask = mask_model(inputs)
             mask = torch.round(mask)
 
             expanded_mask = mask_model.expand_mask(
@@ -226,7 +253,7 @@ def main():
 
             pred = reconstruct_model(masked_inputs)
 
-            loss = loss_fn(pred[mask != 0], masked_outputs[mask != 0])
+            loss, _ = loss_fn(pred, masked_outputs, mask)
 
             val_running_loss += loss.data
             val_count += 1
