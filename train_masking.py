@@ -79,13 +79,8 @@ def initialize(args):
     wandb.save('*.onnx')
     np.random.seed(0)
 
-def sigmoid(x):
-    return torch.nn.Sigmoid()(x)
-
 def loss_fn(inp, target):
     loss_fn = torch.nn.BCELoss(reduction='mean')
-
-    inp = torch.nn.Sigmoid()(inp)
     loss = loss_fn(inp, target)
 
     return loss
@@ -188,7 +183,7 @@ def main():
             # print('\npred\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
             #     torch.mean(pred), torch.std(pred), torch.min(pred), torch.max(pred)))
 
-        print(sigmoid(pred[0]))
+        print(pred[0])
         print(outputs[0])
 
         model.eval()

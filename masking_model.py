@@ -21,7 +21,7 @@ class MaskingModel(torch.nn.Module):
         self.conv5 = self.conv_layer(in_channels=feature_dim, kernel_size=kernel_sizes[4])
         self.final_conv = torch.nn.Sequential(
             torch.nn.Conv1d(
-                in_channels=(feature_dim // 8) * 5,
+                in_channels=(feature_dim // 8) * 1,
                 out_channels=feature_dim // 16,
                 kernel_size=final_kernel_size,
                 stride=1,
@@ -109,9 +109,9 @@ class MaskingModel(torch.nn.Module):
             print('\nout5\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
                 torch.mean(out5), torch.std(out5), torch.min(out5), torch.max(out5), out5.size()))
 
-
-        stacked = torch.stack((out1, out2, out3, out4, out5), dim=2)
-        out = torch.flatten(stacked, start_dim=1, end_dim=2)
+        out = out1 + out2 + out3 + out4 + out5
+        # stacked = torch.stack((out1, out2, out3, out4, out5), dim=2)
+        # out = torch.flatten(stacked, start_dim=1, end_dim=2)
 
         out = self.final_conv(out)
         out = out.view(out.size(0), out.size(2))
