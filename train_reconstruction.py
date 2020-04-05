@@ -85,7 +85,7 @@ def initialize(args):
     np.random.seed(args.seed)
 
 
-def loss_fn(inp, target, mask, loss_weights=None):
+def loss_fn(inp, target, mask, loss_weights):
     masked_inp = mask.unsqueeze(2) * inp
     masked_target = mask.unsqueeze(2) * target
 
@@ -100,16 +100,16 @@ def loss_fn(inp, target, mask, loss_weights=None):
     # print('loss_weights', loss_weights.sum())
     # print(loss_weights)
 
-    if loss_weights is None:
-        loss_weights = 0
-
-    weighted_loss = loss * (loss_weights)
+    weighted_loss = channel_loss * (1 + loss_weights)
 
     softmax_weights = torch.nn.Softmax()(channel_loss).detach()
-    
+
+    # print('\n', channel_loss, '\n', weighted_loss, '\n',
+    #       loss_weights, '\n', softmax_weights, '\n\n')
+
     # Instead of dividing by the number of elements. Divide by the number of non-zero mask elements in the batch
-    loss = loss.sum() / (torch.sum(mask))
-    # loss = weighted_loss.sum() / (torch.sum(mask))
+    # loss = loss.sum() / torch.sum(mask)
+    loss = weighted_loss.sum() / torch.sum(mask)
 
     # print(softmax_weights.min(), softmax_weights.mean(), softmax_weights.max())
     # quit()
@@ -176,15 +176,14 @@ def main():
                            sci_mode=False, linewidth=180)
     print(f"Training Samples: {len(train_set)}")
     print(f"Validation Samples: {len(val_set)}")
-    loss_weights = None
 
+    loss_weights = 0
     for epoch in range(args.epochs):
         reconstruct_model.train(True)  # Set model to training mode
 
         start_time = time.time()
         train_running_loss = 0.0
         train_count = 0
-
         for _, data in enumerate(Bar(data_loaders['train'])):
             inputs = data[0]
             outputs = data[1]
@@ -196,7 +195,6 @@ def main():
             optimizer.zero_grad()
 
             mask = mask_model(inputs)
-            mask = mask
 
             mask = torch.round(mask)
 
@@ -234,7 +232,6 @@ def main():
         reconstruct_model.eval()
         val_running_loss = 0.0
         val_count = 0
-
         for _, data in enumerate(data_loaders['val']):
             inputs = data[0]
             outputs = data[1]
@@ -253,7 +250,7 @@ def main():
 
             pred = reconstruct_model(masked_inputs)
 
-            loss, _ = loss_fn(pred, masked_outputs, mask)
+            loss, _ = loss_fn(pred, masked_outputs, mask, 0)
 
             val_running_loss += loss.data
             val_count += 1

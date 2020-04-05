@@ -78,16 +78,15 @@ def main():
     # print(powerSpectrum)
 
     plt.figure(3)
-    spect_exp = torch.expm1(spect).detach().numpy()
-    print(spect_exp.flatten().min(), spect_exp.flatten().mean(), spect_exp.flatten().max())
-    plt.hist(spect_exp.flatten(), bins=256, range=(0, 2))
-    plt.savefig('vizoutputs/raw_spect_hist.png', bbox_inches='tight', pad=0)
+    print(samples.min(), samples.mean(), samples.max())
+    plt.hist(samples, bins=256, range=(-0.1, 0.1))
+    plt.savefig('vizoutputs/raw_audio_hist.png', bbox_inches='tight', pad=0)
 
-    plt.figure(4)
-    log_spect = np.log1p(spect_exp.flatten())
-    print(log_spect.min(), log_spect.mean(), log_spect.max())
-    plt.hist(log_spect, bins=512, range=(0, 4))
-    plt.savefig('vizoutputs/raw_spect_hist_log.png', bbox_inches='tight', pad=0)
+    # plt.figure(4)
+    # log_spect = np.log1p(spect_exp.flatten())
+    # print(log_spect.min(), log_spect.mean(), log_spect.max())
+    # plt.hist(log_spect, bins=512, range=(0, 4))
+    # plt.savefig('vizoutputs/raw_audio_hist_log.png', bbox_inches='tight', pad=0)
 
 
 

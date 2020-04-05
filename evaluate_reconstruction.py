@@ -1,4 +1,5 @@
 import json
+import re
 import importlib
 import sys
 import argparse
@@ -60,6 +61,8 @@ def main():
 
     filename_without_ext = Path(args.audio_path).stem
 
+    # clean_audio_path = re.sub(f'{pattern}[^/]+/', f'{pattern}clean/', args.audio_path)
+
     input_spectrogram, samples_length, sample_rate, n_fft, hop_length = load_audio_spectrogram(
         args.audio_path)
 
@@ -77,7 +80,6 @@ def main():
         input_spectrogram = input_spectrogram.cuda()
 
     mask = mask_model(input_spectrogram)
-    mask = torch.nn.Sigmoid()(mask)
     mask = torch.round(mask).float()
     
     expanded_mask = mask_model.expand_mask(
