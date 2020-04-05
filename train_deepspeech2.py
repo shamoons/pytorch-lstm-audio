@@ -114,16 +114,19 @@ parser.add_argument('--gpu-rank', default=None,
 parser.add_argument('--seed', default=123456, type=int,
                     help='Seed to generators')
 parser.add_argument('--loss-scale', type=str, default=1)
-parser.add_argument('--mask_wandb', help='Path for the trained masking model', required=True)
+parser.add_argument(
+    '--mask_wandb', help='Path for the trained masking model', required=True)
 
 
 torch.manual_seed(123456)
 torch.cuda.manual_seed_all(123456)
 
+
 def loss_fn(log_probs, targets, input_lengths, target_lengths):
     criterion = torch.nn.CTCLoss(reduction='sum', zero_infinity=True)
 
     return criterion(log_probs, targets, input_lengths, target_lengths)
+
 
 def decode_results(decoded_output, decoded_offsets):
     decoder = 'greedy'
@@ -178,12 +181,12 @@ class AverageMeter(object):
         self.avg = self.sum / self.count
 
 
-if __name__ == '__main__':
+def main():
     args = parser.parse_args()
-    
+
     wandb_tags = [socket.gethostname()]
     wandb.init(project="jstsp-reconstruction-with-deepspeech2",
-               tags=','.join(wandb_tags), sync_tensorboard=True)
+               tags=','.join(wandb_tags))
     wandb.save('*.pt')
 
     # Set seeds for determinism
@@ -195,12 +198,7 @@ if __name__ == '__main__':
     args.distributed = args.world_size > 1
     main_proc = True
     device = torch.device("cuda" if args.cuda else "cpu")
-    if args.distributed:
-        if args.gpu_rank:
-            torch.cuda.set_device(int(args.gpu_rank))
-        dist.init_process_group(backend=args.dist_backend, init_method=args.dist_url,
-                                world_size=args.world_size, rank=args.rank)
-        main_proc = args.rank == 0  # Only the first proc should save models
+
     save_folder = args.save_folder
     os.makedirs(save_folder, exist_ok=True)  # Ensure save folder exists
 
@@ -287,9 +285,8 @@ if __name__ == '__main__':
         print("Shuffling batches for the following epochs")
         train_sampler.shuffle(start_epoch)
 
-
     reconstruct_model = ReconstructionModel(feature_dim=161, make_4d=True)
-    mask_model = load_masking_model(args.mask_wandb, device)
+    mask_model = load_masking_model(args.mask_wandb, device, make_4d=True)
 
     # if args.initialize_baseline:
     #     print('Initializing Baseline:', args.initialize_baseline)
@@ -298,8 +295,6 @@ if __name__ == '__main__':
 
     # model = torch.nn.Sequential(baseline_m, model)
 
-    # print('model', model)
-    # print('baseline_m', baseline_m)
     reconstruct_model = reconstruct_model.to(device)
     mask_model = mask_model.to(device)
     model = model.to(device)
@@ -307,7 +302,7 @@ if __name__ == '__main__':
     optimizer = torch.optim.SGD(parameters, lr=args.lr,
                                 momentum=args.momentum, nesterov=True, weight_decay=1e-5)
     baseline_optimizer = torch.optim.SGD(reconstruct_model.parameters(), lr=args.lr,
-                                momentum=args.momentum, nesterov=True, weight_decay=1e-5)
+                                         momentum=args.momentum, nesterov=True, weight_decay=1e-5)
 
     if optim_state is not None:
         optimizer.load_state_dict(optim_state)
@@ -330,14 +325,24 @@ if __name__ == '__main__':
             if args.cuda:
                 inputs = inputs.cuda()
 
-            print(inputs.size(), inputs.min(), inputs.mean(), inputs.max())
+            print('Input', inputs.size(), inputs.min(), inputs.mean(), inputs.max())
             mask = mask_model(inputs)
-            print(mask.size(), mask.min(), mask.mean(), mask.max())
-            quit()
-            
-            reconstruct_output = reconstruct_model(inputs)
-            # print(reconstruct_output.size(), reconstruct_output.min(), reconstruct_output.mean(), reconstruct_output.max())
-            
+            mask = torch.round(mask)
+
+            expanded_mask = mask_model.expand_mask(mask, seq_length=inputs.size(3))
+
+            print('Mask', mask.size(), mask.min(), mask.mean(), mask.max())
+            print('ExpandedMask', expanded_mask.size(), expanded_mask.min(), expanded_mask.mean(), expanded_mask.max())
+            masked_inputs = inputs * expanded_mask.unsqueeze(2)
+
+            print('masked_inputs', masked_inputs.size(), masked_inputs.min(), masked_inputs.mean(), masked_inputs.max())
+            # quit()
+
+            reconstruct_output = reconstruct_model(masked_inputs)
+            print('reconstruct_output', reconstruct_output.size(), reconstruct_output.min(), reconstruct_output.mean(), reconstruct_output.max())
+
+            reconstruct_output[mask == 0] = inputs[mask == 0]
+
             input_sizes = input_percentages.mul_(int(inputs.size(3))).int()
             # measure data loading time
             data_time.update(time.time() - end)
@@ -351,7 +356,8 @@ if __name__ == '__main__':
             out = out.log_softmax(-1)
 
             float_out = out.float()  # ensure float32 for loss
-            loss = loss_fn(float_out, targets.to(device).long(), output_sizes.to(device), target_sizes.to(device))
+            loss = loss_fn(float_out, targets.to(device).long(),
+                           output_sizes.to(device), target_sizes.to(device))
 
             loss_value = loss.item()
 
@@ -361,8 +367,6 @@ if __name__ == '__main__':
                 optimizer.zero_grad()
                 # compute gradient
 
-                # with amp.scale_loss(loss, optimizer) as scaled_loss:
-                # scaled_loss.backward()
                 loss.backward()
 
                 torch.nn.utils.clip_grad_norm_(
@@ -395,10 +399,11 @@ if __name__ == '__main__':
                                                 wer_results=wer_results, cer_results=cer_results, avg_loss=avg_loss),
                            file_path)
             del loss, out, float_out
-            torch.save(reconstruct_model.state_dict(), os.path.join(wandb.run.dir, 'latest-model.pt'))
+            torch.save(reconstruct_model.state_dict(),
+                       os.path.join(wandb.run.dir, 'latest-model.pt'))
 
         avg_loss /= len(train_sampler)
-        
+
         epoch_time = time.time() - start_epoch_time
         print('Training Summary Epoch: [{0}]\t'
               'Time taken (s): {epoch_time:.0f}\t'
@@ -450,19 +455,20 @@ if __name__ == '__main__':
         # anneal lr
         for g in optimizer.param_groups:
             g['lr'] = g['lr'] / args.learning_anneal
-        print('DeepSpeech Learning rate annealed to: {lr:.6f}'.format(lr=g['lr']))
+        print(
+            'DeepSpeech Learning rate annealed to: {lr:.6f}'.format(lr=g['lr']))
 
         for g in baseline_optimizer.param_groups:
             g['lr'] = g['lr'] / args.learning_anneal
 
-        print('Baseline Learning rate annealed to: {lr:.6f}'.format(lr=g['lr']))
-
-
+        print(
+            'Baseline Learning rate annealed to: {lr:.6f}'.format(lr=g['lr']))
 
         if main_proc and (best_wer is None or best_wer > wer):
             print("Found better validated model, saving to %s" %
                   args.model_path)
-            torch.save(baseline_m.state_dict(), os.path.join(wandb.run.dir, 'best-model.pt'))
+            torch.save(reconstruct_model.state_dict(), os.path.join(
+                wandb.run.dir, 'best-model.pt'))
 
             torch.save(DeepSpeech.serialize(model, optimizer=optimizer, amp=None, epoch=epoch, loss_results=loss_results,
                                             wer_results=wer_results, cer_results=cer_results), args.model_path)
@@ -472,3 +478,7 @@ if __name__ == '__main__':
         if not args.no_shuffle:
             print("Shuffling batches...")
             train_sampler.shuffle(epoch)
+
+
+if __name__ == '__main__':
+    main()
