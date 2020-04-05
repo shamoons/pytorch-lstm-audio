@@ -20,24 +20,14 @@ class MaskingModel(torch.nn.Module):
         self.conv4 = self.conv_layer(in_channels=feature_dim, kernel_size=kernel_sizes[3])
         self.conv5 = self.conv_layer(in_channels=feature_dim, kernel_size=kernel_sizes[4])
         self.final_conv = torch.nn.Sequential(
-            # torch.nn.Conv1d(
-            #     in_channels=(feature_dim // 8) * 5,
-            #     out_channels=(feature_dim // 8) * 5,
-            #     kernel_size=final_kernel_size,
-            #     stride=1,
-            #     padding=final_kernel_size // 2,
-            #     groups=(feature_dim // 8) * 5
-            # ),
-            # torch.nn.PReLU(num_parameters=(feature_dim // 8) * 5),
             torch.nn.Conv1d(
-                in_channels=(feature_dim // 8) * 5,
+                in_channels=(feature_dim // 8) * 1,
                 out_channels=feature_dim // 16,
                 kernel_size=final_kernel_size,
                 stride=1,
                 padding=final_kernel_size // 2
             ),
             torch.nn.ReLU(),
-            # torch.nn.PReLU(num_parameters=feature_dim // 16),
             torch.nn.Conv1d(
                 in_channels=feature_dim // 16,
                 out_channels=feature_dim // 32,
@@ -46,28 +36,19 @@ class MaskingModel(torch.nn.Module):
                 padding=final_kernel_size // 2
             ),
             torch.nn.ReLU(),
-            # torch.nn.PReLU(num_parameters=feature_dim // 32),
             torch.nn.Conv1d(
                 in_channels=feature_dim // 32,
                 out_channels=1,
                 kernel_size=final_kernel_size,
                 stride=1,
                 padding=final_kernel_size // 2
-            )
+            ),
+            torch.nn.Sigmoid()
         )
 
 
     def conv_layer(self, in_channels, kernel_size):
         return torch.nn.Sequential(
-            # torch.nn.Conv1d(
-            #     in_channels=in_channels,
-            #     out_channels=in_channels,
-            #     kernel_size=kernel_size,
-            #     stride=1,
-            #     padding=kernel_size // 2,
-            #     groups=in_channels
-            # ),
-            # torch.nn.PReLU(num_parameters=in_channels),
             torch.nn.Conv1d(
                 in_channels=in_channels,
                 out_channels=in_channels // 2,
@@ -76,7 +57,6 @@ class MaskingModel(torch.nn.Module):
                 padding=kernel_size // 2
             ),
             torch.nn.ReLU(),
-            # torch.nn.PReLU(num_parameters=in_channels // 2),
             torch.nn.Conv1d(
                 in_channels=in_channels // 2,
                 out_channels=in_channels // 4,
@@ -85,7 +65,6 @@ class MaskingModel(torch.nn.Module):
                 padding=kernel_size // 2
             ),
             torch.nn.ReLU(),
-            # torch.nn.PReLU(num_parameters=in_channels // 4),
             torch.nn.Conv1d(
                 in_channels=in_channels // 4,
                 out_channels=in_channels // 8,
@@ -94,7 +73,6 @@ class MaskingModel(torch.nn.Module):
                 padding=kernel_size // 2
             ),
             torch.nn.ReLU()
-            # torch.nn.PReLU(num_parameters=in_channels // 8)
         )
 
     def forward(self, x):
@@ -131,9 +109,9 @@ class MaskingModel(torch.nn.Module):
             print('\nout5\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
                 torch.mean(out5), torch.std(out5), torch.min(out5), torch.max(out5), out5.size()))
 
-        # out = torch.cat((out1, out2, out3, out4, out5), dim=1)
-        stacked = torch.stack((out1, out2, out3, out4, out5), dim=2)
-        out = torch.flatten(stacked, start_dim=1, end_dim=2)
+        out = out1 + out2 + out3 + out4 + out5
+        # stacked = torch.stack((out1, out2, out3, out4, out5), dim=2)
+        # out = torch.flatten(stacked, start_dim=1, end_dim=2)
 
         out = self.final_conv(out)
         out = out.view(out.size(0), out.size(2))

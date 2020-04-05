@@ -79,16 +79,8 @@ def initialize(args):
     wandb.save('*.onnx')
     np.random.seed(0)
 
-def sigmoid(x):
-    return torch.nn.Sigmoid()(x)
-
 def loss_fn(inp, target):
-    zeros_sum = (target == 0).sum(dim = 0).float()
-    one_sum = (target == 1).sum(dim = 0).float()
-
-    pos_weight = zeros_sum / (one_sum + 1e-2)
-    loss_fn = torch.nn.BCEWithLogitsLoss(reduction='mean', pos_weight=pos_weight)
-
+    loss_fn = torch.nn.BCELoss(reduction='mean')
     loss = loss_fn(inp, target)
 
     return loss
@@ -137,7 +129,7 @@ def main():
 
     wandb.watch(model)
 
-    current_best_validation_loss = 1
+    current_best_validation_loss = 10
     model = model.float()
 
     if torch.cuda.is_available():
@@ -191,7 +183,7 @@ def main():
             # print('\npred\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
             #     torch.mean(pred), torch.std(pred), torch.min(pred), torch.max(pred)))
 
-        print(sigmoid(pred[0]))
+        print(pred[0])
         print(outputs[0])
 
         model.eval()
