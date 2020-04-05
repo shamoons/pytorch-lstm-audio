@@ -211,21 +211,20 @@ def main():
         tensorboard_logger = TensorBoardLogger(
             args.id, args.log_dir, args.log_params)
 
-    avg_loss, start_epoch, start_iter, optim_state, amp_state = 0, 0, 0, None, None
+    avg_loss, start_epoch, start_iter, optim_state = 0, 0, 0, None
     if args.continue_from:  # Starting from previous model
         print("Loading checkpoint model %s" % args.continue_from)
         package = torch.load(args.continue_from,
                              map_location=lambda storage, loc: storage)
         model = DeepSpeech.load_model_package(package)
 
-        for param in model.parameters():
-            param.requires_grad_(False)
+        # for param in model.parameters():
+        #     param.requires_grad_(False)
 
         labels = model.labels
         audio_conf = model.audio_conf
         if not args.finetune:  # Don't want to restart training
             optim_state = package['optim_dict']
-            # amp_state = package['amp']
             start_epoch = int(package.get('epoch', 1)) - \
                 1  # Index start at 0 for training
             start_iter = package.get('iteration', None)
@@ -325,23 +324,27 @@ def main():
             if args.cuda:
                 inputs = inputs.cuda()
 
-            print('Input', inputs.size(), inputs.min(), inputs.mean(), inputs.max())
+            # print('Input', inputs.size(), inputs.min(), inputs.mean(), inputs.max())
             mask = mask_model(inputs)
             mask = torch.round(mask)
 
             expanded_mask = mask_model.expand_mask(mask, seq_length=inputs.size(3))
 
-            print('Mask', mask.size(), mask.min(), mask.mean(), mask.max())
-            print('ExpandedMask', expanded_mask.size(), expanded_mask.min(), expanded_mask.mean(), expanded_mask.max())
+            # print('Mask', mask.size(), mask.min(), mask.mean(), mask.max())
+            # print('ExpandedMask', expanded_mask.size(), expanded_mask.min(), expanded_mask.mean(), expanded_mask.max())
             masked_inputs = inputs * expanded_mask.unsqueeze(2)
 
-            print('masked_inputs', masked_inputs.size(), masked_inputs.min(), masked_inputs.mean(), masked_inputs.max())
+            # print('masked_inputs', masked_inputs.size(), masked_inputs.min(), masked_inputs.mean(), masked_inputs.max())
             # quit()
 
             reconstruct_output = reconstruct_model(masked_inputs)
-            print('reconstruct_output', reconstruct_output.size(), reconstruct_output.min(), reconstruct_output.mean(), reconstruct_output.max())
+            I, _, L = torch.where(mask == 0)
+            # print(I, L)
+            reconstruct_output[I, ..., L] = inputs[I, ..., L]
+            # quit()
+            # print('reconstruct_output', reconstruct_output.size(), reconstruct_output.min(), reconstruct_output.mean(), reconstruct_output.max())
 
-            reconstruct_output[mask == 0] = inputs[mask == 0]
+            # reconstruct_output[mask == 0] = inputs[mask == 0]
 
             input_sizes = input_percentages.mul_(int(inputs.size(3))).int()
             # measure data loading time
@@ -349,9 +352,10 @@ def main():
             inputs = inputs.to(device)
 
             out, output_sizes = model(reconstruct_output, input_sizes)
-            decoded_output, decoded_offsets = decoder.decode(out, output_sizes)
 
+            decoded_output, decoded_offsets = decoder.decode(out, output_sizes)
             print(json.dumps(decode_results(decoded_output, decoded_offsets)))
+            
             out = out.transpose(0, 1)  # TxNxH
             out = out.log_softmax(-1)
 
@@ -388,7 +392,7 @@ def main():
                 print('Epoch: [{0}][{1}/{2}]\t'
                       'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                       'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
-                      'Loss {loss.val:.4f} ({loss.avg:.4f})\t'.format(
+                      'Loss {loss.val:.4g} ({loss.avg:.4g})\t'.format(
                           (epoch + 1), (i + 1), len(train_sampler), batch_time=batch_time, data_time=data_time, loss=losses))
             if args.checkpoint_per_batch > 0 and i > 0 and (i + 1) % args.checkpoint_per_batch == 0 and main_proc:
                 file_path = '%s/deepspeech_checkpoint_epoch_%d_iter_%d.pth' % (

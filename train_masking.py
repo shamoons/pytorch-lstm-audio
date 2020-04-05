@@ -80,8 +80,11 @@ def initialize(args):
     np.random.seed(0)
 
 def loss_fn(inp, target):
-    loss_fn = torch.nn.BCELoss(reduction='mean')
-    loss = loss_fn(inp, target)
+    fn = torch.nn.BCELoss(reduction='mean')
+    raw_loss = fn(inp, target)
+    rounded_loss = fn(torch.round(inp), target)
+
+    loss = raw_loss + rounded_loss
 
     return loss
 
@@ -120,9 +123,6 @@ def main():
         state_dict = torch.load(args.continue_from, map_location=device)
         model.load_state_dict(state_dict)
         print('Loading saved model to continue from: {}'.format(args.continue_from))
-    # else:
-    #     model.apply(init_weights)
-    #     print('Initializing weights')
 
     optimizer = optim.Adam(
         model.parameters(), lr=args.base_lr, weight_decay=0)
