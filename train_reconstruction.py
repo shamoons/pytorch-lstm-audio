@@ -149,7 +149,7 @@ def main():
     reconstruct_model = ReconstructionModel(feature_dim=args.feature_dim,
                                             verbose=args.verbose, kernel_size=args.kernel_size, kernel_size_step=args.kernel_size_step, final_kernel_size=args.final_kernel_size)
 
-    # reconstruct_model.model_summary(reconstruct_model)
+    reconstruct_model.model_summary(reconstruct_model)
     if args.continue_from:
         state_dict = torch.load(args.continue_from, map_location=device)
         reconstruct_model.load_state_dict(state_dict)
