@@ -2,7 +2,7 @@ import torch
 
 
 class ReconstructionModel(torch.nn.Module):
-    def __init__(self, feature_dim, kernel_size, kernel_size_step, final_kernel_size, make_4d=False, dropout=0.01, verbose=False):
+    def __init__(self, feature_dim = 161, kernel_size = 25, kernel_size_step = -4, final_kernel_size = 25, make_4d=False, dropout=0.01, verbose=False):
         super(ReconstructionModel, self).__init__()
         self.make_4d = make_4d
         self.verbose = verbose

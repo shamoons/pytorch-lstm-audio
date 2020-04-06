@@ -26,6 +26,7 @@ multiproc = "*"
 tensorboardx = "*"
 fast-ctc-decode = "*"
 pytorch-ignite = "*"
+h5py = "*"
 
 [requires]
 python_version = "3.6"
