@@ -122,7 +122,7 @@ class MaskingModel(torch.nn.Module):
         
 
         if self.make_4d:
-            out = out.reshape(out.size(0), 1, out.size(2), out.size(1))
+            out = out.reshape(out.size(0), 1, out.size(1))
 
         return out
 

@@ -187,6 +187,8 @@ def main():
     wandb_tags = [socket.gethostname()]
     wandb.init(project="jstsp-reconstruction-with-deepspeech2",
                tags=','.join(wandb_tags))
+    open(os.path.join(wandb.run.dir, 'args.json'),
+         'w').write(json.dumps(vars(args)))
     wandb.save('*.pt')
 
     # Set seeds for determinism
@@ -354,8 +356,8 @@ def main():
             out, output_sizes = model(reconstruct_output, input_sizes)
 
             decoded_output, decoded_offsets = decoder.decode(out, output_sizes)
-            print(json.dumps(decode_results(decoded_output, decoded_offsets)))
-            
+            # print(json.dumps(decode_results(decoded_output, decoded_offsets)))
+
             out = out.transpose(0, 1)  # TxNxH
             out = out.log_softmax(-1)
 
@@ -434,12 +436,14 @@ def main():
             'wer_results': wer_results
         }
 
-        # wandb.log({
-        #     'avg_loss': avg_loss,
-        #     'loss_results': loss_results,
-        #     'cer_results': cer_results,
-        #     'wer_results': wer_results
-        # })
+        wandb.log({
+            'epoch': epoch,
+            'epoch_time': epoch_time,
+            'avg_loss': avg_loss,
+            'loss_results': loss_results,
+            'cer_results': cer_results,
+            'wer_results': wer_results
+        })
 
         if args.visdom and main_proc:
             visdom_logger.update(epoch, values)
