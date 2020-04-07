@@ -192,8 +192,8 @@ def main():
             # print('\npred\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
             #     torch.mean(pred), torch.std(pred), torch.min(pred), torch.max(pred)))
 
-        print(pred[0])
-        print(outputs[0])
+        # print(pred[0])
+        # print(outputs[0])
 
         model.eval()
         val_running_loss = 0.0
@@ -239,7 +239,7 @@ def main():
             'hamming_distance': hamming_distance_loss
         })
 
-        print(f"Epoch: {epoch}\tLoss(t): {train_loss:.6g}\tLoss(v): {val_loss:.6g} (best: {current_best_validation_loss:.6g})\tRounded Loss (v): {rounded_val_loss:.6g}\tHamming Distance (v): {hamming_distance_loss}\t Time (epoch): {time_per_epoch:d}s")
+        print(f"Epoch: {epoch}\tLoss(t): {train_loss:.6g}\tLoss(v): {val_loss:.6g} (best: {current_best_validation_loss:.6g})\tRounded Loss (v): {rounded_val_loss:.6g}\tHamming Distance (v): {hamming_distance_loss:.6g}\t Time (epoch): {time_per_epoch:d}s")
 
         if val_loss < current_best_validation_loss:
             torch.save(model.state_dict(), path.join(
