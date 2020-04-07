@@ -79,6 +79,13 @@ def initialize(args):
     wandb.save('*.onnx')
     np.random.seed(0)
 
+
+def hamming_distance(inp, target):
+    # For the binary case, hamming is equivalent to L1
+    fn = torch.nn.L1Loss(reduction='mean')
+    return fn(inp, target)
+
+
 def loss_fn(inp, target):
     fn = torch.nn.BCELoss(reduction='mean')
     raw_loss = fn(inp, target)
@@ -87,6 +94,7 @@ def loss_fn(inp, target):
     loss = raw_loss + rounded_loss
 
     return loss
+
 
 def main():
     args = parse_args()
@@ -139,7 +147,8 @@ def main():
     last_val_loss = current_best_validation_loss
 
     saved_onnx = False
-    torch.set_printoptions(profile='full', precision=3, sci_mode=False, linewidth=180)
+    torch.set_printoptions(profile='full', precision=3,
+                           sci_mode=False, linewidth=180)
 
     print(f"Training Samples: {len(train_set)}")
     print(f"Validation Samples: {len(val_set)}")
@@ -161,7 +170,7 @@ def main():
             optimizer.zero_grad()
 
             pred = model(inputs)
-            
+
             loss = loss_fn(pred, outputs)
 
             loss.backward()
@@ -189,6 +198,7 @@ def main():
         model.eval()
         val_running_loss = 0.0
         rounded_val_running_loss = 0.0
+        hamming_distance_running_loss = 0.0
         for _, data in enumerate(data_loaders['val']):
             inputs = data[0]
             outputs = data[1]
@@ -202,7 +212,10 @@ def main():
             loss = loss_fn(pred, outputs)
 
             val_running_loss += loss.data
-            rounded_val_running_loss += loss_fn(torch.round(pred), outputs).data
+            rounded_val_running_loss += loss_fn(
+                torch.round(pred), outputs).data
+            hamming_distance_running_loss = hamming_distance(
+                torch.round(pred), outputs).data
 
             # pred_rounded = torch.tensor(pred)
             # pred_rounded[pred_rounded < 0.5] = 0
@@ -215,16 +228,18 @@ def main():
         train_loss = train_running_loss / len(data_loaders['train'])
         val_loss = val_running_loss / len(data_loaders['val'])
         rounded_val_loss = rounded_val_running_loss / len(data_loaders['val'])
+        hamming_distance_loss = hamming_distance_running_loss / len(data_loaders['val'])
 
         wandb.log({
             "train_loss": train_loss,
             'val_loss': val_loss,
             'epoch': epoch,
             'sec_per_epoch': time_per_epoch,
-            'rounded_val_loss': rounded_val_loss
+            'rounded_val_loss': rounded_val_loss,
+            'hamming_distance': hamming_distance_loss
         })
 
-        print(f"Epoch: {epoch}\tLoss(t): {train_loss:.6g}\tLoss(v): {val_loss:.6g} (best: {current_best_validation_loss:.6g})\tRounded Loss (v): {rounded_val_loss:.6g}\tTime (epoch): {time_per_epoch:d}s")
+        print(f"Epoch: {epoch}\tLoss(t): {train_loss:.6g}\tLoss(v): {val_loss:.6g} (best: {current_best_validation_loss:.6g})\tRounded Loss (v): {rounded_val_loss:.6g}\tHamming Distance (v): {hamming_distance_loss}\t Time (epoch): {time_per_epoch:d}s")
 
         if val_loss < current_best_validation_loss:
             torch.save(model.state_dict(), path.join(
