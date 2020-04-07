@@ -82,12 +82,12 @@ def main():
     mask = mask_model(input_spectrogram)
     mask = torch.round(mask).float()
     
-    expanded_mask = mask_model.expand_mask(
-        mask, seq_length=input_spectrogram.size(1))
-    masked_input = input_spectrogram * expanded_mask[..., None]
+    # expanded_mask = mask_model.expand_mask(
+    #     mask, seq_length=input_spectrogram.size(1))
+    # masked_input = input_spectrogram * expanded_mask[..., None]
 
     # Model takes data of shape: torch.Size([BATCH_SIZE, SEQUENCE_LENGTH, FEATURE_DIM])
-    output = model(masked_input)
+    output = model(inputs, mask)
     torch.set_printoptions(profile='full', precision=3,
                            sci_mode=False, linewidth=180)
 

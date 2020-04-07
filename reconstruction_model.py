@@ -2,7 +2,7 @@ import torch
 
 
 class ReconstructionModel(torch.nn.Module):
-    def __init__(self, feature_dim = 161, kernel_size = 25, kernel_size_step = -4, final_kernel_size = 25, make_4d=False, dropout=0.01, verbose=False):
+    def __init__(self, feature_dim=161, kernel_size=25, kernel_size_step=-4, final_kernel_size=25, make_4d=False, dropout=0.01, verbose=False):
         super(ReconstructionModel, self).__init__()
         self.make_4d = make_4d
         self.verbose = verbose
@@ -12,13 +12,25 @@ class ReconstructionModel(torch.nn.Module):
         kernel_sizes = [kernel_size, kernel_size + kernel_size_step, kernel_size + 2 *
                         kernel_size_step, kernel_size + 3 * kernel_size_step, kernel_size + 4 * kernel_size_step, kernel_size + 5 * kernel_size_step]
 
+        self.linear = torch.nn.Sequential(
+            torch.nn.Linear(feature_dim, feature_dim),
+            torch.nn.ReLU(),
+            torch.nn.Linear(feature_dim, feature_dim),
+            torch.nn.ReLU6()
+        )
 
-        self.conv1 = self.conv_layer(in_channels=feature_dim, kernel_size=kernel_sizes[0])
-        self.conv2 = self.conv_layer(in_channels=feature_dim, kernel_size=kernel_sizes[1])
-        self.conv3 = self.conv_layer(in_channels=feature_dim, kernel_size=kernel_sizes[2])
-        self.conv4 = self.conv_layer(in_channels=feature_dim, kernel_size=kernel_sizes[3])
-        self.conv5 = self.conv_layer(in_channels=feature_dim, kernel_size=kernel_sizes[4])
-        self.conv6 = self.conv_layer(in_channels=feature_dim, kernel_size=kernel_sizes[5])
+        self.conv1 = self.conv_layer(
+            in_channels=feature_dim, kernel_size=kernel_sizes[0])
+        self.conv2 = self.conv_layer(
+            in_channels=feature_dim, kernel_size=kernel_sizes[1])
+        self.conv3 = self.conv_layer(
+            in_channels=feature_dim, kernel_size=kernel_sizes[2])
+        self.conv4 = self.conv_layer(
+            in_channels=feature_dim, kernel_size=kernel_sizes[3])
+        self.conv5 = self.conv_layer(
+            in_channels=feature_dim, kernel_size=kernel_sizes[4])
+        self.conv6 = self.conv_layer(
+            in_channels=feature_dim, kernel_size=kernel_sizes[5])
 
         self.upscale_conv = torch.nn.Sequential(
             torch.nn.Conv1d(
@@ -82,9 +94,8 @@ class ReconstructionModel(torch.nn.Module):
                 padding=final_kernel_size // 2,
                 groups=feature_dim
             ),
-            torch.nn.ReLU6()
+            torch.nn.ReLU()
         )
-
 
     def conv_layer(self, in_channels, kernel_size):
         return torch.nn.Sequential(
@@ -197,7 +208,13 @@ class ReconstructionModel(torch.nn.Module):
             print('\nout\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
                 torch.mean(out), torch.std(out), torch.min(out), torch.max(out), out.size()))
 
-        out = out.transpose(1, 2)
+        mean_out = torch.mean(out, 2)
+
+        out = self.linear(mean_out)
+        print(out.size())
+        # quit()
+
+        # out = out.transpose(1, 2)
 
         if self.make_4d:
             out = out.reshape(out.size(0), 1, out.size(2), out.size(1))
@@ -207,27 +224,29 @@ class ReconstructionModel(torch.nn.Module):
     def model_summary(self, model):
         print("model_summary")
         print()
-        print("Layer_name"+"\t"*7+"Number of Parameters")
-        print("="*100)
-        model_parameters = [layer for layer in model.parameters() if layer.requires_grad]
+        print("Layer_name" + "\t" * 7 + "Number of Parameters")
+        print("=" * 100)
+        model_parameters = [
+            layer for layer in model.parameters() if layer.requires_grad]
         layer_name = [child for child in model.children()]
         j = 0
         total_params = 0
-        print("\t"*10)
+        print("\t" * 10)
         for i in layer_name:
             print()
             param = 0
             try:
                 bias = (i.bias is not None)
             except:
-                bias = False  
+                bias = False
             if not bias:
-                param =model_parameters[j].numel()+model_parameters[j+1].numel()
-                j = j+2
+                param = model_parameters[j].numel(
+                ) + model_parameters[j + 1].numel()
+                j = j + 2
             else:
-                param =model_parameters[j].numel()
-                j = j+1
-            print(str(i)+"\t"*3+str(param))
-            total_params+=param
-        print("="*100)
-        print(f"Total Params:{total_params}")  
+                param = model_parameters[j].numel()
+                j = j + 1
+            print(str(i) + "\t" * 3 + str(param))
+            total_params += param
+        print("=" * 100)
+        print(f"Total Params:{total_params}")

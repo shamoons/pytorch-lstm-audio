@@ -149,7 +149,7 @@ def main():
     reconstruct_model = ReconstructionModel(feature_dim=args.feature_dim,
                                             verbose=args.verbose, kernel_size=args.kernel_size, kernel_size_step=args.kernel_size_step, final_kernel_size=args.final_kernel_size)
 
-    reconstruct_model.model_summary(reconstruct_model)
+    # reconstruct_model.model_summary(reconstruct_model)
     if args.continue_from:
         state_dict = torch.load(args.continue_from, map_location=device)
         reconstruct_model.load_state_dict(state_dict)
@@ -195,16 +195,9 @@ def main():
             optimizer.zero_grad()
 
             mask = mask_model(inputs)
-
             mask = torch.round(mask)
 
-            expanded_mask = mask_model.expand_mask(
-                mask, seq_length=inputs.size(1))
-
-            masked_inputs = inputs * expanded_mask[..., None]
-            masked_outputs = outputs * expanded_mask[..., None]
-
-            pred = reconstruct_model(masked_inputs)
+            pred = reconstruct_model(inputs)
 
             loss, loss_weights = loss_fn(
                 pred, masked_outputs, mask, loss_weights=loss_weights)

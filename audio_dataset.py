@@ -73,20 +73,23 @@ class AudioDataset(Dataset):
         input_spectrogram, _, _, _, _ = load_audio_spectrogram(
             corrupted_file_path, normalize_spect=self.normalize)
 
+        mask_filepath = path.splitext(corrupted_file_path)[
+            0] + '-mask.npy'
+        mask = np.loadtxt(mask_filepath, dtype=np.float32)
+        width = input_spectrogram.size(0)
+        max_size = (len(mask) // width) * width
+
         if not self.mask:
             clean_file_path = self.clean_file_paths[index]
             # clean_file_path = '/home/shamoon/speech-enhancement-asr/data/LibriSpeech/dev-clean/84/121123/84-121123-0000.flac'
             output_spectrogram, _, _, _, _ = load_audio_spectrogram(
                 clean_file_path, normalize_spect=self.normalize)
+            
         else:
-            mask_filepath = path.splitext(corrupted_file_path)[
-                0] + '-mask.npy'
-            mask = np.loadtxt(mask_filepath, dtype=np.float32)
-
-            width = input_spectrogram.size(0)
-            max_size = (len(mask) // width) * width
+            
             mask_vector = mask[:max_size].reshape(width, -1).max(axis=1)
-
+        print(max_size, output_spectrogram.size())
+        quit()
         input_sliced = input_spectrogram
         if self.mask:
             output_sliced = mask_vector
