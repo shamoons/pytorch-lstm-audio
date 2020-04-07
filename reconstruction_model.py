@@ -408,7 +408,7 @@ class ReconstructionModel(torch.nn.Module):
 
                 if end_index - start_index < max_mask_len:
                     pad_zeros = torch.zeros(
-                        (max_mask_len - side_input.shape[0], side_input.shape[1])).to(side_input.device).to(mask.device)
+                        (max_mask_len - side_input.shape[0], side_input.shape[1])).to(mask.device)
                     if side == 'left':
                         side_input = torch.cat((pad_zeros, side_input), 0)
                     elif side == 'right':

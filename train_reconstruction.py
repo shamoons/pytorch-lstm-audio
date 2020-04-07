@@ -88,38 +88,50 @@ def initialize(args):
 def loss_fn(inp, target, mask, loss_weights):
     max_mask_len = torch.max(torch.sum(mask, 1)).int()
 
-    print(f"inp.size(): {inp.size()}")
-    print(f"target.size(): {target.size()}")
-    print(f"mask.size(): {mask.size()}")
-    print(f"max_mask_len: {max_mask_len}")
+    # print(f"\n\ninp.size(): {inp.size()}")
+    # print(f"target.size(): {target.size()}")
+    # print(f"mask.size(): {mask.size()}")
+    # print(f"max_mask_len: {max_mask_len}")
 
     non_zero_targets = []
+    non_zero_masks = []
     for batch_index, mask_batch in enumerate(mask):
         mask_len = torch.sum(mask_batch).int()
 
         if mask_len == 0:
             continue
         non_zero_targets.append(target[batch_index])
+        non_zero_masks.append(mask[batch_index])
 
+    non_zero_targets = torch.stack(non_zero_targets)
+    non_zero_masks = torch.stack(non_zero_masks)
+    # print(f"non_zero_targets: {non_zero_targets.size()}")
+    # print(f"non_zero_masks: {non_zero_masks.size()}")
     
     losses = []
-    for batch_index, mask_batch in enumerate(mask):
-        mask_len = torch.sum(mask_batch).int()
-
-        if mask_len == 0:
-            continue
-
-        m_nonzero = mask_batch.nonzero().flatten()
+    for batch_index, non_zero_mask in enumerate(non_zero_masks):
+        m_nonzero = non_zero_mask.nonzero().flatten()
         first_nonzero = m_nonzero[0]
-        last_nonzero = m_nonzero[-1]
+        last_nonzero = min(m_nonzero[-1], first_nonzero + max_mask_len - 1)    # TODO: See why this plus 1 is needed
 
-        print(f"first_nonzero: {first_nonzero}\tlast_nonzero: {last_nonzero}")
+        # print(f"first_nonzero: {first_nonzero}\tlast_nonzero: {last_nonzero}")
+        # print(non_zero_targets[batch_index].size())
         batch_target = non_zero_targets[batch_index][first_nonzero:last_nonzero]
 
-        # loss = torch.nn.MSELoss(reduction='none')(inp[batch_index][first_nonzero:last_nonzero], target[batch_index][first_nonzero:last_nonzero])
+        # print(f"pre pad batch_taret: {batch_target.size()}")
+        if batch_target.size(0) < inp[batch_index].size(0):
+            pad_zeros = torch.zeros((inp[batch_index].size(0) - batch_target.size(0), batch_target.size(1))).to(mask.device)
+            batch_target = torch.cat((batch_target, pad_zeros), 0)
 
-        print(f"inp: {inp[batch_index].size()}\t batch_target: {batch_target.size()}")
 
+        # print(f"inp: {inp[batch_index].size()}\t batch_target: {batch_target.size()}")
+        loss = torch.nn.MSELoss(reduction='none')(inp[batch_index], batch_target)
+        losses.append(loss)
+
+    batch_loss = torch.stack(losses).sum() / torch.sum(mask)
+
+    return batch_loss, 0
+    # print(batch_loss)
 
 
     
@@ -241,15 +253,15 @@ def main():
             # masked_outputs = outputs * expanded_mask[..., None]
 
             pred = reconstruct_model(inputs, mask)
-            masked_outputs = reconstruct_model.get_nonzero_masked_outputs(mask, outputs)
-            print(f"mask: {mask.size()}")
-            print(f"inputs: {inputs.size()}")
-            print(f"pred: {pred.size()}")
-            print(f"masked_outputs: {masked_outputs.size()}")
-            quit()
+            # masked_outputs = reconstruct_model.get_nonzero_masked_outputs(mask, outputs)
+            # print(f"mask: {mask.size()}")
+            # print(f"inputs: {inputs.size()}")
+            # print(f"pred: {pred.size()}")
+            # print(f"masked_outputs: {masked_outputs.size()}")
+            # quit()
 
             loss, loss_weights = loss_fn(
-                pred, masked_outputs, mask, loss_weights=loss_weights)
+                pred, outputs, mask, loss_weights=loss_weights)
 
             loss.backward()
             optimizer.step()
@@ -257,10 +269,10 @@ def main():
             train_running_loss += loss.data
             train_count += 1
 
-            if not saved_onnx:
-                torch.onnx.export(reconstruct_model, masked_inputs, path.join(
-                    wandb.run.dir, 'best-model.onnx'), verbose=False)
-                saved_onnx = True
+            # if not saved_onnx:
+            #     torch.onnx.export(reconstruct_model, (inputs, mask), path.join(
+            #         wandb.run.dir, 'best-model.onnx'), verbose=False)
+            #     saved_onnx = True
 
         reconstruct_model.eval()
         val_running_loss = 0.0
@@ -276,14 +288,14 @@ def main():
             mask = mask_model(inputs)
             mask = torch.round(mask)
 
-            expanded_mask = mask_model.expand_mask(
-                mask, seq_length=inputs.size(1))
-            masked_inputs = expanded_mask.unsqueeze(2) * inputs
-            masked_outputs = expanded_mask.unsqueeze(2) * outputs
+            # expanded_mask = mask_model.expand_mask(
+            #     mask, seq_length=inputs.size(1))
+            # masked_inputs = expanded_mask.unsqueeze(2) * inputs
+            # masked_outputs = expanded_mask.unsqueeze(2) * outputs
 
-            pred = reconstruct_model(masked_inputs)
+            pred = reconstruct_model(inputs, mask)
 
-            loss, _ = loss_fn(pred, masked_outputs, mask, 0)
+            loss, _ = loss_fn(pred, outputs, mask, 0)
 
             val_running_loss += loss.data
             val_count += 1
