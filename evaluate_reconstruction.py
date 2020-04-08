@@ -81,46 +81,53 @@ def main():
 
     mask = mask_model(input_spectrogram)
     mask = torch.round(mask).float()
-    
-    # expanded_mask = mask_model.expand_mask(
-    #     mask, seq_length=input_spectrogram.size(1))
-    # masked_input = input_spectrogram * expanded_mask[..., None]
+    # print(torch.sum(mask))
+    first_nonzero = mask[0].nonzero().flatten()[0]
+    mask = torch.zeros(mask.size())
+
+    missing_length = 25
+    mask[0][first_nonzero:first_nonzero + missing_length] = 1
+
+
 
     # Model takes data of shape: torch.Size([BATCH_SIZE, SEQUENCE_LENGTH, FEATURE_DIM])
-    output = model(inputs, mask)
+
+    preds = model(input_spectrogram, mask, missing_length=missing_length)
+    
+    output = input_spectrogram
+    output[mask == 1] = preds
+    # print(preds.size(), output.size())
     torch.set_printoptions(profile='full', precision=3,
                            sci_mode=False, linewidth=180)
 
-    output[mask == 0] = input_spectrogram[mask == 0]
-    # output[:, ~mask[0].to(torch.bool), :] = input_spectrogram[:,
-    #                                                           ~mask[0].to(torch.bool), :]
+    # output[mask == 0] = input_spectrogram[mask == 0]
 
     print('model output\t\tMean: {:.4f} ± {:.4f}\tMin: {:.4f}\tMax: {:.4f}\tSize: {}'.format(
         torch.mean(output), torch.std(output), torch.min(output), torch.max(output), output.size()))
 
-    diff = torch.abs(output - input_spectrogram)
+    # diff = torch.abs(output - input_spectrogram)
 
     output = torch.expm1(output)
-    print('expm1 output\t\tMean: {:.4f} ± {:.4f}\tMin: {:.4f}\tMax: {:.4f}\tSize: {}'.format(
-        torch.mean(output), torch.std(output), torch.min(output), torch.max(output), output.size()))
+    # print('expm1 output\t\tMean: {:.4f} ± {:.4f}\tMin: {:.4f}\tMax: {:.4f}\tSize: {}'.format(
+    #     torch.mean(output), torch.std(output), torch.min(output), torch.max(output), output.size()))
 
-    augmented_mask = torch.tensor(mask)
-    augmented_mask[augmented_mask ==
-                   1] = augmented_mask[augmented_mask == 1] + 0.1111
+    # augmented_mask = torch.tensor(mask)
+    # augmented_mask[augmented_mask ==
+    #                1] = augmented_mask[augmented_mask == 1] + 0.1111
 
-    print('Mask')
-    print(augmented_mask[0])
+    # print('Mask')
+    # print(augmented_mask[0])
 
 
-    print('Input')
-    print(torch.mean(input_spectrogram, 2)[0])
+    # print('Input')
+    # print(torch.mean(input_spectrogram, 2)[0])
 
-    print('Output')
-    output = torch.Tensor(output)
-    print(torch.mean(output, 2)[0])
+    # print('Output')
+    # output = torch.Tensor(output)
+    # print(torch.mean(output, 2)[0])
 
-    print('Diff')
-    print(torch.mean(diff, 2)[0])
+    # print('Diff')
+    # print(torch.mean(diff, 2)[0])
 
     np_output = output.view(output.size(1), output.size(2)).detach().numpy()
 
