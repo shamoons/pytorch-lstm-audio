@@ -2,10 +2,11 @@ import torch
 
 
 class ReconstructionModel(torch.nn.Module):
-    def __init__(self, feature_dim=161, kernel_size=25, kernel_size_step=-4, final_kernel_size=25, make_4d=False, dropout=0.01, verbose=False):
+    def __init__(self, feature_dim=161, kernel_size=25, kernel_size_step=-4, final_kernel_size=25, make_4d=False, dropout=0.01, side_length=320, verbose=False):
         super(ReconstructionModel, self).__init__()
         self.make_4d = make_4d
         self.verbose = verbose
+        self.side_length = side_length
 
         self.dropout = torch.nn.Dropout(p=dropout)
 
@@ -13,9 +14,9 @@ class ReconstructionModel(torch.nn.Module):
                         kernel_size_step, kernel_size + 3 * kernel_size_step, kernel_size + 4 * kernel_size_step, kernel_size + 5 * kernel_size_step]
 
         self.linear = torch.nn.Sequential(
-            torch.nn.Linear(feature_dim, feature_dim),
+            torch.nn.Linear(20, (feature_dim + 20) // 2),
             torch.nn.ReLU(),
-            torch.nn.Linear(feature_dim, feature_dim),
+            torch.nn.Linear((feature_dim + 20) // 2, feature_dim),
             torch.nn.ReLU6()
         )
 
@@ -31,6 +32,54 @@ class ReconstructionModel(torch.nn.Module):
             in_channels=feature_dim, kernel_size=kernel_sizes[4])
         self.conv6 = self.conv_layer(
             in_channels=feature_dim, kernel_size=kernel_sizes[5])
+
+        self.downscale_time_conv = torch.nn.Sequential(
+            torch.nn.Conv1d(
+                in_channels=feature_dim // 8,
+                out_channels=feature_dim // 8,
+                kernel_size=11,
+                stride=1,
+                dilation=1,
+                padding=0
+            ),
+            torch.nn.ReLU(),
+            torch.nn.Conv1d(
+                in_channels=feature_dim // 8,
+                out_channels=feature_dim // 8,
+                kernel_size=11,
+                stride=1,
+                dilation=2,
+                padding=0
+            ),
+            torch.nn.ReLU(),
+            torch.nn.Conv1d(
+                in_channels=feature_dim // 8,
+                out_channels=feature_dim // 8,
+                kernel_size=11,
+                stride=1,
+                dilation=4,
+                padding=0
+            ),
+            torch.nn.ReLU(),
+            torch.nn.Conv1d(
+                in_channels=feature_dim // 8,
+                out_channels=feature_dim // 8,
+                kernel_size=11,
+                stride=1,
+                dilation=8,
+                padding=0
+            ),
+            torch.nn.ReLU(),
+            torch.nn.Conv1d(
+                in_channels=feature_dim // 8,
+                out_channels=feature_dim // 8,
+                kernel_size=11,
+                stride=1,
+                dilation=16,
+                padding=0
+            ),
+            torch.nn.ReLU()
+        )
 
         self.upscale_conv = torch.nn.Sequential(
             torch.nn.Conv1d(
@@ -133,93 +182,140 @@ class ReconstructionModel(torch.nn.Module):
                 padding=kernel_size // 2
             ),
             torch.nn.ReLU(),
-            torch.nn.Conv1d(
-                in_channels=in_channels // 8,
-                out_channels=in_channels // 16,
-                kernel_size=kernel_size,
-                stride=1,
-                padding=kernel_size // 2
-            ),
-            torch.nn.ReLU()
+            # torch.nn.Conv1d(
+            #     in_channels=in_channels // 8,
+            #     out_channels=in_channels // 16,
+            #     kernel_size=kernel_size,
+            #     stride=1,
+            #     padding=kernel_size // 2
+            # ),
+            # torch.nn.ReLU()
         )
+    
+    def forward(self, x, mask, missing_length = 1):
+        inp = x
+        left_outputs = []
+        for l in range(missing_length):
+            left_input = self.get_side(mask, 'left', inp, inp_length=self.side_length).transpose(1, 2)
+            left_output = self.forward_step_left(left_input, mask)
+            left_outputs.append(left_output)
 
-    def forward(self, x):
+            # print(left_input.size(), left_output.size(), inp.size(), left_output.unsqueeze(1).size())
+            inp = torch.cat((inp, left_output.unsqueeze(1)), 1)
+
+        return torch.stack(left_outputs).transpose(0, 1)
+
+
+    def forward_step_left(self, left_inputs, mask):
         if self.make_4d:
             x = x.view(x.size(0), x.size(3), x.size(2))
 
-        if self.verbose:
-            print('\nx\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
-                torch.mean(x), torch.std(x), torch.min(x), torch.max(x), x.size()))
+        out1 = self.conv1(left_inputs)
+        out2 = self.conv2(left_inputs)
+        out3 = self.conv3(left_inputs)
+        out4 = self.conv4(left_inputs)
+        out5 = self.conv5(left_inputs)
+        out6 = self.conv6(left_inputs)
+        out_summed = out1 + out2 + out3 + out4 + out5 + out6
 
-        inp = x.transpose(1, 2)
-        if self.verbose:
-            print('\ninp\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
-                torch.mean(inp), torch.std(inp), torch.min(inp), torch.max(inp), inp.size()))
+        # min_length_for_size = 320
+        # if out_summed.size(2) < min_length_for_size:
+        #     pad_zeros = torch.zeros(out_summed.size(0), out_summed.size(
+        #         1), min_length_for_size - out_summed.size(2)).to(left_inputs.device)
+        #     out_summed = torch.cat((pad_zeros, out_summed), 2)
 
-        out1 = self.conv1(inp)
+        down_out = self.downscale_time_conv(out_summed)
+        mean_out = torch.mean(down_out, 2)
+
+        linear_out = self.linear(mean_out)
+
         if self.verbose:
+            print('\nleft_inputs\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
+                torch.mean(left_inputs), torch.std(left_inputs), torch.min(left_inputs), torch.max(left_inputs), left_inputs.size()))
+
             print('\nout1\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
                 torch.mean(out1), torch.std(out1), torch.min(out1), torch.max(out1), out1.size()))
 
-        out2 = self.conv2(inp)
-        if self.verbose:
             print('\nout2\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
                 torch.mean(out2), torch.std(out2), torch.min(out2), torch.max(out2), out2.size()))
 
-        out3 = self.conv3(inp)
-        if self.verbose:
             print('\nout3\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
                 torch.mean(out3), torch.std(out3), torch.min(out3), torch.max(out3), out3.size()))
 
-        out4 = self.conv4(inp)
-        if self.verbose:
             print('\nout4\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
                 torch.mean(out4), torch.std(out4), torch.min(out4), torch.max(out4), out4.size()))
 
-        out5 = self.conv5(inp)
-        if self.verbose:
             print('\nout5\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
                 torch.mean(out5), torch.std(out5), torch.min(out5), torch.max(out5), out5.size()))
 
-        out6 = self.conv6(inp)
-        if self.verbose:
             print('\nout6\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
                 torch.mean(out6), torch.std(out6), torch.min(out6), torch.max(out6), out6.size()))
 
-        out = out1 + out2 + out3 + out4 + out5 + out6
-        # stacked = torch.stack((out1, out2, out3, out4, out5, out6), dim=2)
-        # out = torch.flatten(stacked, start_dim=1, end_dim=2)
+            print('\n out_summed\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
+                torch.mean(out_summed), torch.std(out_summed), torch.min(out_summed), torch.max(out_summed), out_summed.size()))
 
-        if self.verbose:
-            print('\nsummed\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
-                torch.mean(out), torch.std(out), torch.min(out), torch.max(out), out.size()))
+            print('\n down_out\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
+                torch.mean(down_out), torch.std(down_out), torch.min(down_out), torch.max(down_out), down_out.size()))
 
-        out = self.upscale_conv(out)
+            print('\n mean_out\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
+                torch.mean(mean_out), torch.std(mean_out), torch.min(mean_out), torch.max(mean_out), mean_out.size()))
 
-        if self.verbose:
-            print('\nupscale conv\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
-                torch.mean(out), torch.std(out), torch.min(out), torch.max(out), out.size()))
+            print('\n linear_out\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
+                torch.mean(linear_out), torch.std(linear_out), torch.min(linear_out), torch.max(linear_out), linear_out.size()))
 
-        out += inp
+        return linear_out
 
-        out = self.final_conv(out)
+    def get_side(self, mask, side, inputs, inp_length):
+        with torch.no_grad():
+            side_inputs = []
 
-        if self.verbose:
-            print('\nout\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
-                torch.mean(out), torch.std(out), torch.min(out), torch.max(out), out.size()))
+            # for batch_index, mask_batch in enumerate(mask):
+            #     mask_len = torch.sum(mask_batch).int()
 
-        mean_out = torch.mean(out, 2)
+            #     if mask_len == 0:
+            #         continue
 
-        out = self.linear(mean_out)
-        print(out.size())
-        # quit()
+            #     m_nonzero = mask_batch.nonzero().flatten()
+            #     first_nonzero = m_nonzero[0]
+            #     last_nonzero = m_nonzero[-1]
 
-        # out = out.transpose(1, 2)
+            #     if side == 'left' and first_nonzero - 1 > inp_length:
+            #         inp_length = first_nonzero - 1
+            #     elif side == 'right' and inputs.size(1) - last_nonzero > inp_length:
+            #         inp_length = inputs.size(1) - last_nonzero
 
-        if self.make_4d:
-            out = out.reshape(out.size(0), 1, out.size(2), out.size(1))
 
-        return out
+            for batch_index, mask_batch in enumerate(mask):
+                mask_len = torch.sum(mask_batch).int()
+
+                if mask_len == 0:
+                    side_input = torch.zeros((inp_length, inputs.size(2))).to(mask.device)
+                else:
+
+                    m_nonzero = mask_batch.nonzero().flatten()
+                    first_nonzero = m_nonzero[0]
+                    last_nonzero = m_nonzero[-1]
+
+                    if side == 'left':
+                        end_index = first_nonzero - 1
+                        start_index = max(0, end_index - inp_length)
+                    elif side == 'right':
+                        start_index = last_nonzero + 1
+                        end_index = min(inputs[batch_index].size(1), start_index + inp_length)
+
+                    side_input = inputs[batch_index][start_index:end_index]
+
+                    if end_index - start_index < inp_length:
+                        pad_zeros = torch.zeros(
+                            (inp_length - side_input.shape[0], side_input.shape[1])).to(mask.device)
+                        if side == 'left':
+                            side_input = torch.cat((pad_zeros, side_input), 0)
+                        elif side == 'right':
+                            side_input = torch.cat((side_input, pad_zeros), 0)
+
+                side_inputs.append(side_input)
+
+        return torch.stack(side_inputs)
 
     def model_summary(self, model):
         print("model_summary")

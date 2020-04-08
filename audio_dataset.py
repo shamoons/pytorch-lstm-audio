@@ -78,27 +78,30 @@ class AudioDataset(Dataset):
         mask = np.loadtxt(mask_filepath, dtype=np.float32)
         width = input_spectrogram.size(0)
         max_size = (len(mask) // width) * width
+        mask_vector = torch.Tensor(mask[:max_size].reshape(width, -1).max(axis=1))
+        output_sliced = mask_vector
+
 
         if not self.mask:
             clean_file_path = self.clean_file_paths[index]
             # clean_file_path = '/home/shamoon/speech-enhancement-asr/data/LibriSpeech/dev-clean/84/121123/84-121123-0000.flac'
             output_spectrogram, _, _, _, _ = load_audio_spectrogram(
                 clean_file_path, normalize_spect=self.normalize)
-            
-        else:
-            
-            mask_vector = mask[:max_size].reshape(width, -1).max(axis=1)
-        print(max_size, output_spectrogram.size())
-        quit()
-        input_sliced = input_spectrogram
-        if self.mask:
-            output_sliced = mask_vector
-        else:
-            output_sliced = output_spectrogram
 
-        output_sliced = torch.Tensor(output_sliced)
+            masked_output_spectrogram = mask_vector.unsqueeze(1) * output_spectrogram
+            masked_output_spectrogram = masked_output_spectrogram[mask_vector != 0]
+            
+            output_sliced = masked_output_spectrogram
 
-        return input_sliced, output_sliced
+        # print(output_sliced)
+        # if self.mask:
+        #     output_sliced = mask_vector
+        # else:
+        #     output_sliced = masked_output_spectrogram
+
+        # output_sliced = torch.Tensor(output_sliced)
+
+        return input_spectrogram, output_sliced
 
 
 def pad_samples(batched_data):

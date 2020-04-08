@@ -67,7 +67,7 @@ def parse_args():
     parser.add_argument('--verbose', default=False,
                         type=bool, help='Verbose mode')
 
-    parser.add_argument('--seed', default=1,
+    parser.add_argument('--seed', default=2,
                         type=int, help='Seed')
 
     args = parser.parse_args()
@@ -85,11 +85,10 @@ def initialize(args):
     np.random.seed(args.seed)
 
 
-def loss_fn(inp, target, mask, loss_weights):
-    masked_inp = mask.unsqueeze(2) * inp
-    masked_target = mask.unsqueeze(2) * target
+def loss_fn(inp, target, loss_weights):
+    loss = torch.nn.MSELoss(reduction='mean')(inp, target)
 
-    loss = torch.nn.MSELoss(reduction='none')(masked_inp, masked_target)
+    return loss, 0
     channel_loss = torch.sum(loss, dim=1)
     channel_loss = torch.mean(channel_loss, dim=0)
 
@@ -197,10 +196,13 @@ def main():
             mask = mask_model(inputs)
             mask = torch.round(mask)
 
-            pred = reconstruct_model(inputs)
-
-            loss, loss_weights = loss_fn(
-                pred, masked_outputs, mask, loss_weights=loss_weights)
+            missing_length = 5
+            pred = reconstruct_model(inputs, mask, missing_length=missing_length)
+            first_outputs = outputs[:,:missing_length,:]
+            # print(pred.size(), first_outputs.size())
+            # quit()
+            loss, loss_weights = loss_fn(pred, first_outputs, loss_weights=loss_weights)
+            # print(f"Loss: {loss}")
 
             loss.backward()
             optimizer.step()
@@ -209,8 +211,8 @@ def main():
             train_count += 1
 
             if not saved_onnx:
-                torch.onnx.export(reconstruct_model, masked_inputs, path.join(
-                    wandb.run.dir, 'best-model.onnx'), verbose=False)
+                # torch.onnx.export(reconstruct_model, inputs, path.join(
+                #     wandb.run.dir, 'best-model.onnx'), verbose=False)
                 saved_onnx = True
 
             # print('\ninput\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
@@ -236,14 +238,11 @@ def main():
             mask = mask_model(inputs)
             mask = torch.round(mask)
 
-            expanded_mask = mask_model.expand_mask(
-                mask, seq_length=inputs.size(1))
-            masked_inputs = expanded_mask.unsqueeze(2) * inputs
-            masked_outputs = expanded_mask.unsqueeze(2) * outputs
+            missing_length = 5
+            pred = reconstruct_model(inputs, mask, missing_length=missing_length)
+            first_outputs = outputs[:,:missing_length,:]
 
-            pred = reconstruct_model(masked_inputs)
-
-            loss, _ = loss_fn(pred, masked_outputs, mask, 0)
+            loss, _ = loss_fn(pred, first_outputs, loss_weights=0)
 
             val_running_loss += loss.data
             val_count += 1
