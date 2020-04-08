@@ -13,27 +13,47 @@ class ReconstructionModel(torch.nn.Module):
         kernel_sizes = [kernel_size, kernel_size + kernel_size_step, kernel_size + 2 *
                         kernel_size_step, kernel_size + 3 * kernel_size_step, kernel_size + 4 * kernel_size_step, kernel_size + 5 * kernel_size_step]
 
-        self.linear = torch.nn.Sequential(
+        self.linear_left = torch.nn.Sequential(
             torch.nn.Linear(20, (feature_dim + 20) // 2),
             torch.nn.ReLU(),
             torch.nn.Linear((feature_dim + 20) // 2, feature_dim),
             torch.nn.ReLU6()
         )
 
-        self.conv1 = self.conv_layer(
+        self.linear_right = torch.nn.Sequential(
+            torch.nn.Linear(20, (feature_dim + 20) // 2),
+            torch.nn.ReLU(),
+            torch.nn.Linear((feature_dim + 20) // 2, feature_dim),
+            torch.nn.ReLU6()
+        )
+
+        self.left_conv1 = self.conv_layer(
             in_channels=feature_dim, kernel_size=kernel_sizes[0])
-        self.conv2 = self.conv_layer(
+        self.left_conv2 = self.conv_layer(
             in_channels=feature_dim, kernel_size=kernel_sizes[1])
-        self.conv3 = self.conv_layer(
+        self.left_conv3 = self.conv_layer(
             in_channels=feature_dim, kernel_size=kernel_sizes[2])
-        self.conv4 = self.conv_layer(
+        self.left_conv4 = self.conv_layer(
             in_channels=feature_dim, kernel_size=kernel_sizes[3])
-        self.conv5 = self.conv_layer(
+        self.left_conv5 = self.conv_layer(
             in_channels=feature_dim, kernel_size=kernel_sizes[4])
-        self.conv6 = self.conv_layer(
+        self.left_conv6 = self.conv_layer(
             in_channels=feature_dim, kernel_size=kernel_sizes[5])
 
-        self.downscale_time_conv = torch.nn.Sequential(
+        self.right_conv1 = self.conv_layer(
+            in_channels=feature_dim, kernel_size=kernel_sizes[0])
+        self.right_conv2 = self.conv_layer(
+            in_channels=feature_dim, kernel_size=kernel_sizes[1])
+        self.right_conv3 = self.conv_layer(
+            in_channels=feature_dim, kernel_size=kernel_sizes[2])
+        self.right_conv4 = self.conv_layer(
+            in_channels=feature_dim, kernel_size=kernel_sizes[3])
+        self.right_conv5 = self.conv_layer(
+            in_channels=feature_dim, kernel_size=kernel_sizes[4])
+        self.right_conv6 = self.conv_layer(
+            in_channels=feature_dim, kernel_size=kernel_sizes[5])
+
+        self.left_downscale_time_conv = torch.nn.Sequential(
             torch.nn.Conv1d(
                 in_channels=feature_dim // 8,
                 out_channels=feature_dim // 8,
@@ -81,70 +101,54 @@ class ReconstructionModel(torch.nn.Module):
             torch.nn.ReLU()
         )
 
-        self.upscale_conv = torch.nn.Sequential(
+        self.right_downscale_time_conv = torch.nn.Sequential(
             torch.nn.Conv1d(
-                in_channels=feature_dim // 16,
+                in_channels=feature_dim // 8,
                 out_channels=feature_dim // 8,
-                kernel_size=final_kernel_size,
+                kernel_size=11,
                 stride=1,
-                padding=final_kernel_size // 2
+                dilation=1,
+                padding=0
             ),
             torch.nn.ReLU(),
             torch.nn.Conv1d(
                 in_channels=feature_dim // 8,
-                out_channels=feature_dim // 4,
-                kernel_size=final_kernel_size,
+                out_channels=feature_dim // 8,
+                kernel_size=11,
                 stride=1,
-                padding=final_kernel_size // 2
+                dilation=2,
+                padding=0
             ),
             torch.nn.ReLU(),
             torch.nn.Conv1d(
-                in_channels=feature_dim // 4,
-                out_channels=feature_dim // 2,
-                kernel_size=final_kernel_size,
+                in_channels=feature_dim // 8,
+                out_channels=feature_dim // 8,
+                kernel_size=11,
                 stride=1,
-                padding=final_kernel_size // 2
+                dilation=4,
+                padding=0
             ),
             torch.nn.ReLU(),
             torch.nn.Conv1d(
-                in_channels=feature_dim // 2,
-                out_channels=feature_dim,
-                kernel_size=final_kernel_size,
+                in_channels=feature_dim // 8,
+                out_channels=feature_dim // 8,
+                kernel_size=11,
                 stride=1,
-                padding=final_kernel_size // 2
+                dilation=8,
+                padding=0
+            ),
+            torch.nn.ReLU(),
+            torch.nn.Conv1d(
+                in_channels=feature_dim // 8,
+                out_channels=feature_dim // 8,
+                kernel_size=11,
+                stride=1,
+                dilation=16,
+                padding=0
             ),
             torch.nn.ReLU()
         )
 
-        self.final_conv = torch.nn.Sequential(
-            torch.nn.Conv1d(
-                in_channels=feature_dim,
-                out_channels=feature_dim,
-                kernel_size=final_kernel_size,
-                stride=1,
-                padding=final_kernel_size // 2,
-                groups=23
-            ),
-            torch.nn.ReLU(),
-            torch.nn.Conv1d(
-                in_channels=feature_dim,
-                out_channels=feature_dim,
-                kernel_size=final_kernel_size,
-                stride=1,
-                padding=final_kernel_size // 2,
-                groups=7
-            ),
-            torch.nn.ReLU(),
-            torch.nn.Conv1d(
-                in_channels=feature_dim,
-                out_channels=feature_dim,
-                kernel_size=final_kernel_size,
-                stride=1,
-                padding=final_kernel_size // 2,
-                groups=feature_dim
-            ),
-            torch.nn.ReLU()
-        )
 
     def conv_layer(self, in_channels, kernel_size):
         return torch.nn.Sequential(
@@ -181,55 +185,52 @@ class ReconstructionModel(torch.nn.Module):
                 stride=1,
                 padding=kernel_size // 2
             ),
-            torch.nn.ReLU(),
-            # torch.nn.Conv1d(
-            #     in_channels=in_channels // 8,
-            #     out_channels=in_channels // 16,
-            #     kernel_size=kernel_size,
-            #     stride=1,
-            #     padding=kernel_size // 2
-            # ),
-            # torch.nn.ReLU()
+            torch.nn.ReLU()
         )
     
     def forward(self, x, mask, missing_length = 1):
+        if self.make_4d:
+            x = x.view(x.size(0), x.size(3), x.size(2))
+
         inp = x
         left_outputs = []
+        right_outputs = []
+
+        left_input = self.get_side(mask, 'left', inp, inp_length=self.side_length).transpose(1, 2)
+        right_input = self.get_side(mask, 'right', inp, inp_length=self.side_length).transpose(1, 2)
+
         for l in range(missing_length):
-            left_input = self.get_side(mask, 'left', inp, inp_length=self.side_length).transpose(1, 2)
             left_output = self.forward_step_left(left_input, mask)
             left_outputs.append(left_output)
 
-            # print(left_input.size(), left_output.size(), inp.size(), left_output.unsqueeze(1).size())
-            inp = torch.cat((inp, left_output.unsqueeze(1)), 1)
+            left_input = torch.cat((left_input, left_output.unsqueeze(2)), 2)[:, :, 1:]
 
+            # right_output = self.forward_step_right(right_input, mask)
+            # right_outputs.append(right_output)
+
+            # right_input = torch.cat((right_output.unsqueeze(2), right_input), 2)[:, :, -1]
+            
+
+        # quit()
         return torch.stack(left_outputs).transpose(0, 1)
 
 
     def forward_step_left(self, left_inputs, mask):
-        if self.make_4d:
-            x = x.view(x.size(0), x.size(3), x.size(2))
-
-        out1 = self.conv1(left_inputs)
-        out2 = self.conv2(left_inputs)
-        out3 = self.conv3(left_inputs)
-        out4 = self.conv4(left_inputs)
-        out5 = self.conv5(left_inputs)
-        out6 = self.conv6(left_inputs)
+        out1 = self.left_conv1(left_inputs)
+        out2 = self.left_conv2(left_inputs)
+        out3 = self.left_conv3(left_inputs)
+        out4 = self.left_conv4(left_inputs)
+        out5 = self.left_conv5(left_inputs)
+        out6 = self.left_conv6(left_inputs)
         out_summed = out1 + out2 + out3 + out4 + out5 + out6
 
-        # min_length_for_size = 320
-        # if out_summed.size(2) < min_length_for_size:
-        #     pad_zeros = torch.zeros(out_summed.size(0), out_summed.size(
-        #         1), min_length_for_size - out_summed.size(2)).to(left_inputs.device)
-        #     out_summed = torch.cat((pad_zeros, out_summed), 2)
-
-        down_out = self.downscale_time_conv(out_summed)
+        down_out = self.left_downscale_time_conv(out_summed)
         mean_out = torch.mean(down_out, 2)
 
-        linear_out = self.linear(mean_out)
+        linear_out = self.linear_left(mean_out)
 
         if self.verbose:
+            print('\nLEFT INPUTS')
             print('\nleft_inputs\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
                 torch.mean(left_inputs), torch.std(left_inputs), torch.min(left_inputs), torch.max(left_inputs), left_inputs.size()))
 
@@ -268,22 +269,6 @@ class ReconstructionModel(torch.nn.Module):
     def get_side(self, mask, side, inputs, inp_length):
         with torch.no_grad():
             side_inputs = []
-
-            # for batch_index, mask_batch in enumerate(mask):
-            #     mask_len = torch.sum(mask_batch).int()
-
-            #     if mask_len == 0:
-            #         continue
-
-            #     m_nonzero = mask_batch.nonzero().flatten()
-            #     first_nonzero = m_nonzero[0]
-            #     last_nonzero = m_nonzero[-1]
-
-            #     if side == 'left' and first_nonzero - 1 > inp_length:
-            #         inp_length = first_nonzero - 1
-            #     elif side == 'right' and inputs.size(1) - last_nonzero > inp_length:
-            #         inp_length = inputs.size(1) - last_nonzero
-
 
             for batch_index, mask_batch in enumerate(mask):
                 mask_len = torch.sum(mask_batch).int()
