@@ -146,7 +146,7 @@ def main():
     mask_model = load_masking_model(args.mask_wandb, device)
 
     reconstruct_model = ReconstructionModel(feature_dim=args.feature_dim,
-                                            verbose=args.verbose, kernel_size=args.kernel_size, kernel_size_step=args.kernel_size_step, final_kernel_size=args.final_kernel_size)
+                                            verbose=args.verbose, kernel_size=args.kernel_size, kernel_size_step=args.kernel_size_step)
 
     # reconstruct_model.model_summary(reconstruct_model)
     if args.continue_from:
@@ -196,13 +196,32 @@ def main():
             mask = mask_model(inputs)
             mask = torch.round(mask)
 
-            print(f"inputs: {inputs.size()}\toutputs: {outputs.size()}")
-            missing_length = 5
+
             pred = reconstruct_model(
-                inputs, mask, missing_length=missing_length)
-            first_outputs = outputs[:, :missing_length, :]
+                inputs, mask)
+            
+            # print(f"inputs: {inputs.size()}\toutputs: {outputs.size()}\tpred: {pred.size()}")
+
+            outputs_t = outputs.transpose(1, 2)
+            pred_t = pred.transpose(1, 2)
+            # print(f"outputs_t: {outputs_t.size()}\tpred_t: {pred_t.size()}")
+            # quit()
+
+            # pred = torch.nn.functional.interpolate(outputs_t, scale_factor=(1, outputs_t.size(1) / outputs_t.size(1), 1))
+            pred = torch.nn.functional.interpolate(pred_t, scale_factor=outputs_t.size(2) / pred_t.size(2)).transpose(1, 2)
+
+            
+            # if outputs.size(1) < pred.size(1):
+            #     pred = pred[:, :outputs.size(1), :]
+            # elif outputs.size(1) > pred.size(1):
+            #     pad_zeros = torch.zeros((pred.size(0), outputs.size(1)  - pred.size(1), pred.size(2))).to(mask.device)
+            #     pred = torch.cat((pred, pad_zeros), 1)
+            # print(f"pred: {pred.size()}")
+            # quit()
+            # print(pred)
+            # print(outputs)
             loss, loss_weights = loss_fn(
-                pred, first_outputs, loss_weights=loss_weights)
+                pred, outputs, loss_weights=loss_weights)
             # print(f"Loss: {loss}")
 
             loss.backward()
@@ -239,12 +258,16 @@ def main():
             mask = mask_model(inputs)
             mask = torch.round(mask)
 
-            missing_length = 5
             pred = reconstruct_model(
-                inputs, mask, missing_length=missing_length)
-            first_outputs = outputs[:, :missing_length, :]
+                inputs, mask)
 
-            loss, _ = loss_fn(pred, first_outputs, loss_weights=0)
+            if outputs.size(1) < pred.size(1):
+                pred = pred[:, :outputs.size(1), :]
+            elif outputs.size(1) > pred.size(1):
+                pad_zeros = torch.zeros((pred.size(0), outputs.size(1)  - pred.size(1), pred.size(2))).to(mask.device)
+                pred = torch.cat((pred, pad_zeros), 1)
+
+            loss, _ = loss_fn(pred, outputs, loss_weights=0)
 
             val_running_loss += loss.data
             val_count += 1

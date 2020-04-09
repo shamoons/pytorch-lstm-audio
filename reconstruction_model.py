@@ -2,7 +2,7 @@ import torch
 
 
 class ReconstructionModel(torch.nn.Module):
-    def __init__(self, feature_dim=161, kernel_size=25, kernel_size_step=-4, final_kernel_size=25, make_4d=False, dropout=0.01, side_length=320, verbose=False):
+    def __init__(self, feature_dim=161, kernel_size=25, kernel_size_step=-4, make_4d=False, dropout=0.01, side_length=320, verbose=False):
         super(ReconstructionModel, self).__init__()
         self.make_4d = make_4d
         self.verbose = verbose
@@ -57,7 +57,7 @@ class ReconstructionModel(torch.nn.Module):
             torch.nn.Conv1d(
                 in_channels=feature_dim // 8,
                 out_channels=feature_dim // 8,
-                kernel_size=11,
+                kernel_size=2,
                 stride=1,
                 dilation=1,
                 padding=0
@@ -66,7 +66,7 @@ class ReconstructionModel(torch.nn.Module):
             torch.nn.Conv1d(
                 in_channels=feature_dim // 8,
                 out_channels=feature_dim // 8,
-                kernel_size=11,
+                kernel_size=2,
                 stride=1,
                 dilation=2,
                 padding=0
@@ -75,7 +75,7 @@ class ReconstructionModel(torch.nn.Module):
             torch.nn.Conv1d(
                 in_channels=feature_dim // 8,
                 out_channels=feature_dim // 8,
-                kernel_size=11,
+                kernel_size=2,
                 stride=1,
                 dilation=4,
                 padding=0
@@ -84,7 +84,7 @@ class ReconstructionModel(torch.nn.Module):
             torch.nn.Conv1d(
                 in_channels=feature_dim // 8,
                 out_channels=feature_dim // 8,
-                kernel_size=11,
+                kernel_size=2,
                 stride=1,
                 dilation=8,
                 padding=0
@@ -93,7 +93,7 @@ class ReconstructionModel(torch.nn.Module):
             torch.nn.Conv1d(
                 in_channels=feature_dim // 8,
                 out_channels=feature_dim // 8,
-                kernel_size=11,
+                kernel_size=2,
                 stride=1,
                 dilation=16,
                 padding=0
@@ -187,7 +187,7 @@ class ReconstructionModel(torch.nn.Module):
             torch.nn.ReLU()
         )
 
-    def forward(self, x, mask, missing_length=1):
+    def forward(self, x, mask):
         if self.make_4d:
             x = x.view(x.size(0), x.size(3), x.size(2))
 
@@ -197,41 +197,30 @@ class ReconstructionModel(torch.nn.Module):
 
         max_mask_len = torch.max(mask_sums).int()
 
-        left_outputs = torch.zeros((inp.size(0), max_mask_len, inp.size(2)))
-        print(f"sums: {mask_sums}")
-        print(
-            f"mask size: {mask.size()}\tmask sum: {mask_sums.size()}\tmax_mask_len: {max_mask_len}\tinp: {inp.size()}\tleft_outputs: {left_outputs.size()}")
-        # right_outputs = []
+        outputs = torch.zeros((inp.size(0), max_mask_len, inp.size(2))).to(x.device)
+        # print(f"sums: {mask_sums}")
+        # print(
+        #     f"mask size: {mask.size()}\tmask sum: {mask_sums.size()}\tmax_mask_len: {max_mask_len}\tinp: {inp.size()}\toutputs: {outputs.size()}")
 
         left_input = self.get_side(
             mask, 'left', inp, inp_length=self.side_length).transpose(1, 2)
-        # right_input = self.get_side(mask, 'right', inp, inp_length=self.side_length).transpose(1, 2)
+        right_input = self.get_side(
+            mask, 'right', inp, inp_length=self.side_length).transpose(1, 2)
 
-        # for batch_index in range(x.size(0)):
-        #     print(batch_index)
+        for l_index in range(max_mask_len // 2):
+            left_output = self.forward_step_left(left_input)
+            outputs[:, l_index] = left_output
+            left_input = torch.cat(
+                (left_input, left_output.unsqueeze(2)), 2)[:, :, 1:]
 
-        for l_index in range(missing_length):
-            left_output = self.forward_step_left(left_input, mask)
-            # print(left_outputs[0])
-            left_outputs[:,l_index] = left_output
-            # print(left_outputs[0])
+            right_output = self.forward_step_right(right_input)
+            outputs[:, max_mask_len - l_index - 1] = right_output
+            right_input = torch.cat(
+                (right_output.unsqueeze(2), right_input), 2)[:, :, :-1]
 
-            # print(f"l_index: {l_index}\tleft_input: {left_input.size()}",left_outputs.size(), left_output.size())
-            # quit()
-            # left_outputs.append(left_output)
+        return outputs
 
-            left_input = torch.cat((left_input, left_output.unsqueeze(2)), 2)[:, :, 1:]
-
-            # right_output = self.forward_step_right(right_input, mask)
-            # right_outputs.append(right_output)
-
-            # right_input = torch.cat((right_output.unsqueeze(2), right_input), 2)[:, :, -1]
-
-        print(f"left_outputs: {left_outputs.size()}")
-        quit()
-        return left_outputs
-
-    def forward_step_left(self, left_inputs, mask):
+    def forward_step_left(self, left_inputs):
         out1 = self.left_conv1(left_inputs)
         out2 = self.left_conv2(left_inputs)
         out3 = self.left_conv3(left_inputs)
@@ -249,6 +238,57 @@ class ReconstructionModel(torch.nn.Module):
             print('\nLEFT INPUTS')
             print('\nleft_inputs\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
                 torch.mean(left_inputs), torch.std(left_inputs), torch.min(left_inputs), torch.max(left_inputs), left_inputs.size()))
+
+            print('\nout1\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
+                torch.mean(out1), torch.std(out1), torch.min(out1), torch.max(out1), out1.size()))
+
+            print('\nout2\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
+                torch.mean(out2), torch.std(out2), torch.min(out2), torch.max(out2), out2.size()))
+
+            print('\nout3\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
+                torch.mean(out3), torch.std(out3), torch.min(out3), torch.max(out3), out3.size()))
+
+            print('\nout4\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
+                torch.mean(out4), torch.std(out4), torch.min(out4), torch.max(out4), out4.size()))
+
+            print('\nout5\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
+                torch.mean(out5), torch.std(out5), torch.min(out5), torch.max(out5), out5.size()))
+
+            print('\nout6\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
+                torch.mean(out6), torch.std(out6), torch.min(out6), torch.max(out6), out6.size()))
+
+            print('\n out_summed\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
+                torch.mean(out_summed), torch.std(out_summed), torch.min(out_summed), torch.max(out_summed), out_summed.size()))
+
+            print('\n down_out\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
+                torch.mean(down_out), torch.std(down_out), torch.min(down_out), torch.max(down_out), down_out.size()))
+
+            print('\n mean_out\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
+                torch.mean(mean_out), torch.std(mean_out), torch.min(mean_out), torch.max(mean_out), mean_out.size()))
+
+            print('\n linear_out\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
+                torch.mean(linear_out), torch.std(linear_out), torch.min(linear_out), torch.max(linear_out), linear_out.size()))
+
+        return linear_out
+
+    def forward_step_right(self, right_inputs):
+        out1 = self.right_conv1(right_inputs)
+        out2 = self.right_conv2(right_inputs)
+        out3 = self.right_conv3(right_inputs)
+        out4 = self.right_conv4(right_inputs)
+        out5 = self.right_conv5(right_inputs)
+        out6 = self.right_conv6(right_inputs)
+        out_summed = out1 + out2 + out3 + out4 + out5 + out6
+
+        down_out = self.right_downscale_time_conv(out_summed)
+        mean_out = torch.mean(down_out, 2)
+
+        linear_out = self.linear_right(mean_out)
+
+        if self.verbose:
+            print('\nRIGHT INPUTS')
+            print('\nright_inputs\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
+                torch.mean(right_inputs), torch.std(right_inputs), torch.min(right_inputs), torch.max(right_inputs), right_inputs.size()))
 
             print('\nout1\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
                 torch.mean(out1), torch.std(out1), torch.min(out1), torch.max(out1), out1.size()))

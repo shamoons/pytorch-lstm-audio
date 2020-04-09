@@ -38,12 +38,15 @@ class AudioDataset(Dataset):
                 sorted(glob.iglob(clean_base_path + '/**/*.flac', recursive=True)))
 
             x_train, x_test, y_train, y_test = train_test_split(
-                corrupted_audio_file_paths, clean_audio_file_paths, test_size=0.1)
+                corrupted_audio_file_paths, clean_audio_file_paths, test_size=0.1, random_state=0)
         else:
             np.random.shuffle(corrupted_audio_file_paths)
             cutoff = len(corrupted_audio_file_paths)
             x_train = corrupted_audio_file_paths[0:int(cutoff * 0.9)]
             x_test = corrupted_audio_file_paths[int(cutoff * 0.9):]
+
+        x_test = x_train
+        y_test = y_train
 
         if train_set:
             if not self.mask:
@@ -61,14 +64,17 @@ class AudioDataset(Dataset):
                 self.clean_file_paths, repeat_sample)
         self.corrupted_file_paths = np.repeat(
             self.corrupted_file_paths, repeat_sample)
+        
+        self.clean_file_paths = self.corrupted_file_paths
+
 
     def __len__(self):
-        return min(len(self.corrupted_file_paths), 1000000)
+        return min(len(self.corrupted_file_paths), 128)
 
     def __getitem__(self, index):
         corrupted_file_path = self.corrupted_file_paths[index]
 
-        # corrupted_file_path = '/home/shamoon/speech-enhancement-asr/data/LibriSpeech/dev-noise-subtractive-250ms-1/84/121123/84-121123-0000.flac'
+        # corrupted_file_path = '/home/shamoon/speech-enhancement-asr/data/LibriSpeech/dev-noise-subtractive-250ms-1/84/121123/84-121123-0001.flac'
 
         input_spectrogram, _, _, _, _ = load_audio_spectrogram(
             corrupted_file_path, normalize_spect=self.normalize)
@@ -84,7 +90,9 @@ class AudioDataset(Dataset):
 
         if not self.mask:
             clean_file_path = self.clean_file_paths[index]
-            # clean_file_path = '/home/shamoon/speech-enhancement-asr/data/LibriSpeech/dev-clean/84/121123/84-121123-0000.flac'
+            # clean_file_path = '/home/shamoon/speech-enhancement-asr/data/LibriSpeech/dev-clean/84/121123/84-121123-0001.flac'
+
+            # print(corrupted_file_path, clean_file_path)
             output_spectrogram, _, _, _, _ = load_audio_spectrogram(
                 clean_file_path, normalize_spect=self.normalize)
 

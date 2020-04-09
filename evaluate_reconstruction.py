@@ -50,7 +50,7 @@ def main():
 
     sys.path.append(os.path.abspath(saved_model_path))
     model = importlib.import_module('saved_reconstruction_model').ReconstructionModel(
-        feature_dim=saved_args['feature_dim'], kernel_size=saved_args['kernel_size'], kernel_size_step=saved_args['kernel_size_step'], final_kernel_size=saved_args['final_kernel_size'])
+        feature_dim=saved_args['feature_dim'], kernel_size=saved_args['kernel_size'], kernel_size_step=saved_args['kernel_size_step'])
 
     state_dict = torch.load(model_path, map_location=device)
 
@@ -81,26 +81,28 @@ def main():
 
     mask = mask_model(input_spectrogram)
     mask = torch.round(mask).float()
-    # print(torch.sum(mask))
-    first_nonzero = mask[0].nonzero().flatten()[0]
-    mask = torch.zeros(mask.size())
-
-    missing_length = 25
-    mask[0][first_nonzero:first_nonzero + missing_length] = 1
-
-
+    mask_sum = torch.sum(mask).int()
 
     # Model takes data of shape: torch.Size([BATCH_SIZE, SEQUENCE_LENGTH, FEATURE_DIM])
+    pred = model(input_spectrogram, mask)
 
-    preds = model(input_spectrogram, mask, missing_length=missing_length)
-    
+    print(f"pred: {pred.size()}\tmask: {mask_sum}")
+
+    if mask_sum < pred.size(1):
+        pred = pred[:, :mask_sum, :]
+    elif mask_sum > pred.size(1):
+        pad_zeros = torch.zeros((pred.size(0), mask_sum  - pred.size(1), pred.size(2))).to(mask.device)
+        pred = torch.cat((pred, pad_zeros), 1)
     output = input_spectrogram
-    output[mask == 1] = preds
-    # print(preds.size(), output.size())
+    output[mask == 1] = pred
+    
     torch.set_printoptions(profile='full', precision=3,
                            sci_mode=False, linewidth=180)
 
     # output[mask == 0] = input_spectrogram[mask == 0]
+
+    print('pred\t\tMean: {:.4f} ± {:.4f}\tMin: {:.4f}\tMax: {:.4f}\tSize: {}'.format(
+        torch.mean(pred), torch.std(pred), torch.min(pred), torch.max(pred), pred.size()))
 
     print('model output\t\tMean: {:.4f} ± {:.4f}\tMin: {:.4f}\tMax: {:.4f}\tSize: {}'.format(
         torch.mean(output), torch.std(output), torch.min(output), torch.max(output), output.size()))
