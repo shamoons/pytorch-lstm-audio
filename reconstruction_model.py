@@ -149,7 +149,6 @@ class ReconstructionModel(torch.nn.Module):
             torch.nn.ReLU()
         )
 
-
     def conv_layer(self, in_channels, kernel_size):
         return torch.nn.Sequential(
             torch.nn.Conv1d(
@@ -187,21 +186,39 @@ class ReconstructionModel(torch.nn.Module):
             ),
             torch.nn.ReLU()
         )
-    
-    def forward(self, x, mask, missing_length = 1):
+
+    def forward(self, x, mask, missing_length=1):
         if self.make_4d:
             x = x.view(x.size(0), x.size(3), x.size(2))
 
         inp = x
-        left_outputs = []
-        right_outputs = []
 
-        left_input = self.get_side(mask, 'left', inp, inp_length=self.side_length).transpose(1, 2)
-        right_input = self.get_side(mask, 'right', inp, inp_length=self.side_length).transpose(1, 2)
+        mask_sums = torch.sum(mask, 1)
 
-        for l in range(missing_length):
+        max_mask_len = torch.max(mask_sums).int()
+
+        left_outputs = torch.zeros((inp.size(0), max_mask_len, inp.size(2)))
+        print(f"sums: {mask_sums}")
+        print(
+            f"mask size: {mask.size()}\tmask sum: {mask_sums.size()}\tmax_mask_len: {max_mask_len}\tinp: {inp.size()}\tleft_outputs: {left_outputs.size()}")
+        # right_outputs = []
+
+        left_input = self.get_side(
+            mask, 'left', inp, inp_length=self.side_length).transpose(1, 2)
+        # right_input = self.get_side(mask, 'right', inp, inp_length=self.side_length).transpose(1, 2)
+
+        # for batch_index in range(x.size(0)):
+        #     print(batch_index)
+
+        for l_index in range(missing_length):
             left_output = self.forward_step_left(left_input, mask)
-            left_outputs.append(left_output)
+            # print(left_outputs[0])
+            left_outputs[:,l_index] = left_output
+            # print(left_outputs[0])
+
+            # print(f"l_index: {l_index}\tleft_input: {left_input.size()}",left_outputs.size(), left_output.size())
+            # quit()
+            # left_outputs.append(left_output)
 
             left_input = torch.cat((left_input, left_output.unsqueeze(2)), 2)[:, :, 1:]
 
@@ -209,11 +226,10 @@ class ReconstructionModel(torch.nn.Module):
             # right_outputs.append(right_output)
 
             # right_input = torch.cat((right_output.unsqueeze(2), right_input), 2)[:, :, -1]
-            
 
-        # quit()
-        return torch.stack(left_outputs).transpose(0, 1)
-
+        print(f"left_outputs: {left_outputs.size()}")
+        quit()
+        return left_outputs
 
     def forward_step_left(self, left_inputs, mask):
         out1 = self.left_conv1(left_inputs)
@@ -274,7 +290,8 @@ class ReconstructionModel(torch.nn.Module):
                 mask_len = torch.sum(mask_batch).int()
 
                 if mask_len == 0:
-                    side_input = torch.zeros((inp_length, inputs.size(2))).to(mask.device)
+                    side_input = torch.zeros(
+                        (inp_length, inputs.size(2))).to(mask.device)
                 else:
 
                     m_nonzero = mask_batch.nonzero().flatten()
@@ -286,7 +303,8 @@ class ReconstructionModel(torch.nn.Module):
                         start_index = max(0, end_index - inp_length)
                     elif side == 'right':
                         start_index = last_nonzero + 1
-                        end_index = min(inputs[batch_index].size(1), start_index + inp_length)
+                        end_index = min(inputs[batch_index].size(
+                            1), start_index + inp_length)
 
                     side_input = inputs[batch_index][start_index:end_index]
 

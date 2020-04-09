@@ -196,12 +196,13 @@ def main():
             mask = mask_model(inputs)
             mask = torch.round(mask)
 
+            print(f"inputs: {inputs.size()}\toutputs: {outputs.size()}")
             missing_length = 5
-            pred = reconstruct_model(inputs, mask, missing_length=missing_length)
-            first_outputs = outputs[:,:missing_length,:]
-            # print(pred.size(), first_outputs.size())
-            # quit()
-            loss, loss_weights = loss_fn(pred, first_outputs, loss_weights=loss_weights)
+            pred = reconstruct_model(
+                inputs, mask, missing_length=missing_length)
+            first_outputs = outputs[:, :missing_length, :]
+            loss, loss_weights = loss_fn(
+                pred, first_outputs, loss_weights=loss_weights)
             # print(f"Loss: {loss}")
 
             loss.backward()
@@ -239,8 +240,9 @@ def main():
             mask = torch.round(mask)
 
             missing_length = 5
-            pred = reconstruct_model(inputs, mask, missing_length=missing_length)
-            first_outputs = outputs[:,:missing_length,:]
+            pred = reconstruct_model(
+                inputs, mask, missing_length=missing_length)
+            first_outputs = outputs[:, :missing_length, :]
 
             loss, _ = loss_fn(pred, first_outputs, loss_weights=0)
 
