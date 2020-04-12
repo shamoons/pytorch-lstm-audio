@@ -86,7 +86,12 @@ def initialize(args):
 
 
 def loss_fn(inp, target, loss_weights):
-    loss = torch.nn.MSELoss(reduction='mean')(inp, target)
+    loss = torch.nn.L1Loss(reduction='mean')(inp, target)
+    print('\n\n')
+    print(torch.mean(inp[0], 1))
+    print(torch.mean(target[0], 1))
+    print('\n')
+    # print(inp[0], target[0])
 
     return loss, 0
     channel_loss = torch.sum(loss, dim=1)
@@ -154,8 +159,7 @@ def main():
         reconstruct_model.load_state_dict(state_dict)
         print('Loading saved model to continue from: {}'.format(args.continue_from))
 
-    optimizer = optim.Adam(reconstruct_model.parameters(),
-                           lr=args.base_lr, weight_decay=0)
+    optimizer = optim.Adam(reconstruct_model.parameters(),lr=args.base_lr, weight_decay=0)
 
     wandb.watch(reconstruct_model)
 
@@ -171,8 +175,7 @@ def main():
 
     saved_onnx = False
 
-    torch.set_printoptions(profile='full', precision=3,
-                           sci_mode=False, linewidth=180)
+    torch.set_printoptions(profile='full', precision=4,sci_mode=False, linewidth=180)
     print(f"Training Samples: {len(train_set)}")
     print(f"Validation Samples: {len(val_set)}")
 
@@ -196,33 +199,14 @@ def main():
             mask = mask_model(inputs)
             mask = torch.round(mask)
 
+            pred = reconstruct_model(inputs, mask)
 
-            pred = reconstruct_model(
-                inputs, mask)
-            
-            # print(f"inputs: {inputs.size()}\toutputs: {outputs.size()}\tpred: {pred.size()}")
+            pred_t = pred.permute(0, 2, 1)
 
-            outputs_t = outputs.transpose(1, 2)
-            pred_t = pred.transpose(1, 2)
-            # print(f"outputs_t: {outputs_t.size()}\tpred_t: {pred_t.size()}")
-            # quit()
+            pred = torch.nn.functional.interpolate(pred_t, size=outputs.size(1)).permute(0, 2, 1)
 
-            # pred = torch.nn.functional.interpolate(outputs_t, scale_factor=(1, outputs_t.size(1) / outputs_t.size(1), 1))
-            pred = torch.nn.functional.interpolate(pred_t, scale_factor=outputs_t.size(2) / pred_t.size(2)).transpose(1, 2)
-
-            
-            # if outputs.size(1) < pred.size(1):
-            #     pred = pred[:, :outputs.size(1), :]
-            # elif outputs.size(1) > pred.size(1):
-            #     pad_zeros = torch.zeros((pred.size(0), outputs.size(1)  - pred.size(1), pred.size(2))).to(mask.device)
-            #     pred = torch.cat((pred, pad_zeros), 1)
-            # print(f"pred: {pred.size()}")
-            # quit()
-            # print(pred)
-            # print(outputs)
-            loss, loss_weights = loss_fn(
-                pred, outputs, loss_weights=loss_weights)
-            # print(f"Loss: {loss}")
+            loss, loss_weights = loss_fn(pred, outputs, loss_weights=loss_weights)
+            print(f"Loss: {loss}")
 
             loss.backward()
             optimizer.step()
@@ -261,11 +245,21 @@ def main():
             pred = reconstruct_model(
                 inputs, mask)
 
-            if outputs.size(1) < pred.size(1):
-                pred = pred[:, :outputs.size(1), :]
-            elif outputs.size(1) > pred.size(1):
-                pad_zeros = torch.zeros((pred.size(0), outputs.size(1)  - pred.size(1), pred.size(2))).to(mask.device)
-                pred = torch.cat((pred, pad_zeros), 1)
+            outputs_t = outputs.transpose(1, 2)
+            pred_t = pred.transpose(1, 2)
+            # # print(f"outputs_t: {outputs_t.size()}\tpred_t: {pred_t.size()}")
+            # # quit()
+
+            # pred = torch.nn.functional.interpolate(pred, size=outputs.size())
+            pred = torch.nn.functional.interpolate(pred_t, scale_factor=outputs_t.size(2) / pred_t.size(2)).transpose(1, 2)
+
+
+            # if outputs.size(1) < pred.size(1):
+            #     pred = pred[:, :outputs.size(1), :]
+            # elif outputs.size(1) > pred.size(1):
+            #     pad_zeros = torch.zeros((pred.size(0), outputs.size(
+            #         1) - pred.size(1), pred.size(2))).to(mask.device)
+            #     pred = torch.cat((pred, pad_zeros), 1)
 
             loss, _ = loss_fn(pred, outputs, loss_weights=0)
 

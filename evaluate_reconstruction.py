@@ -86,18 +86,19 @@ def main():
     # Model takes data of shape: torch.Size([BATCH_SIZE, SEQUENCE_LENGTH, FEATURE_DIM])
     pred = model(input_spectrogram, mask)
 
-    print(f"pred: {pred.size()}\tmask: {mask_sum}")
+    print(f"pred: {pred.size()}\tmask: {mask_sum}\tmask size: {mask.size()}")
 
-    if mask_sum < pred.size(1):
-        pred = pred[:, :mask_sum, :]
-    elif mask_sum > pred.size(1):
-        pad_zeros = torch.zeros((pred.size(0), mask_sum  - pred.size(1), pred.size(2))).to(mask.device)
-        pred = torch.cat((pred, pad_zeros), 1)
+    pred_t = pred.permute(0, 2, 1)
+
+    pred = torch.nn.functional.interpolate(pred_t, size=mask_sum.item()).permute(0, 2, 1)
+
     output = input_spectrogram
     output[mask == 1] = pred
     
     torch.set_printoptions(profile='full', precision=3,
                            sci_mode=False, linewidth=180)
+
+    print(pred)
 
     # output[mask == 0] = input_spectrogram[mask == 0]
 
