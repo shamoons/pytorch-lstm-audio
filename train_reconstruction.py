@@ -85,38 +85,50 @@ def initialize(args):
     np.random.seed(args.seed)
 
 
-def loss_fn(inp, target, loss_weights):
-    loss = torch.nn.L1Loss(reduction='mean')(inp, target)
-    print('\n\n')
-    print(torch.mean(inp[0], 1))
-    print(torch.mean(target[0], 1))
-    print('\n')
-    # print(inp[0], target[0])
+def loss_fn(pred, target, loss_weights):
+    """Loss Function
+    
+    Arguments:
+        pred {[tensor]} -- Size: BATCH x SEQ_LEN x CHANNELS
+        target {[tensor]} -- Size: BATCH x SEQ_LEN x CHANNELS
+        loss_weights {[tensor]} -- [description]
+    
+    Returns:
+        [float, tensor] -- [description]
+    """
+    loss = torch.nn.MSELoss(reduction='none')(pred, target)
 
-    return loss, 0
     channel_loss = torch.sum(loss, dim=1)
     channel_loss = torch.mean(channel_loss, dim=0)
-
-    # torch.set_printoptions(precision=2, sci_mode=True)
-    # print(loss.size())
-    # print('channel_loss', channel_loss.size())
-    # print(channel_loss)
-    # print('loss_weights', loss_weights.sum())
-    # print(loss_weights)
+    softmax_weights = torch.nn.Softmax()(channel_loss).detach()
 
     weighted_loss = channel_loss * (1 + loss_weights)
 
     softmax_weights = torch.nn.Softmax()(channel_loss).detach()
 
-    # print('\n', channel_loss, '\n', weighted_loss, '\n',
-    #       loss_weights, '\n', softmax_weights, '\n\n')
+    loss = torch.mean(weighted_loss)
 
-    # Instead of dividing by the number of elements. Divide by the number of non-zero mask elements in the batch
-    # loss = loss.sum() / torch.sum(mask)
-    loss = weighted_loss.sum() / torch.sum(mask)
+    # print('\n\n')
+    # print('TIME BASED:', pred.size())
+    pred_time_mean = torch.mean(torch.mean(pred, 2), 0)
+    target_time_mean = torch.mean(torch.mean(target, 2), 0)
+    # print('\tPRED:\n', pred_time_mean.data, pred_time_mean.size())
+    # print('\n\tTARG:\n', target_time_mean.data, target_time_mean.size())
 
-    # print(softmax_weights.min(), softmax_weights.mean(), softmax_weights.max())
-    # quit()
+    # print('\t=======')
+    # print(torch.mean(pred[0], 1))
+    # print(torch.mean(target[0], 1))
+
+    # print('FREQ BASED:', pred.size())
+    pred_time_mean = torch.mean(torch.mean(pred, 1), 0)
+    target_time_mean = torch.mean(torch.mean(target, 1), 0)
+    # print('\tPRED:\n', pred_time_mean.data, pred_time_mean.size())
+    # print('\n\tTARG:\n', target_time_mean.data, target_time_mean.size())
+
+    # print('\nSOFTMAX: ')
+    # print(softmax_weights.data, softmax_weights.size())
+
+
     return loss, softmax_weights
 
 
@@ -159,7 +171,8 @@ def main():
         reconstruct_model.load_state_dict(state_dict)
         print('Loading saved model to continue from: {}'.format(args.continue_from))
 
-    optimizer = optim.Adam(reconstruct_model.parameters(),lr=args.base_lr, weight_decay=0)
+    optimizer = optim.Adam(reconstruct_model.parameters(),
+                           lr=args.base_lr, weight_decay=0)
 
     wandb.watch(reconstruct_model)
 
@@ -175,7 +188,8 @@ def main():
 
     saved_onnx = False
 
-    torch.set_printoptions(profile='full', precision=4,sci_mode=False, linewidth=180)
+    torch.set_printoptions(profile='full', precision=2,
+                           sci_mode=False, linewidth=180)
     print(f"Training Samples: {len(train_set)}")
     print(f"Validation Samples: {len(val_set)}")
 
@@ -203,10 +217,12 @@ def main():
 
             pred_t = pred.permute(0, 2, 1)
 
-            pred = torch.nn.functional.interpolate(pred_t, size=outputs.size(1)).permute(0, 2, 1)
+            pred = torch.nn.functional.interpolate(
+                pred_t, size=outputs.size(1)).permute(0, 2, 1)
 
-            loss, loss_weights = loss_fn(pred, outputs, loss_weights=loss_weights)
-            print(f"Loss: {loss}")
+            loss, loss_weights = loss_fn(
+                pred, outputs, loss_weights=loss_weights)
+            # print(f"Loss: {loss}")
 
             loss.backward()
             optimizer.step()
@@ -251,8 +267,8 @@ def main():
             # # quit()
 
             # pred = torch.nn.functional.interpolate(pred, size=outputs.size())
-            pred = torch.nn.functional.interpolate(pred_t, scale_factor=outputs_t.size(2) / pred_t.size(2)).transpose(1, 2)
-
+            pred = torch.nn.functional.interpolate(
+                pred_t, scale_factor=outputs_t.size(2) / pred_t.size(2)).transpose(1, 2)
 
             # if outputs.size(1) < pred.size(1):
             #     pred = pred[:, :outputs.size(1), :]

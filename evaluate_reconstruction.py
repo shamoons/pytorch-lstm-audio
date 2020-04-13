@@ -98,7 +98,7 @@ def main():
     torch.set_printoptions(profile='full', precision=3,
                            sci_mode=False, linewidth=180)
 
-    print(pred)
+    # print(pred)
 
     # output[mask == 0] = input_spectrogram[mask == 0]
 

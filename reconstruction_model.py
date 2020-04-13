@@ -2,7 +2,7 @@ import torch
 
 
 class ReconstructionModel(torch.nn.Module):
-    def __init__(self, feature_dim=161, kernel_size=25, kernel_size_step=-4, make_4d=False, dropout=0.01, side_length=96, verbose=False):
+    def __init__(self, feature_dim=161, kernel_size=25, kernel_size_step=-4, make_4d=False, dropout=0.01, side_length=48, verbose=False):
         super(ReconstructionModel, self).__init__()
         self.make_4d = make_4d
         self.verbose = verbose
@@ -53,8 +53,8 @@ class ReconstructionModel(torch.nn.Module):
 
             self.downscale_time_conv[side] = torch.nn.Sequential(
                 torch.nn.Conv1d(
-                    in_channels=feature_dim ,
-                    out_channels=feature_dim ,
+                    in_channels=feature_dim,
+                    out_channels=feature_dim,
                     kernel_size=2,
                     stride=1,
                     dilation=1,
@@ -62,8 +62,8 @@ class ReconstructionModel(torch.nn.Module):
                 ),
                 torch.nn.Tanh(),
                 torch.nn.Conv1d(
-                    in_channels=feature_dim ,
-                    out_channels=feature_dim ,
+                    in_channels=feature_dim,
+                    out_channels=feature_dim,
                     kernel_size=2,
                     stride=1,
                     dilation=2,
@@ -71,8 +71,8 @@ class ReconstructionModel(torch.nn.Module):
                 ),
                 torch.nn.Tanh(),
                 torch.nn.Conv1d(
-                    in_channels=feature_dim ,
-                    out_channels=feature_dim ,
+                    in_channels=feature_dim,
+                    out_channels=feature_dim,
                     kernel_size=2,
                     stride=1,
                     dilation=4,
@@ -80,8 +80,8 @@ class ReconstructionModel(torch.nn.Module):
                 ),
                 torch.nn.Tanh(),
                 torch.nn.Conv1d(
-                    in_channels=feature_dim ,
-                    out_channels=feature_dim ,
+                    in_channels=feature_dim,
+                    out_channels=feature_dim,
                     kernel_size=2,
                     stride=1,
                     dilation=8,
@@ -89,8 +89,8 @@ class ReconstructionModel(torch.nn.Module):
                 ),
                 torch.nn.Tanh(),
                 torch.nn.Conv1d(
-                    in_channels=feature_dim ,
-                    out_channels=feature_dim ,
+                    in_channels=feature_dim,
+                    out_channels=feature_dim,
                     kernel_size=2,
                     stride=1,
                     dilation=16,
@@ -157,48 +157,47 @@ class ReconstructionModel(torch.nn.Module):
         # TODO: Consider using the mean mask length
         max_mask_len = torch.max(mask_sums).int()
 
-        outputs = torch.zeros((inp.size(0), max_mask_len, inp.size(2))).to(x.device)
-        print(f"inp: {inp.size()}\t mask: {mask.size()}")
+        outputs = torch.zeros(
+            (inp.size(0), max_mask_len, inp.size(2))).to(x.device)
+        
         left_input = self.get_side(
             mask, 'left', inp, inp_length=self.side_length)
-        # right_input = self.get_side(
-        #     mask, 'right', inp, inp_length=self.side_length)
+        right_input = self.get_side(
+            mask, 'right', inp, inp_length=self.side_length)
 
         for l_index in range(max_mask_len // 2):
             left_output = self.forward_step(left_input, 'left')
 
             # Need to get the input including zeros
-            # right_left_input = self.get_side(mask, 'right', inp, inp_length=self.side_length, offset=l_index + 1)
+            right_left_input = self.get_side(
+                mask, 'right', inp, inp_length=self.side_length, offset=max_mask_len - (l_index + 0))
 
-            print(f"inp: {torch.mean(inp[0], 1)}\t{inp.size()}")
-            print(f"left_input: {torch.mean(left_input[0], 1)}\t{left_input.size()}")
+            # print(f"max_mask_len: {max_mask_len}\tl_index: {l_index}")
+            # print(f"inp: {torch.mean(inp[0], 1)}\t{inp.size()}")
+            # print(f"left_input: {torch.mean(left_input[0], 1)}\t{left_input.size()}")
             # print(f"right_left_input: {torch.mean(right_left_input[0], 1)}\t{right_left_input.size()}")
-            quit()
-
+            # quit()
 
             right_left_output = self.forward_step(right_left_input, 'right')
 
             left_output = torch.max(left_output, right_left_output)
-            
+
             outputs[:, l_index] = left_output
 
             right_output = self.forward_step(right_input, 'right')
             # Need to get the input including zeros
             left_right_input = self.get_side(
-                mask, 'left', inp, inp_length=self.side_length, offset=l_index + 1)
+                mask, 'left', inp, inp_length=self.side_length, offset=max_mask_len + (l_index + 1))
             left_right_output = self.forward_step(left_right_input, 'left')
             right_output = torch.max(right_output, left_right_output)
 
             outputs[:, max_mask_len - l_index - 1] = right_output
 
-            print(torch.mean(outputs[0], 1))
-            quit()
-
             left_input = torch.cat(
-                (left_input, left_output.unsqueeze(2)), 2)[:, :, 1:]
+                (left_input, left_output.unsqueeze(1)), 1)[:, 1:, :]
 
             right_input = torch.cat(
-                (right_output.unsqueeze(2), right_input), 2)[:, :, :-1]
+                (right_output.unsqueeze(1), right_input), 1)[:, :-1, :]
 
             for batch_index in range(inp.size(0)):
                 batch_mask = mask[batch_index]
@@ -215,24 +214,24 @@ class ReconstructionModel(torch.nn.Module):
                 # print(f"batch_mask: {batch_mask.size()}\tbatch_inp: {batch_inp.size()}\tbatch_out: {batch_out.size()}\tbatch_mask_sum: {batch_mask_sum}\tbatch_out_t: {batch_out_t.size()}")
 
                 # Interpolate down to the largest mask that we have in this batch
-                batch_out_t = torch.nn.functional.interpolate(batch_out_t, size=batch_mask_sum.item())
+                batch_out_t = torch.nn.functional.interpolate(
+                    batch_out_t, size=batch_mask_sum.item())
 
                 # Convert back to [SEQ x CHANNELS]
                 batch_out = torch.squeeze(batch_out_t).transpose(0, 1)
                 inp[batch_index][batch_mask == 1] = batch_out
 
         # quit()
-            
 
         return outputs
 
     def forward_step(self, inp, side):
         """Forward steps for a particular input
-        
+
         Arguments:
             inp {[Tensor]} -- Size: [BATCH x SEQ_LEN x CHANNELS]
             side {[string]} -- Which side to forward: `left` / `right`
-        
+
         Returns:
             [Tensor] -- [description]
         """
@@ -295,16 +294,16 @@ class ReconstructionModel(torch.nn.Module):
 
     def get_side(self, mask, side, inputs, inp_length, offset=0):
         """Returns all input elements from a particular `side`, given a `mask`
-        
+
         Arguments:
             mask {[Tensor]} -- Tensor of mask to apply for reconstruction. Size = [BATCH x SEQ_LEN]
             side {[string]} -- 'left' or 'right'
             inputs {[Tensor]} -- The input spectrogram. Size = [BATCH x SEQ_LEN x CHANNELS]
             inp_length {[int]} -- The length of the input to return
-        
+
         Keyword Arguments:
             offset {int} -- [description] (default: {0})
-        
+
         Returns:
             [Tensor] -- Output spectrogram to the side of the input. Size = [BATCH x `inp_length` x CHANNELS]
         """
@@ -324,27 +323,25 @@ class ReconstructionModel(torch.nn.Module):
                     first_nonzero = m_nonzero[0] + offset
                     last_nonzero = m_nonzero[-1] - offset
 
-                    print(f"first_nonzero: {first_nonzero}\t{inputs[batch_index, first_nonzero].mean()}")
-
-
                     if side == 'left':
                         end_index = first_nonzero - 1
                         start_index = max(0, end_index - inp_length)
                     elif side == 'right':
                         start_index = last_nonzero + 1
-                        end_index = min(inputs[batch_index].size(1), start_index + inp_length)
-                    
-                    side_input = inputs[batch_index,start_index:end_index, :]
-                    # print(f"side_inputs: {side_inputs.size()}")
-                    # print(f"side_input: {torch.mean(side_input, 0)}\t{side_input.size()}")
-                    # quit()
+                        end_index = min(inputs[batch_index].size(
+                            0), start_index + inp_length)
 
-                    # print(f"side: {side}\tside_inputs: {side_inputs.size()}\tside_input: {side_input.size()}\tleft: {side_inputs[batch_index,-side_input.size(0):,:].size()}\tright: {side_inputs[batch_index,:side_input.size(0),:].size()}")
+                    # if side == 'right':
+                    # print(f"first_nonzero: {first_nonzero}\t{inputs[batch_index, first_nonzero].mean()}\tstart_index:{start_index}\tend_index: {end_index} ")
+
+                    side_input = inputs[batch_index, start_index:end_index, :]
+
+                    # print(f"side: {side}\tside_inputs: {side_inputs.size()}\tside_input: {side_input.size()}\tleft: {side_inputs[batch_index,-side_input.size(0):,:].size()}\tright: {side_inputs[batch_index,:side_input.size(0),:].size()}\tindices: [{start_index}:{end_index}]\tmask_len: {mask_len}")
 
                     if side == 'left':
                         side_inputs[batch_index, -side_input.size(0):, :] = side_input
                     elif side == 'right':
-                        side_inputs[batch_index,:side_input.size(0), :] = side_input
+                        side_inputs[batch_index, :side_input.size(0), :] = side_input
         return side_inputs
 
     def model_summary(self, model):
