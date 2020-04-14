@@ -96,6 +96,7 @@ def loss_fn(pred, target, loss_weights):
     Returns:
         [float, tensor] -- [description]
     """
+    # print(f"pred: {pred.size()}\ttarget: {target.size()}")
     loss = torch.nn.MSELoss(reduction='none')(pred, target)
 
     channel_loss = torch.sum(loss, dim=1)
@@ -219,10 +220,7 @@ def main():
 
             pred = torch.nn.functional.interpolate(
                 pred_t, size=outputs.size(1)).permute(0, 2, 1)
-
-            loss, loss_weights = loss_fn(
-                pred, outputs, loss_weights=loss_weights)
-            # print(f"Loss: {loss}")
+            loss, loss_weights = loss_fn(pred, outputs, loss_weights=loss_weights)
 
             loss.backward()
             optimizer.step()
@@ -261,21 +259,11 @@ def main():
             pred = reconstruct_model(
                 inputs, mask)
 
-            outputs_t = outputs.transpose(1, 2)
-            pred_t = pred.transpose(1, 2)
-            # # print(f"outputs_t: {outputs_t.size()}\tpred_t: {pred_t.size()}")
-            # # quit()
 
-            # pred = torch.nn.functional.interpolate(pred, size=outputs.size())
+            pred_t = pred.permute(0, 2, 1)
+
             pred = torch.nn.functional.interpolate(
-                pred_t, scale_factor=outputs_t.size(2) / pred_t.size(2)).transpose(1, 2)
-
-            # if outputs.size(1) < pred.size(1):
-            #     pred = pred[:, :outputs.size(1), :]
-            # elif outputs.size(1) > pred.size(1):
-            #     pad_zeros = torch.zeros((pred.size(0), outputs.size(
-            #         1) - pred.size(1), pred.size(2))).to(mask.device)
-            #     pred = torch.cat((pred, pad_zeros), 1)
+                pred_t, size=outputs.size(1)).permute(0, 2, 1)
 
             loss, _ = loss_fn(pred, outputs, loss_weights=0)
 

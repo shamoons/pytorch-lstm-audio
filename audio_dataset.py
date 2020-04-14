@@ -45,15 +45,11 @@ class AudioDataset(Dataset):
             x_train = corrupted_audio_file_paths[0:int(cutoff * 0.9)]
             x_test = corrupted_audio_file_paths[int(cutoff * 0.9):]
 
-        x_test = x_train
-        y_test = y_train
-
-        if train_set:
+        if train_set or True:
             if not self.mask:
                 self.clean_file_paths = y_train
             self.corrupted_file_paths = x_train
-
-        if test_set:
+        elif test_set:
             if not self.mask:
                 self.clean_file_paths = y_test
             self.corrupted_file_paths = x_test
@@ -64,10 +60,9 @@ class AudioDataset(Dataset):
                 self.clean_file_paths, repeat_sample)
         self.corrupted_file_paths = np.repeat(
             self.corrupted_file_paths, repeat_sample)
-        
-        self.corrupted_file_paths = self.corrupted_file_paths[0:64]
-        self.clean_file_paths = self.clean_file_paths[0:64]
-        # print(self.corrupted_file_paths)
+
+        self.corrupted_file_paths = self.corrupted_file_paths[0:1024]
+        self.clean_file_paths = self.clean_file_paths[0:1024]
 
 
     def __len__(self):
