@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-import load_masking_model, load_reconstruction_model
+from model_loader import load_masking_model, load_reconstruction_model
 from audio_util import convert_to_spectrogram, create_audio_from_spectrogram
 
 class DeepRestore:
