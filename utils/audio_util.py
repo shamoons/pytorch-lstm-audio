@@ -90,7 +90,7 @@ def load_audio_spectrogram(audio_path, transpose=True, normalize_spect=False):
 
 def create_audio_from_spectrogram(spectrogram, n_fft, hop_length, length):
     spectrogram = np.swapaxes(spectrogram, 0, 1)
-    audio_signal = librosa.griffinlim(spectrogram, n_iter=1024, win_length=n_fft,
+    audio_signal = librosa.core.griffinlim(spectrogram, n_iter=1024, win_length=n_fft,
                                       hop_length=hop_length, window=scipy.signal.windows.hamming, length=length)
 
     return audio_signal

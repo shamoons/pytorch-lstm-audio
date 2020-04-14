@@ -136,7 +136,7 @@ class ReconstructionModel(torch.nn.Module):
         mask_sums = torch.sum(mask, 1)
 
         # TODO: Consider using the mean mask length
-        max_mask_len = torch.max(mask_sums).int()
+        max_mask_len = torch.max(mask_sums).int().item()
 
         outputs = torch.zeros(
             (inp.size(0), max_mask_len, inp.size(2))).to(x.device)
@@ -300,7 +300,7 @@ class ReconstructionModel(torch.nn.Module):
             # print(f"inputs: {inputs.size()}\tside_inputs: {side_inputs.size()}\tmask: {mask.size()}")
 
             for batch_index, mask_batch in enumerate(mask):
-                mask_len = torch.sum(mask_batch).int()
+                mask_len = torch.sum(mask_batch).int().item()
 
                 if mask_len == 0:
                     continue
