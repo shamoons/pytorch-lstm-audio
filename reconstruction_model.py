@@ -317,13 +317,18 @@ class ReconstructionModel(torch.nn.Module):
                         end_index = min(inputs[batch_index].size(
                             0), start_index + inp_length)
 
-                    # print(f"first_nonzero: {first_nonzero}\t{inputs[batch_index, first_nonzero].mean()}\tstart_index:{start_index}\tend_index: {end_index} ")
+                    # print(f"\n\nfirst_nonzero: {first_nonzero}\tlast_nonzero: {last_nonzero}\tstart_index:{start_index}\tend_index: {end_index}\tindices: [{start_index}:{end_index}]\tmask_len: {mask_len}\toffset: {offset}")
 
                     if end_index - start_index <= 0:
                         continue
                     side_input = inputs[batch_index, start_index:end_index, :]
 
-                    # print(f"side: {side}\tside_inputs: {side_inputs.size()}\tside_input: {side_input.size()}\tleft: {side_inputs[batch_index,-side_input.size(0):,:].size()}\tright: {side_inputs[batch_index,:side_input.size(0),:].size()}\tindices: [{start_index}:{end_index}]\tmask_len: {mask_len}")
+                    # print(f"\tbatch_inp: {inputs[batch_index].size()}\tside: {side}\tside_inputs: {side_inputs.size()}\tside_input: {side_input.size()}\tleft: {side_inputs[batch_index,-side_input.size(0):,:].size()}\tright: {side_inputs[batch_index,:side_input.size(0),:].size()}")
+
+                    if side_input.size(0) == 0:
+                        continue
+
+
 
                     if side == 'left':
                         side_inputs[batch_index, -side_input.size(0):, :] = side_input

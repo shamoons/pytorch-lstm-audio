@@ -10,7 +10,7 @@ from pathlib import Path
 import soundfile as sf
 from utils.audio_util import load_audio_spectrogram, create_audio_from_spectrogram
 import numpy as np
-from utils.model_loader import load_masking_model
+from utils.model_loader import load_masking_model, load_reconstruction_model
 
 
 def parse_args():
@@ -40,24 +40,25 @@ def main():
 
     device = torch.device("cpu") # TODO: Use CUDA when available
     mask_model = load_masking_model(args.mask_wandb, device)
+    model = load_reconstruction_model(args.wandb, device)
 
-    wandb_dir = list(glob.iglob(os.path.join(
-        'wandb', '*' + args.wandb), recursive=False))[0]
-    model_path = os.path.join(wandb_dir, 'best-model.pt')
-    saved_model_path = wandb_dir
-    args_path = os.path.join(wandb_dir, 'args.json')
-    saved_args = json.loads(open(args_path, 'r').read())
+    # wandb_dir = list(glob.iglob(os.path.join(
+    #     'wandb', '*' + args.wandb), recursive=False))[0]
+    # model_path = os.path.join(wandb_dir, 'best-model.pt')
+    # saved_model_path = wandb_dir
+    # args_path = os.path.join(wandb_dir, 'args.json')
+    # saved_args = json.loads(open(args_path, 'r').read())
 
-    sys.path.append(os.path.abspath(saved_model_path))
-    model = importlib.import_module('saved_reconstruction_model').ReconstructionModel(
-        feature_dim=saved_args['feature_dim'], kernel_size=saved_args['kernel_size'], kernel_size_step=saved_args['kernel_size_step'])
+    # sys.path.append(os.path.abspath(saved_model_path))
+    # model = importlib.import_module('saved_reconstruction_model').ReconstructionModel(
+    #     feature_dim=saved_args['feature_dim'], kernel_size=saved_args['kernel_size'], kernel_size_step=saved_args['kernel_size_step'])
 
-    state_dict = torch.load(model_path, map_location=device)
+    # state_dict = torch.load(model_path, map_location=device)
 
-    model.load_state_dict(state_dict)
+    # model.load_state_dict(state_dict)
 
-    model = model.float()
-    model.eval()
+    # model = model.float()
+    # model.eval()
 
     filename_without_ext = Path(args.audio_path).stem
 
