@@ -11,16 +11,15 @@ class DeepRestore:
         self.reconstruct_model = load_reconstruction_model(reconstruct_wandb, device)
     
     def enhance(self, audio_signal):
-        input_spectrogram, sample_rate, n_fft, hop_length = load_audio_spectrogram(audio_signal)
+        input_spectrogram, sample_rate, n_fft, hop_length = convert_to_spectrogram(audio_signal)
 
         input_spectrogram = input_spectrogram.view(1, input_spectrogram.size(0), input_spectrogram.size(1))
-
 
         mask = self.mask_model(input_spectrogram)
         mask = torch.round(mask).float()
         mask_sum = torch.sum(mask).int()
 
-        pred = model(input_spectrogram, mask)
+        pred = self.reconstruct_model(input_spectrogram, mask)
 
         pred_t = pred.permute(0, 2, 1)
 
