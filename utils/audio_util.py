@@ -33,26 +33,15 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 #     return log_spectrogram
 
-
-def load_audio_spectrogram(audio_path, transpose=True, normalize_spect=False):
-
-    sample_rate = librosa.get_samplerate(audio_path)
-    samples, sample_rate = librosa.core.load(audio_path, sr=sample_rate)
-
+def convert_to_spectrogram(audio_signal, sample_rate=16000, transpose = True, normalize_spect=False):
     n_fft, hop_length = get_n_fft_overlap(sample_rate)
-    # print('n_fft: {}\thop_length: {}\twin_length: {}\twindow: {}'.format(
-    #     n_fft, hop_length, n_fft, scipy.signal.windows.hamming))
-    # print(samples.shape, samples.mean())
-    D = librosa.stft(samples, n_fft=n_fft, hop_length=hop_length,
+
+    D = librosa.stft(audio_signal, n_fft=n_fft, hop_length=hop_length,
                      win_length=n_fft, window=scipy.signal.windows.hamming)
 
     spect, _ = librosa.magphase(D)
 
-    if transpose:
-        spect = np.swapaxes(spect, 0, 1)
     spect = torch.FloatTensor(spect)
-
-    # print('spect before log1p\tMean: {:.4f} ± {:.4f}\tMin: {:.4f}\tMax: {:.4f}\tSize: {}'.format(torch.mean(spect), torch.std(spect), torch.min(spect), torch.max(spect), spect.size()))
 
     spect = torch.log1p(spect)
 
@@ -61,6 +50,22 @@ def load_audio_spectrogram(audio_path, transpose=True, normalize_spect=False):
         std = spect.std()
         spect.add_(-mean)
         spect.div_(std)
+
+    if transpose:
+        spect = spect.transpose(0, 1)
+
+    return spect, n_fft, hop_length
+
+
+def load_audio_spectrogram(audio_path, transpose=True, normalize_spect=False):
+
+    sample_rate = librosa.get_samplerate(audio_path)
+    samples, sample_rate = librosa.core.load(audio_path, sr=sample_rate)
+
+    spect, n_fft, hop_length = convert_to_spectrogram(samples, sample_rate=sample_rate, normalize_spect=False)
+
+    # print('spect before log1p\tMean: {:.4f} ± {:.4f}\tMin: {:.4f}\tMax: {:.4f}\tSize: {}'.format(torch.mean(spect), torch.std(spect), torch.min(spect), torch.max(spect), spect.size()))
+
 
     return spect.contiguous(), len(samples), sample_rate, n_fft, hop_length
 
