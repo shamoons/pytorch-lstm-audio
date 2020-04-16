@@ -33,16 +33,16 @@ class ReconstructionModel(torch.nn.Module):
 
         for side in self.SIDES:
             self.linear[side] = torch.nn.Sequential(
-                torch.nn.Linear(feature_dim, feature_dim),
+                torch.nn.Linear(feature_dim // 16, (feature_dim // 16 + feature_dim) // 2),
                 TaylorActivation(),
-                torch.nn.Linear(feature_dim, feature_dim),
+                torch.nn.Linear((feature_dim // 16 + feature_dim) // 2, feature_dim),
                 TaylorActivation()
             )
 
             self.downscale_time_conv[side] = torch.nn.Sequential(
                 torch.nn.Conv1d(
-                    in_channels=feature_dim,
-                    out_channels=feature_dim,
+                    in_channels=feature_dim // 16,
+                    out_channels=feature_dim // 16,
                     kernel_size=2,
                     stride=1,
                     dilation=1,
@@ -50,8 +50,8 @@ class ReconstructionModel(torch.nn.Module):
                 ),
                 TaylorActivation(),
                 torch.nn.Conv1d(
-                    in_channels=feature_dim,
-                    out_channels=feature_dim,
+                    in_channels=feature_dim // 16,
+                    out_channels=feature_dim // 16,
                     kernel_size=2,
                     stride=1,
                     dilation=2,
@@ -59,8 +59,8 @@ class ReconstructionModel(torch.nn.Module):
                 ),
                 TaylorActivation(),
                 torch.nn.Conv1d(
-                    in_channels=feature_dim,
-                    out_channels=feature_dim,
+                    in_channels=feature_dim // 16,
+                    out_channels=feature_dim // 16,
                     kernel_size=2,
                     stride=1,
                     dilation=4,
@@ -68,8 +68,8 @@ class ReconstructionModel(torch.nn.Module):
                 ),
                 TaylorActivation(),
                 torch.nn.Conv1d(
-                    in_channels=feature_dim,
-                    out_channels=feature_dim,
+                    in_channels=feature_dim // 16,
+                    out_channels=feature_dim // 16,
                     kernel_size=2,
                     stride=1,
                     dilation=8,
@@ -77,18 +77,19 @@ class ReconstructionModel(torch.nn.Module):
                 ),
                 TaylorActivation(),
                 torch.nn.Conv1d(
-                    in_channels=feature_dim,
-                    out_channels=feature_dim,
+                    in_channels=feature_dim // 16,
+                    out_channels=feature_dim // 16,
                     kernel_size=2,
                     stride=1,
                     dilation=16,
                     padding=0,
                 ),
-                TaylorActivation()
+                TaylorActivation(),
+                self.dropout
             )
 
     def autoencoder1(self, inputs):
-        out_summed = torch.zeros(inputs.size()).to(inputs.device)
+        out_summed = torch.zeros((inputs.size(0), inputs.size(1) // 16, inputs.size(2))).to(inputs.device)
 
         for key in self.autoencoder1_layer:
             out = self.autoencoder1_layer[key](inputs)
@@ -145,38 +146,7 @@ class ReconstructionModel(torch.nn.Module):
                 padding=kernel_size // 2
             ),
             TaylorActivation(),
-            torch.nn.Conv1d(
-                in_channels=in_channels // 16,
-                out_channels=in_channels // 8,
-                kernel_size=kernel_size,
-                stride=1,
-                padding=kernel_size // 2
-            ),
-            TaylorActivation(),
-            torch.nn.Conv1d(
-                in_channels=in_channels // 8,
-                out_channels=in_channels // 4,
-                kernel_size=kernel_size,
-                stride=1,
-                padding=kernel_size // 2
-            ),
-            TaylorActivation(),
-            torch.nn.Conv1d(
-                in_channels=in_channels // 4,
-                out_channels=in_channels // 2,
-                kernel_size=kernel_size,
-                stride=1,
-                padding=kernel_size // 2
-            ),
-            TaylorActivation(),
-            torch.nn.Conv1d(
-                in_channels=in_channels // 2,
-                out_channels=in_channels,
-                kernel_size=kernel_size,
-                stride=1,
-                padding=kernel_size // 2
-            ),
-            TaylorActivation()
+            self.dropout
         )
 
     def forward(self, x, mask):
@@ -267,9 +237,9 @@ class ReconstructionModel(torch.nn.Module):
         inputs = inp.clone().permute(0, 2, 1)
 
         autoencoded_out1 = self.autoencoder1(inputs)
-        autoencoded_out2 = self.autoencoder2(autoencoded_out1)
+        # autoencoded_out2 = self.autoencoder2(autoencoded_out1)
 
-        down_out = self.downscale_time_conv[side](autoencoded_out2)
+        down_out = self.downscale_time_conv[side](autoencoded_out1)
         mean_out = torch.mean(down_out, 2)
 
         linear_out = self.linear[side](mean_out)
@@ -282,8 +252,8 @@ class ReconstructionModel(torch.nn.Module):
             print('\n autoencoded_out1\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
                 torch.mean(autoencoded_out1), torch.std(autoencoded_out1), torch.min(autoencoded_out1), torch.max(autoencoded_out1), autoencoded_out1.size()))
 
-            print('\n autoencoded_out2\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
-                torch.mean(autoencoded_out2), torch.std(autoencoded_out2), torch.min(autoencoded_out2), torch.max(autoencoded_out2), autoencoded_out2.size()))
+            # print('\n autoencoded_out2\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
+            #     torch.mean(autoencoded_out2), torch.std(autoencoded_out2), torch.min(autoencoded_out2), torch.max(autoencoded_out2), autoencoded_out2.size()))
 
             print('\n down_out\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
                 torch.mean(down_out), torch.std(down_out), torch.min(down_out), torch.max(down_out), down_out.size()))

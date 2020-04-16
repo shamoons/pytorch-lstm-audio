@@ -11,7 +11,7 @@ from utils.audio_util import load_audio_spectrogram
 
 
 class AudioDataset(Dataset):
-    def __init__(self, corrupted_paths, mask, feature_dim=5, train_set=False, test_set=False, normalize=False):
+    def __init__(self, corrupted_paths, mask, feature_dim=5, train_set=False, test_set=False, normalize=False, tune=0):
         torch.manual_seed(0)
 
         self.feature_dim = feature_dim
@@ -57,8 +57,9 @@ class AudioDataset(Dataset):
                     self.clean_file_paths.extend(y_test)
                 self.corrupted_file_paths.extend(x_test)
 
-        # self.corrupted_file_paths = self.corrupted_file_paths[0:1024]
-        # self.clean_file_paths = self.clean_file_paths[0:1024]
+        if tune > 0:
+            self.corrupted_file_paths = self.corrupted_file_paths[0:tune]
+            self.clean_file_paths = self.clean_file_paths[0:tune]
 
 
     def __len__(self):

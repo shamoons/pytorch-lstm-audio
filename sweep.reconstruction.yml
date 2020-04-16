@@ -1,0 +1,32 @@
+program: train_reconstruction.py
+command:
+  - ${env}
+  - python
+  - ${program}
+  - "--epochs=30"
+  - "--audio_paths=data/dev-noise-subtractive-250ms-1,data/dev-noise-subtractive-250ms-1-gaussian"
+  - "--mask_wandb=11h3jltj"
+  - "--tune=64"
+  - ${args}
+method: bayes
+metric:
+  name: val_loss
+  goal: minimize
+parameters:
+  base_lr:
+    distribution: uniform
+    min: 1e-5
+    max: 1e-2
+  weight_decay:
+    distribution: uniform
+    min: 0
+    max: 0.002
+  dropout:
+    distribution: uniform
+    min: 0
+    max: 0.5
+
+early_terminate:
+  type: hyperband
+  max_iter: 27
+  s: 2

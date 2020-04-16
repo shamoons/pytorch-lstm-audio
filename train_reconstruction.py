@@ -66,6 +66,11 @@ def parse_args():
 
     parser.add_argument('--seed', default=2,
                         type=int, help='Seed')
+    parser.add_argument('--weight_decay', default=0, type=float, help='Weight decay')
+
+    parser.add_argument('--dropout', default=0.2, type=float, help='Dropout')
+
+    parser.add_argument('--tune', default=0, type=int, help='Minimize samples to this amount for tuning')
 
     args = parser.parse_args()
 
@@ -108,8 +113,8 @@ def loss_fn(pred, target, loss_weights):
 
     # print('\n\n')
     # print('TIME BASED:', pred.size())
-    pred_time_mean = torch.mean(torch.mean(pred, 2), 0)
-    target_time_mean = torch.mean(torch.mean(target, 2), 0)
+    # pred_time_mean = torch.mean(torch.mean(pred, 2), 0)
+    # target_time_mean = torch.mean(torch.mean(target, 2), 0)
     # print('\tPRED:\n', pred_time_mean.data, pred_time_mean.size())
     # print('\n\tTARG:\n', target_time_mean.data, target_time_mean.size())
 
@@ -118,8 +123,8 @@ def loss_fn(pred, target, loss_weights):
     # print(torch.mean(target[0], 1))
 
     # print('FREQ BASED:', pred.size())
-    pred_time_mean = torch.mean(torch.mean(pred, 1), 0)
-    target_time_mean = torch.mean(torch.mean(target, 1), 0)
+    # pred_time_mean = torch.mean(torch.mean(pred, 1), 0)
+    # target_time_mean = torch.mean(torch.mean(target, 1), 0)
     # print('\tPRED:\n', pred_time_mean.data, pred_time_mean.size())
     # print('\n\tTARG:\n', target_time_mean.data, target_time_mean.size())
 
@@ -147,9 +152,9 @@ def main():
 
     audio_paths = args.audio_paths.strip().split(',')
 
-    train_set = AudioDataset(audio_paths, train_set=True, feature_dim=args.feature_dim, normalize=False, mask=False)
+    train_set = AudioDataset(audio_paths, train_set=True, feature_dim=args.feature_dim, normalize=False, mask=False, tune=args.tune)
 
-    val_set = AudioDataset(audio_paths, test_set=True, feature_dim=args.feature_dim, normalize=False, mask=False)
+    val_set = AudioDataset(audio_paths, test_set=True, feature_dim=args.feature_dim, normalize=False, mask=False, tune=args.tune)
 
     train_loader = torch.utils.data.DataLoader(
         train_set, shuffle=True, batch_size=args.batch_size, num_workers=args.num_workers, collate_fn=pad_samples, **params)
@@ -161,7 +166,7 @@ def main():
     mask_model = load_masking_model(args.mask_wandb, device)
 
     reconstruct_model = ReconstructionModel(feature_dim=args.feature_dim,
-                                            verbose=args.verbose, kernel_size=args.kernel_size, kernel_size_step=args.kernel_size_step)
+                                            verbose=args.verbose, kernel_size=args.kernel_size, kernel_size_step=args.kernel_size_step, dropout=args.dropout)
 
     # reconstruct_model.model_summary(reconstruct_model)
     if args.continue_from:
@@ -169,8 +174,7 @@ def main():
         reconstruct_model.load_state_dict(state_dict)
         print('Loading saved model to continue from: {}'.format(args.continue_from))
 
-    optimizer = optim.Adam(reconstruct_model.parameters(),
-                           lr=args.base_lr, weight_decay=0)
+    optimizer = optim.Adam(reconstruct_model.parameters(),lr=args.base_lr, weight_decay=args.weight_decay)
 
     wandb.watch(reconstruct_model)
 
