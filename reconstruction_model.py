@@ -189,7 +189,7 @@ class ReconstructionModel(torch.nn.Module):
 
         # TODO: Consider using the mean mask length
         max_mask_len = torch.max(mask_sums).int().item()
-        print(f"max_mask_len: {max_mask_len}")
+        # print(f"max_mask_len: {max_mask_len}")
 
         if max_mask_len == 0:
             # Super weird edge case where the entire batch has no mask.
@@ -251,7 +251,7 @@ class ReconstructionModel(torch.nn.Module):
                 batch_out = torch.squeeze(batch_out_t, dim=0).permute(1, 0)
                 inp[batch_index][batch_mask == 1] = batch_out
 
-        print(f"outputs: {outputs.size()}")
+        # print(f"outputs: {outputs.size()}")
         return outputs
 
     def forward_step(self, inp, side):

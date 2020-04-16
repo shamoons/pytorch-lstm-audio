@@ -212,9 +212,9 @@ def main():
             mask = torch.round(mask)
 
             pred = reconstruct_model(inputs, mask)
-            print(f"\npred: {pred.size()}\toutputs: {outputs.size()}\tmask: {mask.size()}")
+            # print(f"\npred: {pred.size()}\toutputs: {outputs.size()}\tmask: {mask.size()}")
             pred_t = pred.permute(0, 2, 1)
-            print(f"pred_t: {pred_t.size()}")
+            # print(f"pred_t: {pred_t.size()}")
 
             pred = torch.nn.functional.interpolate(
                 pred_t, size=outputs.size(1)).permute(0, 2, 1)
