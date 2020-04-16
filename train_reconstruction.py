@@ -52,9 +52,6 @@ def parse_args():
     parser.add_argument('--continue-from', default='',
                         help='Continue from checkpoint model')
 
-    parser.add_argument('--final_kernel_size', default=25,
-                        type=int, help='Final kernel size')
-
     parser.add_argument('--kernel_size', default=25,
                         type=int, help='Kernel size start')
 
@@ -69,6 +66,7 @@ def parse_args():
     parser.add_argument('--weight_decay', default=0, type=float, help='Weight decay')
 
     parser.add_argument('--dropout', default=0.2, type=float, help='Dropout')
+    parser.add_argument('--side_length', default=48, type=int, help='Side Length')
 
     parser.add_argument('--tune', default=0, type=int, help='Minimize samples to this amount for tuning')
 
@@ -166,7 +164,7 @@ def main():
     mask_model = load_masking_model(args.mask_wandb, device)
 
     reconstruct_model = ReconstructionModel(feature_dim=args.feature_dim,
-                                            verbose=args.verbose, kernel_size=args.kernel_size, kernel_size_step=args.kernel_size_step, dropout=args.dropout)
+                                            verbose=args.verbose, kernel_size=args.kernel_size, kernel_size_step=args.kernel_size_step, dropout=args.dropout, side_length=args.side_length)
 
     # reconstruct_model.model_summary(reconstruct_model)
     if args.continue_from:
@@ -281,9 +279,10 @@ def main():
             'val_loss': val_loss,
             'epoch': epoch,
             'sec_per_epoch': time_per_epoch,
+            'val_train_loss': val_loss / train_loss
         })
 
-        print(f"Epoch: {epoch}\tLoss(t): {train_loss:.6g}\tLoss(v): {val_loss:.6g} (best: {current_best_validation_loss:.6g})\tTime (epoch): {time_per_epoch:d}s")
+        print(f"Epoch: {epoch}\tLoss(t): {train_loss:.6g}\tLoss(v): {val_loss:.6g} (best: {current_best_validation_loss:.6g})\tTime (epoch): {time_per_epoch:d}s\tVal v Train: {val_loss / train_loss:.6g}")
 
         if val_loss < current_best_validation_loss:
             torch.save(reconstruct_model.state_dict(), path.join(

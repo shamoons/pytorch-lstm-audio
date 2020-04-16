@@ -4,9 +4,10 @@ command:
   - python
   - ${program}
   - "--epochs=30"
-  - "--audio_paths=data/dev-noise-subtractive-250ms-1,data/dev-noise-subtractive-250ms-1-gaussian"
+  - "--audio_paths=data/dev-noise-subtractive-250ms-1"
   - "--mask_wandb=11h3jltj"
-  - "--tune=64"
+  - "--tune=256"
+  - "--batch_size=24"
   - ${args}
 method: bayes
 metric:
@@ -20,13 +21,12 @@ parameters:
   weight_decay:
     distribution: uniform
     min: 0
-    max: 0.002
+    max: 0.001
   dropout:
     distribution: uniform
-    min: 0
+    min: 0.25
     max: 0.5
-
-early_terminate:
-  type: hyperband
-  max_iter: 27
-  s: 2
+  side_length:
+    distribution: int_uniform
+    min: 16
+    max: 48
