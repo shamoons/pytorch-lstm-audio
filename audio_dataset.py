@@ -11,62 +11,58 @@ from utils.audio_util import load_audio_spectrogram
 
 
 class AudioDataset(Dataset):
-    def __init__(self, corrupted_path, mask, feature_dim=5, train_set=False, test_set=False, normalize=False, repeat_sample=1):
+    def __init__(self, corrupted_paths, mask, feature_dim=5, train_set=False, test_set=False, normalize=False):
         torch.manual_seed(0)
 
         self.feature_dim = feature_dim
         self.normalize = normalize
         self.mask = mask
+        self.corrupted_file_paths = []
+        self.clean_file_paths = []
 
-        corrupted_base_path = path.abspath(corrupted_path)
-        corrupted_base_path_parts = corrupted_base_path.split('/')
-        clean_base_path = corrupted_base_path_parts.copy()
-        if 'dev' in clean_base_path[-1]:
-            clean_base_path[-1] = 'dev-clean'
-        elif 'train' in clean_base_path[-1]:
-            clean_base_path[-1] = 'train-clean'
-        elif 'test' in clean_base_path[-1]:
-            clean_base_path[-1] = 'test-clean'
+        for corrupted_path in corrupted_paths:
+            corrupted_base_path = path.abspath(corrupted_path)
+            corrupted_base_path_parts = corrupted_base_path.split('/')
+            clean_base_path = corrupted_base_path_parts.copy()
+            if 'dev' in clean_base_path[-1]:
+                clean_base_path[-1] = 'dev-clean'
+            elif 'train' in clean_base_path[-1]:
+                clean_base_path[-1] = 'train-clean'
+            elif 'test' in clean_base_path[-1]:
+                clean_base_path[-1] = 'test-clean'
 
-        clean_base_path = '/'.join(clean_base_path)
+            clean_base_path = '/'.join(clean_base_path)
 
-        corrupted_audio_file_paths = np.array(
-            sorted(glob.iglob(corrupted_base_path + '/**/*.flac', recursive=True)))
+            corrupted_audio_file_paths = np.array(
+                sorted(glob.iglob(corrupted_base_path + '/**/*.flac', recursive=True)))
 
-        if not self.mask:
-            clean_audio_file_paths = np.array(
-                sorted(glob.iglob(clean_base_path + '/**/*.flac', recursive=True)))
-
-            x_train, x_test, y_train, y_test = train_test_split(
-                corrupted_audio_file_paths, clean_audio_file_paths, test_size=0.1, random_state=0)
-        else:
-            np.random.shuffle(corrupted_audio_file_paths)
-            cutoff = len(corrupted_audio_file_paths)
-            x_train = corrupted_audio_file_paths[0:int(cutoff * 0.9)]
-            x_test = corrupted_audio_file_paths[int(cutoff * 0.9):]
-
-        if train_set:
             if not self.mask:
-                self.clean_file_paths = y_train
-            self.corrupted_file_paths = x_train
-        elif test_set:
-            if not self.mask:
-                self.clean_file_paths = y_test
-            self.corrupted_file_paths = x_test
+                clean_audio_file_paths = np.array(
+                    sorted(glob.iglob(clean_base_path + '/**/*.flac', recursive=True)))
 
+                x_train, x_test, y_train, y_test = train_test_split(
+                    corrupted_audio_file_paths, clean_audio_file_paths, test_size=0.1, random_state=0)
+            else:
+                np.random.shuffle(corrupted_audio_file_paths)
+                cutoff = len(corrupted_audio_file_paths)
+                x_train = corrupted_audio_file_paths[0:int(cutoff * 0.9)]
+                x_test = corrupted_audio_file_paths[int(cutoff * 0.9):]
 
-        if not self.mask:
-            self.clean_file_paths = np.repeat(
-                self.clean_file_paths, repeat_sample)
-        self.corrupted_file_paths = np.repeat(
-            self.corrupted_file_paths, repeat_sample)
+            if train_set:
+                if not self.mask:
+                    self.clean_file_paths.extend(y_train)
+                self.corrupted_file_paths.extend(x_train)
+            elif test_set:
+                if not self.mask:
+                    self.clean_file_paths.extend(y_test)
+                self.corrupted_file_paths.extend(x_test)
 
         # self.corrupted_file_paths = self.corrupted_file_paths[0:1024]
         # self.clean_file_paths = self.clean_file_paths[0:1024]
 
 
     def __len__(self):
-        return min(len(self.corrupted_file_paths), 4e10)
+        return min(len(self.corrupted_file_paths), 32e10)
 
     def __getitem__(self, index):
         corrupted_file_path = self.corrupted_file_paths[index]

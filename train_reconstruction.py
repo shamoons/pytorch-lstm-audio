@@ -19,7 +19,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        '--audio_path', help='Path for corrupted audio', required=True)
+        '--audio_paths', help='Path for corrupted audio', required=True)
 
     parser.add_argument(
         '--mask_wandb', help='Path for the trained masking model', required=True)
@@ -46,11 +46,8 @@ def parse_args():
     parser.add_argument('--batch_size', help='Batch size',
                         type=int, default=64)
 
-    parser.add_argument('--repeat_sample', help='How many times to sample each file',
-                        type=int, default=1)
-
     parser.add_argument('--num_workers', help='Number of workers for data_loaders',
-                        type=int, default=4)
+                        type=int, default=16)
 
     parser.add_argument('--continue-from', default='',
                         help='Continue from checkpoint model')
@@ -148,11 +145,11 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     params = {'pin_memory': True} if device == 'cuda' else {}
 
-    train_set = AudioDataset(
-        args.audio_path, train_set=True, feature_dim=args.feature_dim, repeat_sample=args.repeat_sample, normalize=False, mask=False)
+    audio_paths = args.audio_paths.strip().split(',')
 
-    val_set = AudioDataset(
-        args.audio_path, test_set=True, feature_dim=args.feature_dim, normalize=False, mask=False)
+    train_set = AudioDataset(audio_paths, train_set=True, feature_dim=args.feature_dim, normalize=False, mask=False)
+
+    val_set = AudioDataset(audio_paths, test_set=True, feature_dim=args.feature_dim, normalize=False, mask=False)
 
     train_loader = torch.utils.data.DataLoader(
         train_set, shuffle=True, batch_size=args.batch_size, num_workers=args.num_workers, collate_fn=pad_samples, **params)
@@ -215,8 +212,9 @@ def main():
             mask = torch.round(mask)
 
             pred = reconstruct_model(inputs, mask)
-
+            print(f"\npred: {pred.size()}\toutputs: {outputs.size()}\tmask: {mask.size()}")
             pred_t = pred.permute(0, 2, 1)
+            print(f"pred_t: {pred_t.size()}")
 
             pred = torch.nn.functional.interpolate(
                 pred_t, size=outputs.size(1)).permute(0, 2, 1)

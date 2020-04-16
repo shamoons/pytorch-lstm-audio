@@ -13,6 +13,7 @@ import torch.optim as optim
 import wandb
 import json
 import time
+import re
 import numpy as np
 
 
@@ -20,7 +21,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        '--audio_path', help='Path for corrupted audio', required=True)
+        '--audio_paths', help='Path for corrupted audio', required=True)
 
     parser.add_argument('--feature_dim', help='Feature dimension',
                         type=int, default=161)
@@ -43,9 +44,6 @@ def parse_args():
 
     parser.add_argument('--batch_size', help='Batch size',
                         type=int, default=64)
-
-    parser.add_argument('--repeat_sample', help='How many times to sample each file',
-                        type=int, default=1)
 
     parser.add_argument('--num_workers', help='Number of workers for data_loaders',
                         type=int, default=4)
@@ -111,11 +109,10 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     params = {'pin_memory': True} if device == 'cuda' else {}
 
-    train_set = AudioDataset(
-        args.audio_path, train_set=True, feature_dim=args.feature_dim, repeat_sample=args.repeat_sample, normalize=False, mask=True)
+    audio_paths = args.audio_paths.strip().split(',')
+    train_set = AudioDataset(audio_paths, train_set=True, feature_dim=args.feature_dim, normalize=False, mask=True)
 
-    val_set = AudioDataset(
-        args.audio_path, test_set=True, feature_dim=args.feature_dim, normalize=False, mask=True)
+    val_set = AudioDataset(audio_paths, test_set=True, feature_dim=args.feature_dim, normalize=False, mask=True)
 
     train_loader = torch.utils.data.DataLoader(
         train_set, shuffle=True, batch_size=args.batch_size, num_workers=args.num_workers, collate_fn=pad_samples, **params)
