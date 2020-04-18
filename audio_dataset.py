@@ -94,14 +94,6 @@ class AudioDataset(Dataset):
             
             output_sliced = masked_output_spectrogram
 
-        # print(output_sliced)
-        # if self.mask:
-        #     output_sliced = mask_vector
-        # else:
-        #     output_sliced = masked_output_spectrogram
-
-        # output_sliced = torch.Tensor(output_sliced)
-
         return input_spectrogram, output_sliced
 
 

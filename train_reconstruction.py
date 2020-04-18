@@ -109,27 +109,6 @@ def loss_fn(pred, target, loss_weights):
 
     loss = torch.mean(weighted_loss)
 
-    # print('\n\n')
-    # print('TIME BASED:', pred.size())
-    # pred_time_mean = torch.mean(torch.mean(pred, 2), 0)
-    # target_time_mean = torch.mean(torch.mean(target, 2), 0)
-    # print('\tPRED:\n', pred_time_mean.data, pred_time_mean.size())
-    # print('\n\tTARG:\n', target_time_mean.data, target_time_mean.size())
-
-    # print('\t=======')
-    # print(torch.mean(pred[0], 1))
-    # print(torch.mean(target[0], 1))
-
-    # print('FREQ BASED:', pred.size())
-    # pred_time_mean = torch.mean(torch.mean(pred, 1), 0)
-    # target_time_mean = torch.mean(torch.mean(target, 1), 0)
-    # print('\tPRED:\n', pred_time_mean.data, pred_time_mean.size())
-    # print('\n\tTARG:\n', target_time_mean.data, target_time_mean.size())
-
-    # print('\nSOFTMAX: ')
-    # print(softmax_weights.data, softmax_weights.size())
-
-
     return loss, softmax_weights
 
 
@@ -163,8 +142,7 @@ def main():
 
     mask_model = load_masking_model(args.mask_wandb, device)
 
-    reconstruct_model = ReconstructionModel(feature_dim=args.feature_dim,
-                                            verbose=args.verbose, kernel_size=args.kernel_size, kernel_size_step=args.kernel_size_step, dropout=args.dropout, side_length=args.side_length)
+    reconstruct_model = ReconstructionModel(verbose=args.verbose, kernel_size=args.kernel_size, kernel_size_step=args.kernel_size_step, dropout=args.dropout, side_length=args.side_length)
 
     # reconstruct_model.model_summary(reconstruct_model)
     if args.continue_from:
@@ -188,8 +166,8 @@ def main():
 
     saved_onnx = False
 
-    torch.set_printoptions(profile='full', precision=2,
-                           sci_mode=False, linewidth=180)
+    # torch.set_printoptions(profile='full', precision=2,
+    #                        sci_mode=False, linewidth=180)
     print(f"Training Samples: {len(train_set)}")
     print(f"Validation Samples: {len(val_set)}")
 
@@ -200,9 +178,7 @@ def main():
         start_time = time.time()
         train_running_loss = 0.0
         train_count = 0
-        for _, data in enumerate(Bar(data_loaders['train'])):
-            inputs = data[0]
-            outputs = data[1]
+        for _, (inputs, outputs) in enumerate(Bar(data_loaders['train'])):
 
             if torch.cuda.is_available():
                 inputs = inputs.cuda()
@@ -214,7 +190,7 @@ def main():
             mask = torch.round(mask)
 
             pred = reconstruct_model(inputs, mask)
-            # print(f"\npred: {pred.size()}\toutputs: {outputs.size()}\tmask: {mask.size()}")
+            print(f"\npred: {pred.size()}\toutputs: {outputs.size()}\tmask: {mask.size()}")
             pred_t = pred.permute(0, 2, 1)
             # print(f"pred_t: {pred_t.size()}")
 

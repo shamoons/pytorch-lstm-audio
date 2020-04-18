@@ -94,14 +94,12 @@ def main():
     pred = torch.nn.functional.interpolate(pred_t, size=mask_sum.item()).permute(0, 2, 1)
 
     output = input_spectrogram
+    print(f"pred: {pred.size()}\tmask: {mask.size()}\toutput: {output.size()}")
     output[mask == 1] = pred
     
     torch.set_printoptions(profile='full', precision=3,
                            sci_mode=False, linewidth=180)
 
-    # print(pred)
-
-    # output[mask == 0] = input_spectrogram[mask == 0]
 
     print('pred\t\tMean: {:.4f} ± {:.4f}\tMin: {:.4f}\tMax: {:.4f}\tSize: {}'.format(
         torch.mean(pred), torch.std(pred), torch.min(pred), torch.max(pred), pred.size()))
@@ -114,13 +112,6 @@ def main():
     output = torch.expm1(output)
     # print('expm1 output\t\tMean: {:.4f} ± {:.4f}\tMin: {:.4f}\tMax: {:.4f}\tSize: {}'.format(
     #     torch.mean(output), torch.std(output), torch.min(output), torch.max(output), output.size()))
-
-    # augmented_mask = torch.tensor(mask)
-    # augmented_mask[augmented_mask ==
-    #                1] = augmented_mask[augmented_mask == 1] + 0.1111
-
-    # print('Mask')
-    # print(augmented_mask[0])
 
 
     # print('Input')
