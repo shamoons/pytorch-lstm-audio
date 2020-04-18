@@ -4,9 +4,9 @@ command:
   - python
   - ${program}
   - "--epochs=30"
-  - "--audio_paths=data/dev-noise-subtractive-250ms-1"
+  - "--audio_paths=data/dev-noise-subtractive-250ms-1,data/dev-noise-subtractive-250ms-1-gaussian"
   - "--mask_wandb=11h3jltj"
-  - "--tune=256"
+  - "--tune=512"
   - "--batch_size=24"
   - ${args}
 method: bayes
@@ -16,17 +16,17 @@ metric:
 parameters:
   base_lr:
     distribution: uniform
-    min: 1e-5
+    min: 5e-5
     max: 1e-2
   weight_decay:
     distribution: uniform
-    min: 0
-    max: 0.001
+    min: 2e-5
+    max: 1e-3
   dropout:
     distribution: uniform
     min: 0.25
-    max: 0.5
+    max: 0.75
   side_length:
     distribution: int_uniform
-    min: 16
-    max: 48
+    min: 32
+    max: 56

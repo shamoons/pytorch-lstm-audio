@@ -1,5 +1,5 @@
 from audio_dataset import AudioDataset
-from audio_dataset import pad_samples
+from audio_dataset import pad_samples_audio
 from barbar import Bar
 from reconstruction_model import ReconstructionModel
 from utils.model_loader import load_masking_model
@@ -28,7 +28,7 @@ def parse_args():
                         type=int, default=161)
 
     parser.add_argument('--base_lr',
-                        help='Base learning rate', type=float, default=1e-3)
+                        help='Base learning rate', type=float, default=0.004)
 
     parser.add_argument('--learning-anneal',
                         default=1.1, type=float,
@@ -63,9 +63,9 @@ def parse_args():
 
     parser.add_argument('--seed', default=2,
                         type=int, help='Seed')
-    parser.add_argument('--weight_decay', default=0, type=float, help='Weight decay')
+    parser.add_argument('--weight_decay', default=1e-5, type=float, help='Weight decay')
 
-    parser.add_argument('--dropout', default=0.2, type=float, help='Dropout')
+    parser.add_argument('--dropout', default=0.5, type=float, help='Dropout')
     parser.add_argument('--side_length', default=48, type=int, help='Side Length')
 
     parser.add_argument('--tune', default=0, type=int, help='Minimize samples to this amount for tuning')
@@ -87,12 +87,12 @@ def initialize(args):
 
 def loss_fn(pred, target, loss_weights):
     """Loss Function
-    
+
     Arguments:
         pred {[tensor]} -- Size: BATCH x SEQ_LEN x CHANNELS
         target {[tensor]} -- Size: BATCH x SEQ_LEN x CHANNELS
         loss_weights {[tensor]} -- [description]
-    
+
     Returns:
         [float, tensor] -- [description]
     """
@@ -134,9 +134,9 @@ def main():
     val_set = AudioDataset(audio_paths, test_set=True, feature_dim=args.feature_dim, normalize=False, mask=False, tune=args.tune)
 
     train_loader = torch.utils.data.DataLoader(
-        train_set, shuffle=True, batch_size=args.batch_size, num_workers=args.num_workers, collate_fn=pad_samples, **params)
+        train_set, shuffle=True, batch_size=args.batch_size, num_workers=args.num_workers, collate_fn=pad_samples_audio, **params)
     val_loader = torch.utils.data.DataLoader(
-        val_set, shuffle=True, batch_size=args.batch_size, num_workers=args.num_workers, collate_fn=pad_samples, **params)
+        val_set, shuffle=True, batch_size=args.batch_size, num_workers=args.num_workers, collate_fn=pad_samples_audio, **params)
 
     data_loaders = {'train': train_loader, 'val': val_loader}
 
@@ -150,7 +150,7 @@ def main():
         reconstruct_model.load_state_dict(state_dict)
         print('Loading saved model to continue from: {}'.format(args.continue_from))
 
-    optimizer = optim.Adam(reconstruct_model.parameters(),lr=args.base_lr, weight_decay=args.weight_decay)
+    optimizer = optim.Adam(reconstruct_model.parameters(), lr=args.base_lr, weight_decay=args.weight_decay)
 
     wandb.watch(reconstruct_model)
 
@@ -166,8 +166,13 @@ def main():
 
     saved_onnx = False
 
-    # torch.set_printoptions(profile='full', precision=2,
-    #                        sci_mode=False, linewidth=180)
+    if torch.cuda.device_count() > 1:
+        # TODO: Try to get DataParallel to work properly
+        print(f"We have {torch.cuda.device_count()} GPUs")
+        reconstruct_model = torch.nn.DataParallel(reconstruct_model)
+
+    torch.set_printoptions(profile='full', precision=2,
+                           sci_mode=False, linewidth=180)
     print(f"Training Samples: {len(train_set)}")
     print(f"Validation Samples: {len(val_set)}")
 
@@ -178,7 +183,7 @@ def main():
         start_time = time.time()
         train_running_loss = 0.0
         train_count = 0
-        for _, (inputs, outputs) in enumerate(Bar(data_loaders['train'])):
+        for _, (inputs, outputs, x_lens, y_lens) in enumerate(Bar(data_loaders['train'])):
 
             if torch.cuda.is_available():
                 inputs = inputs.cuda()
@@ -190,12 +195,8 @@ def main():
             mask = torch.round(mask)
 
             pred = reconstruct_model(inputs, mask)
-            print(f"\npred: {pred.size()}\toutputs: {outputs.size()}\tmask: {mask.size()}")
-            pred_t = pred.permute(0, 2, 1)
-            # print(f"pred_t: {pred_t.size()}")
+            pred = reconstruct_model.fit_to_size(pred, sizes=y_lens)
 
-            pred = torch.nn.functional.interpolate(
-                pred_t, size=outputs.size(1)).permute(0, 2, 1)
             loss, loss_weights = loss_fn(pred, outputs, loss_weights=loss_weights)
 
             loss.backward()
@@ -232,9 +233,7 @@ def main():
             mask = mask_model(inputs)
             mask = torch.round(mask)
 
-            pred = reconstruct_model(
-                inputs, mask)
-
+            pred = reconstruct_model(inputs, mask)
 
             pred_t = pred.permute(0, 2, 1)
 

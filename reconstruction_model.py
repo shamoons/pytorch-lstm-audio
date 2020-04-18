@@ -175,34 +175,48 @@ class ReconstructionModel(torch.nn.Module):
             max_mask_len = 1
 
         outputs = torch.zeros((inp.size(0), max_mask_len, inp.size(2)), requires_grad=True).to(x.device)
-        print(f"\noutputs: {outputs.size()}\tmax_mask_len: {max_mask_len}")
+        # print(f"\noutputs: {outputs.size()}\tmax_mask_len: {max_mask_len}")
 
         left_input, left_start_indices, left_end_indices = self.get_side(
             mask, 'left', inp)
         right_input, right_start_indices, right_end_indices = self.get_side(
             mask, 'right', inp)
 
+        # left_predict_indices = left_end_indices + 2
+        # right_predict_indices = right_start_indices - 2
+        # left_predict_indices = left_predict_indices.cpu().numpy()
+        # right_predict_indices = right_predict_indices.cpu().numpy()
 
-        left_index = 0
+        # left_indexer = np.r_[tuple([np.s_[i:j] for (i, j) in zip(left_predict_indices, left_predict_indices + self.side_length)])]
+
+        # right_indexer = np.r_[tuple([np.s_[i:j] for (i, j) in zip(right_predict_indices - self.side_length, right_predict_indices)])]
+        # print(f"\n\nright_start_indices: {right_start_indices}\tright_end_indices: {right_end_indices}")
+        # print(right_predict_indices, "\n", *right_indexer)
+
         for l_index in range(max_mask_len // 2):
+            left_remain_input = torch.zeros(inp.size(0), self.side_length, inp.size(2)).to(mask.device)
+            right_remain_input = torch.zeros(inp.size(0), self.side_length, inp.size(2)).to(mask.device)
+
             # First, we need to identify which left and right element we are predicting
             # We are adding / subtracting 2 because the self.get_side returns the start / end
             # index for the part before / after the mask.
-            left_predict_indices = left_end_indices + 2
-            right_predict_indices = right_start_indices - 2
-            left_predict_indices = left_predict_indices.cpu().numpy()
-            right_predict_indices = right_predict_indices.cpu().numpy()
 
             # Next, we need to get the remain inputs. This is the portion that is to the
             # right / left of the predict index
-            left_remain_input = torch.zeros(inp.size(0), self.side_length, inp.size(2)).to(mask.device)
-            right_remain_input = torch.zeros(inp.size(0), self.side_length, inp.size(2)).to(mask.device)
-            
-            left_indexer = np.r_[tuple([np.s_[i:j] for (i,j) in zip(left_predict_indices,left_predict_indices + self.side_length)])]
+            for batch_index in range(len(mask)):
+                # + 2 because the left_start_indices is where the mask ends. Then +1 is what we want to predict, so +2 is after that
+                left_start = left_end_indices[batch_index] + 2 + l_index
+                left_end = left_start + self.side_length
+                left_end = min(left_end, inp[batch_index].size(0) - 1)
 
-            right_indexer = np.r_[tuple([np.s_[i:j] for (i,j) in zip(right_predict_indices - self.side_length,right_predict_indices)])]
-            left_remain_input = inp[:, left_indexer, :]
-            right_remain_input = inp[:, right_indexer, :]
+                right_start = left_start_indices[batch_index] - (2 + l_index)
+                right_start = max(right_start, 0)
+                right_end = right_start + self.side_length
+
+                # print(f"left_start: {left_start}\tleft_end: {left_end}\tright_start: {right_start}\tright_end: {right_end}\tinp[batch_index]: {inp[batch_index].size()}")
+
+                left_remain_input[batch_index][0:left_end - left_start] = inp[batch_index][left_start:left_end]
+                right_remain_input[batch_index][0:right_end - right_start] = inp[batch_index][right_start:right_end]
 
             # Do forward passes for left and right
             left_output = self.forward_step(left_input, 'left')
@@ -222,34 +236,30 @@ class ReconstructionModel(torch.nn.Module):
             for batch_index in range(len(mask)):
                 # We are doing this in a loop because each item of the batch has a different
                 # size
-                # left_index = left_predict_indices[batch_index] - 1
-                # right_index = right_predict_indices[batch_index] + 1
                 nonzeros = mask[batch_index].nonzero().flatten()
                 if nonzeros.size(0) == 0:
                     # In the event that our mask didn't find anything, skip this item
                     continue
 
-                right_index = nonzeros[-1] - nonzeros[0] - left_index
+                # print(batch_index, nonzeros, outputs[batch_index].size(0), l_index, outputs.size())
+                # In the case that there are multiple masked values, we may have to trim
+                right_index = min(nonzeros[-1] - nonzeros[0] - l_index, outputs[batch_index].size(0) - l_index - 1)
 
+                if l_index < right_index:
+                    # print(f"outputs[batch_index]: {outputs[batch_index].size()}\tleft_final[batch_index]: {left_final[batch_index].size()}\tright_final[batch_index]: {right_final[batch_index].size()}\tl_index: {l_index}\tright_index: {right_index}")
 
-                if left_index < right_index:
-                    # print(f"outputs[batch_index]: {outputs[batch_index].size()}\tleft_final[batch_index]: {left_final[batch_index].size()}\tleft_index: {left_index}\tright_index: {right_index}")
-
-                    outputs[batch_index][left_index] = left_final[batch_index]
+                    outputs[batch_index][l_index] = left_final[batch_index]
                     outputs[batch_index][right_index] = right_final[batch_index]
 
                     # Finally, we need to update each side inputs with the new outputs
                     left_input[batch_index] = torch.cat((left_input[batch_index], left_final[batch_index].unsqueeze(0)), 0)[1:, :]
                     right_input[batch_index] = torch.cat((right_final[batch_index].unsqueeze(0), right_input[batch_index]), 0)[:-1, :]
-                left_index += 1
-
 
             # print(torch.mean(right_input, 2))
             # print(torch.mean(left_final, 1))
             # quit()
 
         return outputs
-
 
         for l_index in range(max_mask_len // 2):
             left_indices_start = left_end_indices + 2
@@ -322,6 +332,7 @@ class ReconstructionModel(torch.nn.Module):
         Returns:
             [Tensor] -- [description]
         """
+        # print(inp.size())
         inputs = inp.clone().permute(0, 2, 1)
 
         autoencoded_out1 = self.autoencoder1(inputs)
@@ -415,8 +426,66 @@ class ReconstructionModel(torch.nn.Module):
                                     side_input.size(0):, :] = side_input
                     elif side == 'right':
                         side_inputs[batch_index,
-                                    :side_input.size(0), :] = side_input
+                                    : side_input.size(0), :] = side_input
         return side_inputs, start_indices, end_indices
+
+    def fit_to_size(self, pred, sizes):
+        """Shrinks or expands the prediction to the `size`
+
+        Arguments:
+            pred {Tensor} -- Tensor of predictions of shape: [BATCH x SEQ_LEN x CHANNELS]
+            sizes {list of str} -- List of sizes. Shape: [SEQ_LEN]
+
+        Returns:
+            {Tensor} -- Fit tensor to sequence length of size of shape: [BATCH x SEQ_LEN x CHANNELS]
+        """
+
+        max_length = max(sizes)
+        print(f"sizes: {len(sizes)}\tpred: {pred.size()}\tmax_length: {max_length}")
+
+        resized_pred = torch.zeros((pred.size(0), max_length, pred.size(2))).to(pred.device)
+        print(f"resized_pred: {resized_pred.size()}")
+
+        for batch_index in range(len(sizes)):
+            print(f"\n\nbatch_index: {batch_index}")
+            if pred[batch_index].size(0) < sizes[batch_index]:
+                # If the size we want is greater than the prediction, we need to pad it
+                print('PADDING')
+                resized_pred[batch_index][0:, :] = pred[batch_index]
+            elif pred[batch_index].size(0) > sizes[batch_index]:
+                # If our prediction is larger than the requested size, we need to interpolate
+                print('INTERPOLATE')
+                pred_t = pred[batch_index].unsqueeze(0).permute(0, 2, 1)  # Convert to BATCH x CHANNELS x SEQ_LEN
+                size = sizes[batch_index]
+
+                print(f"pred_t: {pred_t.size()}\t: size: {size}")
+                interpolated_pred = torch.nn.functional.interpolate(pred_t, size=size).permute(0, 2, 1).squeeze(0)
+                print(f"interpolated_pred: {interpolated_pred.size()}")
+                print(f"resized_pred[batch_index]: {resized_pred[batch_index].size()}")
+                resized_pred[batch_index, 0:interpolated_pred.size(0), :] = interpolated_pred
+            else:
+                resized_pred = pred
+                print('DO NOTHING')
+
+        return resized_pred
+
+        # if size > pred.size(1):
+        #     # If the size we want is greater than the prediction, we need to pad it
+        #     padded_pred = torch.zeros((pred.size(0), size, pred.size(2)))
+        #     padded_pred[:, 0:, ] = pred
+
+        #     print('PAD!')
+
+        #     return padded_pred
+
+        # if size < pred.size(1):
+        #     # If our prediction is larger than the requested size, we need to interpolate
+        #     # Convert to BATCH x CHANNELS x SEQ_LEN
+        #     pred_t = pred.permute(0, 2, 1)
+        #     pred = torch.nn.functional.interpolate(pred_t, size=size).permute(0, 2, 1)
+        #     print('INTERPOLATE!')
+
+        # return pred
 
     def model_summary(self, model):
         print("model_summary")

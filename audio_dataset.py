@@ -61,7 +61,6 @@ class AudioDataset(Dataset):
             self.corrupted_file_paths = self.corrupted_file_paths[0:tune]
             self.clean_file_paths = self.clean_file_paths[0:tune]
 
-
     def __len__(self):
         return min(len(self.corrupted_file_paths), 32e10)
 
@@ -91,16 +90,23 @@ class AudioDataset(Dataset):
 
             masked_output_spectrogram = mask_vector.unsqueeze(1) * output_spectrogram
             masked_output_spectrogram = masked_output_spectrogram[mask_vector != 0]
-            
+
             output_sliced = masked_output_spectrogram
 
         return input_spectrogram, output_sliced
 
 
-def pad_samples(batched_data):
+def pad_samples(batched_data, padding_value=0):
     (xx, yy) = zip(*batched_data)
 
-    xx_pad = pad_sequence(xx, batch_first=True, padding_value=0)
-    yy_pad = pad_sequence(yy, batch_first=True, padding_value=0)
+    x_lens = [len(x) for x in xx]
+    y_lens = [len(y) for y in yy]
 
-    return xx_pad, yy_pad
+    xx_pad = pad_sequence(xx, batch_first=True, padding_value=padding_value)
+    yy_pad = pad_sequence(yy, batch_first=True, padding_value=padding_value)
+
+    return xx_pad, yy_pad, x_lens, y_lens
+
+
+def pad_samples_audio(batched_data):
+    return pad_samples(batched_data, padding_value=-1)
