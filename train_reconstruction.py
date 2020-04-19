@@ -195,7 +195,9 @@ def main():
             mask = torch.round(mask)
 
             pred = reconstruct_model(inputs, mask)
+            print(f"\n\npred: {pred.size()}\toutputs: {outputs.size()}")
             pred = reconstruct_model.fit_to_size(pred, sizes=y_lens)
+            print(f"AFTER FIT pred: {pred.size()}")
 
             loss, loss_weights = loss_fn(pred, outputs, loss_weights=loss_weights)
 
@@ -222,10 +224,7 @@ def main():
         reconstruct_model.eval()
         val_running_loss = 0.0
         val_count = 0
-        for _, data in enumerate(data_loaders['val']):
-            inputs = data[0]
-            outputs = data[1]
-
+        for _, (inputs, outputs, x_lens, y_lens) in enumerate(data_loaders['val']):
             if torch.cuda.is_available():
                 inputs = inputs.cuda()
                 outputs = outputs.cuda()
@@ -234,11 +233,7 @@ def main():
             mask = torch.round(mask)
 
             pred = reconstruct_model(inputs, mask)
-
-            pred_t = pred.permute(0, 2, 1)
-
-            pred = torch.nn.functional.interpolate(
-                pred_t, size=outputs.size(1)).permute(0, 2, 1)
+            pred = reconstruct_model.fit_to_size(pred, sizes=y_lens)
 
             loss, _ = loss_fn(pred, outputs, loss_weights=0)
 

@@ -167,7 +167,8 @@ class ReconstructionModel(torch.nn.Module):
 
         # TODO: Consider using the mean mask length
         max_mask_len = torch.max(mask_sums).int().item()
-        # print(f"max_mask_len: {max_mask_len}")
+        # print(f"max_mask_len: {max_mask_len}\tmask_sums: {mask_sums.size()}")
+        # print(mask)
 
         if max_mask_len == 0:
             # Super weird edge case where the entire batch has no mask.
@@ -291,9 +292,11 @@ class ReconstructionModel(torch.nn.Module):
                 (right_output, right_remain_output), dim=1)
             right_final = self.final_layer(right_combined_output)
 
-            for batch_index in range(len(mask)):
-                outputs[:, left_indices_start[batch_index] - 1] = left_final
-                outputs[:, right_indices_end[batch_index] + 1] = right_final
+            # for batch_index in range(len(mask)):
+            # outputs[:, left_indices_start[batch_index] - 1] = left_final
+            # outputs[:, right_indices_end[batch_index] + 1] = right_final
+            outputs[:, l_index] = left_final
+            outputs[:-(1 + l_index)] = right_final
 
             left_input = torch.cat(
                 (left_input, left_output.unsqueeze(1)), 1)[:, 1:, :]
@@ -447,45 +450,22 @@ class ReconstructionModel(torch.nn.Module):
         print(f"resized_pred: {resized_pred.size()}")
 
         for batch_index in range(len(sizes)):
-            print(f"\n\nbatch_index: {batch_index}")
-            if pred[batch_index].size(0) < sizes[batch_index]:
-                # If the size we want is greater than the prediction, we need to pad it
-                print('PADDING')
-                resized_pred[batch_index][0:, :] = pred[batch_index]
-            elif pred[batch_index].size(0) > sizes[batch_index]:
-                # If our prediction is larger than the requested size, we need to interpolate
-                print('INTERPOLATE')
+            if pred[batch_index].size(0) != sizes[batch_index]:
+                # If our prediction is larger or smaller than the requested size, we need to interpolate
                 pred_t = pred[batch_index].unsqueeze(0).permute(0, 2, 1)  # Convert to BATCH x CHANNELS x SEQ_LEN
                 size = sizes[batch_index]
 
-                print(f"pred_t: {pred_t.size()}\t: size: {size}")
+                # print(f"pred_t: {pred_t.size()}\t: size: {size}")
                 interpolated_pred = torch.nn.functional.interpolate(pred_t, size=size).permute(0, 2, 1).squeeze(0)
-                print(f"interpolated_pred: {interpolated_pred.size()}")
-                print(f"resized_pred[batch_index]: {resized_pred[batch_index].size()}")
-                resized_pred[batch_index, 0:interpolated_pred.size(0), :] = interpolated_pred
+                # print(f"interpolated_pred: {interpolated_pred.size()}")
+                # print(f"resized_pred[batch_index]: {resized_pred[batch_index].size()}")
+                resized_pred[batch_index, 0:size, :] = interpolated_pred
             else:
-                resized_pred = pred
+                print(f"batch_index: {batch_index}")
                 print('DO NOTHING')
+                resized_pred = pred
 
         return resized_pred
-
-        # if size > pred.size(1):
-        #     # If the size we want is greater than the prediction, we need to pad it
-        #     padded_pred = torch.zeros((pred.size(0), size, pred.size(2)))
-        #     padded_pred[:, 0:, ] = pred
-
-        #     print('PAD!')
-
-        #     return padded_pred
-
-        # if size < pred.size(1):
-        #     # If our prediction is larger than the requested size, we need to interpolate
-        #     # Convert to BATCH x CHANNELS x SEQ_LEN
-        #     pred_t = pred.permute(0, 2, 1)
-        #     pred = torch.nn.functional.interpolate(pred_t, size=size).permute(0, 2, 1)
-        #     print('INTERPOLATE!')
-
-        # return pred
 
     def model_summary(self, model):
         print("model_summary")
