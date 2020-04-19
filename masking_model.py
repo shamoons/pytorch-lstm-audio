@@ -3,7 +3,7 @@ import numpy as np
 
 
 class MaskingModel(torch.nn.Module):
-    def __init__(self, feature_dim, kernel_size, kernel_size_step, final_kernel_size, device, make_4d=False, dropout=0.01, verbose=False):
+    def __init__(self, kernel_size, kernel_size_step, final_kernel_size, device, make_4d=False, dropout=0.01, verbose=False, feature_dim=161):
         super(MaskingModel, self).__init__()
         self.make_4d = make_4d
         self.verbose = verbose
@@ -45,7 +45,6 @@ class MaskingModel(torch.nn.Module):
             ),
             torch.nn.Sigmoid()
         )
-
 
     def conv_layer(self, in_channels, kernel_size):
         return torch.nn.Sequential(
@@ -119,7 +118,6 @@ class MaskingModel(torch.nn.Module):
         if self.verbose:
             print('\nout\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
                 torch.mean(out), torch.std(out), torch.min(out), torch.max(out), out.size()))
-        
 
         if self.make_4d:
             out = out.reshape(out.size(0), 1, out.size(1))

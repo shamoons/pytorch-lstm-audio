@@ -207,7 +207,10 @@ def main():
 
             pred = reconstruct_model(inputs, mask)
             # print(f"\n\npred: {pred.size()}\toutputs: {outputs.size()}")
+
             pred = reconstruct_model.fit_to_size(pred, sizes=y_lens)
+            # print(f"OUTPUT MEAN ({outputs.size()})")
+            # print(torch.mean(outputs, dim=2))
             # print(f"AFTER FIT pred: {pred.size()}")
 
             loss, loss_weights = loss_fn(pred, outputs, loss_weights=loss_weights)

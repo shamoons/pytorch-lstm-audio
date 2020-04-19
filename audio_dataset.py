@@ -107,4 +107,4 @@ def pad_samples(batched_data, padding_value=0):
 
 
 def pad_samples_audio(batched_data):
-    return pad_samples(batched_data, padding_value=-1)
+    return pad_samples(batched_data, padding_value=0)

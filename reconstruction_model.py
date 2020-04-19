@@ -1,3 +1,4 @@
+import math
 import torch
 import numpy as np
 from taylor_activation import TaylorActivation
@@ -175,7 +176,7 @@ class ReconstructionModel(torch.nn.Module):
             # In this case, return a tensor of SEQ_LEN=1
             max_mask_len = 1
 
-        outputs = torch.zeros((inp.size(0), max_mask_len, inp.size(2)), requires_grad=True).to(x.device)
+        outputs = torch.empty((inp.size(0), max_mask_len, inp.size(2))).to(x.device).fill_(-1)
         # print(f"\noutputs: {outputs.size()}\tmax_mask_len: {max_mask_len}")
 
         left_input, left_start_indices, left_end_indices = self.get_side(
@@ -183,18 +184,7 @@ class ReconstructionModel(torch.nn.Module):
         right_input, right_start_indices, right_end_indices = self.get_side(
             mask, 'right', inp)
 
-        # left_predict_indices = left_end_indices + 2
-        # right_predict_indices = right_start_indices - 2
-        # left_predict_indices = left_predict_indices.cpu().numpy()
-        # right_predict_indices = right_predict_indices.cpu().numpy()
-
-        # left_indexer = np.r_[tuple([np.s_[i:j] for (i, j) in zip(left_predict_indices, left_predict_indices + self.side_length)])]
-
-        # right_indexer = np.r_[tuple([np.s_[i:j] for (i, j) in zip(right_predict_indices - self.side_length, right_predict_indices)])]
-        # print(f"\n\nright_start_indices: {right_start_indices}\tright_end_indices: {right_end_indices}")
-        # print(right_predict_indices, "\n", *right_indexer)
-
-        for l_index in range(max_mask_len // 2):
+        for l_index in range(math.ceil(max_mask_len / 2)):
             left_remain_input = torch.zeros(inp.size(0), self.side_length, inp.size(2)).to(mask.device)
             right_remain_input = torch.zeros(inp.size(0), self.side_length, inp.size(2)).to(mask.device)
 
@@ -246,11 +236,13 @@ class ReconstructionModel(torch.nn.Module):
                 # In the case that there are multiple masked values, we may have to trim
                 right_index = min(nonzeros[-1] - nonzeros[0] - l_index, outputs[batch_index].size(0) - l_index - 1)
 
-                if l_index < right_index:
-                    # print(f"outputs[batch_index]: {outputs[batch_index].size()}\tleft_final[batch_index]: {left_final[batch_index].size()}\tright_final[batch_index]: {right_final[batch_index].size()}\tl_index: {l_index}\tright_index: {right_index}")
+                # if batch_index == 3:
+                #     print(f"outputs[{batch_index}]: {outputs[batch_index].size()}\tl_index: {l_index}\tright_index: {right_index}")
 
-                    outputs[batch_index][l_index] = left_final[batch_index]
-                    outputs[batch_index][right_index] = right_final[batch_index]
+                if l_index <= right_index:
+
+                    outputs[batch_index, l_index, :] = left_final[batch_index]
+                    outputs[batch_index, right_index, :] = right_final[batch_index]
 
                     # Finally, we need to update each side inputs with the new outputs
                     left_input[batch_index] = torch.cat((left_input[batch_index], left_final[batch_index].unsqueeze(0)), 0)[1:, :]
@@ -259,6 +251,8 @@ class ReconstructionModel(torch.nn.Module):
             # print(torch.mean(right_input, 2))
             # print(torch.mean(left_final, 1))
             # quit()
+        # print(torch.mean(outputs[0], dim=1))
+        # quit()
 
         return outputs
 
@@ -381,25 +375,36 @@ class ReconstructionModel(torch.nn.Module):
         """
 
         max_length = max(sizes)
-        # print(f"sizes: {len(sizes)}\tpred: {pred.size()}\tmax_length: {max_length}")
+        # print(f"\n\nmax_length: {max_length}")
 
         resized_pred = torch.zeros((pred.size(0), max_length, pred.size(2))).to(pred.device)
-        # print(f"resized_pred: {resized_pred.size()}")
 
+        # print(f"PRED ({pred.size()})")
+        # print(torch.mean(pred, dim=2))
         for batch_index in range(len(sizes)):
-            if pred[batch_index].size(0) != sizes[batch_index]:
+
+            first_nonzero_index = (torch.mean(pred[batch_index], dim=1) == -1).nonzero()
+            if first_nonzero_index.size(0) == 0:
+                # No need to rescale
+                pred_part = pred[batch_index]
+            else:
+                first_nonzero_index = first_nonzero_index.flatten()[0]
+                pred_part = pred[batch_index][0:first_nonzero_index]
+            # print(f"\tBatch: {batch_index}\tpred_part: {pred_part.size()}")
+            if pred_part.size(0) != sizes[batch_index]:
                 # If our prediction is larger or smaller than the requested size, we need to interpolate
-                pred_t = pred[batch_index].unsqueeze(0).permute(0, 2, 1)  # Convert to BATCH x CHANNELS x SEQ_LEN
+                pred_t = pred_part.unsqueeze(0).permute(0, 2, 1)  # Convert to BATCH x CHANNELS x SEQ_LEN
                 size = sizes[batch_index]
 
                 # print(f"pred_t: {pred_t.size()}\t: size: {size}")
                 interpolated_pred = torch.nn.functional.interpolate(pred_t, size=size).permute(0, 2, 1).squeeze(0)
                 # print(f"interpolated_pred: {interpolated_pred.size()}")
                 # print(f"resized_pred[batch_index]: {resized_pred[batch_index].size()}")
-                resized_pred[batch_index, 0:size, :] = interpolated_pred
+                resized_pred[batch_index, 0: size, :] = interpolated_pred
             else:
-                # print(f"batch_index: {batch_index}")
-                resized_pred = pred
+                resized_pred[batch_index] = pred_part
+        # print(f"RESIZED ({resized_pred.size()})")
+        # print(torch.mean(resized_pred, dim=2))
 
         return resized_pred
 
