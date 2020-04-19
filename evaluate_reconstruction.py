@@ -33,36 +33,24 @@ def parse_args():
 
     return args
 
+
 def main():
+    torch.set_printoptions(profile='full', precision=5,
+                           sci_mode=False, linewidth=180)
+
     args = parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    device = torch.device("cpu") # TODO: Use CUDA when available
+    device = torch.device("cpu")  # TODO: Use CUDA when available
     mask_model = load_masking_model(args.mask_wandb, device)
     model = load_reconstruction_model(args.wandb, device)
 
-    # wandb_dir = list(glob.iglob(os.path.join(
-    #     'wandb', '*' + args.wandb), recursive=False))[0]
-    # model_path = os.path.join(wandb_dir, 'best-model.pt')
-    # saved_model_path = wandb_dir
-    # args_path = os.path.join(wandb_dir, 'args.json')
-    # saved_args = json.loads(open(args_path, 'r').read())
-
-    # sys.path.append(os.path.abspath(saved_model_path))
-    # model = importlib.import_module('saved_reconstruction_model').ReconstructionModel(
-    #     feature_dim=saved_args['feature_dim'], kernel_size=saved_args['kernel_size'], kernel_size_step=saved_args['kernel_size_step'])
-
-    # state_dict = torch.load(model_path, map_location=device)
-
-    # model.load_state_dict(state_dict)
-
-    # model = model.float()
-    # model.eval()
-
     filename_without_ext = Path(args.audio_path).stem
 
-    # clean_audio_path = re.sub(f'{pattern}[^/]+/', f'{pattern}clean/', args.audio_path)
+    pattern = 'dev-'
+    clean_audio_path = re.sub(f'{pattern}[^/]+/', f'{pattern}clean/', args.audio_path)
+    print(clean_audio_path)
 
     input_spectrogram, samples_length, sample_rate, n_fft, hop_length = load_audio_spectrogram(
         args.audio_path)
@@ -70,10 +58,8 @@ def main():
     input_spectrogram = input_spectrogram.view(
         1, input_spectrogram.size(0), input_spectrogram.size(1))
 
-
-    print('input_spectrogram\tMean: {:.4f} ± {:.4f}\tMin: {:.4f}\tMax: {:.4f}\tSize: {}'.format(torch.mean(input_spectrogram), torch.std(
+    print('input_spectrogram\tMean: {:.6f} ± {:.6f}\tMin: {:.6f}\tMax: {:.6f}\tSize: {}'.format(torch.mean(input_spectrogram), torch.std(
         input_spectrogram), torch.min(input_spectrogram), torch.max(input_spectrogram), input_spectrogram.size()))
-
 
     if str(device) == 'cuda':
         mask_model.cuda()
@@ -86,25 +72,15 @@ def main():
 
     # Model takes data of shape: torch.Size([BATCH_SIZE, SEQUENCE_LENGTH, FEATURE_DIM])
     pred = model(input_spectrogram, mask)
-
-    print(f"pred: {pred.size()}\tmask: {mask_sum}\tmask size: {mask.size()}")
-
-    pred_t = pred.permute(0, 2, 1)
-
-    pred = torch.nn.functional.interpolate(pred_t, size=mask_sum.item()).permute(0, 2, 1)
+    pred = model.fit_to_size(pred, torch.sum(mask, 1).int().tolist())
 
     output = input_spectrogram
-    print(f"pred: {pred.size()}\tmask: {mask.size()}\toutput: {output.size()}")
     output[mask == 1] = pred
-    
-    torch.set_printoptions(profile='full', precision=3,
-                           sci_mode=False, linewidth=180)
 
-
-    print('pred\t\tMean: {:.4f} ± {:.4f}\tMin: {:.4f}\tMax: {:.4f}\tSize: {}'.format(
+    print('pred\t\tMean: {:.6f} ± {:.6f}\tMin: {:.6f}\tMax: {:.6f}\tSize: {}'.format(
         torch.mean(pred), torch.std(pred), torch.min(pred), torch.max(pred), pred.size()))
 
-    print('model output\t\tMean: {:.4f} ± {:.4f}\tMin: {:.4f}\tMax: {:.4f}\tSize: {}'.format(
+    print('spect output\t\tMean: {:.6f} ± {:.6f}\tMin: {:.6f}\tMax: {:.6f}\tSize: {}'.format(
         torch.mean(output), torch.std(output), torch.min(output), torch.max(output), output.size()))
 
     # diff = torch.abs(output - input_spectrogram)
@@ -112,7 +88,6 @@ def main():
     output = torch.expm1(output)
     # print('expm1 output\t\tMean: {:.4f} ± {:.4f}\tMin: {:.4f}\tMax: {:.4f}\tSize: {}'.format(
     #     torch.mean(output), torch.std(output), torch.min(output), torch.max(output), output.size()))
-
 
     # print('Input')
     # print(torch.mean(input_spectrogram, 2)[0])

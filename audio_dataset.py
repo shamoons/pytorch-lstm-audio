@@ -1,7 +1,5 @@
 import glob
-import random
 import torch
-import math
 import numpy as np
 import os.path as path
 from sklearn.model_selection import train_test_split
@@ -11,10 +9,9 @@ from utils.audio_util import load_audio_spectrogram
 
 
 class AudioDataset(Dataset):
-    def __init__(self, corrupted_paths, mask, feature_dim=5, train_set=False, test_set=False, normalize=False, tune=0):
+    def __init__(self, corrupted_paths, mask, train_set=False, test_set=False, normalize=False, tune=0):
         torch.manual_seed(0)
 
-        self.feature_dim = feature_dim
         self.normalize = normalize
         self.mask = mask
         self.corrupted_file_paths = []
@@ -61,6 +58,8 @@ class AudioDataset(Dataset):
             self.corrupted_file_paths = self.corrupted_file_paths[0:tune]
             self.clean_file_paths = self.clean_file_paths[0:tune]
 
+            print(self.corrupted_file_paths)
+
     def __len__(self):
         return min(len(self.corrupted_file_paths), 32e10)
 
@@ -84,7 +83,6 @@ class AudioDataset(Dataset):
             clean_file_path = self.clean_file_paths[index]
             # clean_file_path = '/home/shamoon/speech-enhancement-asr/data/LibriSpeech/dev-clean/84/121123/84-121123-0001.flac'
 
-            # print(corrupted_file_path, clean_file_path)
             output_spectrogram, _, _, _, _ = load_audio_spectrogram(
                 clean_file_path, normalize_spect=self.normalize)
 

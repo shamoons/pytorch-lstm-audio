@@ -36,7 +36,7 @@ def load_masking_model(wandb_id, device, make_4d=False):
     return model
 
 
-def load_reconstruction_model(wandb_id, device, make_4d=False):
+def load_reconstruction_model(wandb_id, device):
     wandb_dir = list(glob.iglob(
         path.join('wandb', '*' + wandb_id), recursive=False))[0]
     model_path = path.join(wandb_dir, 'best-model.pt')
@@ -53,7 +53,7 @@ def load_reconstruction_model(wandb_id, device, make_4d=False):
     model_spec = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(model_spec)
 
-    model = model_spec.ReconstructionModel(feature_dim=masked_args['feature_dim'], kernel_size=masked_args['kernel_size'], kernel_size_step=masked_args['kernel_size_step'])
+    model = model_spec.ReconstructionModel(kernel_size=masked_args['kernel_size'], kernel_size_step=masked_args['kernel_size_step'])
 
     state_dict = torch.load(model_path, map_location=device)
 

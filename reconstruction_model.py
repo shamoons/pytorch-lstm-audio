@@ -262,69 +262,6 @@ class ReconstructionModel(torch.nn.Module):
 
         return outputs
 
-        for l_index in range(max_mask_len // 2):
-            left_indices_start = left_end_indices + 2
-            left_indices_end = left_indices_start + self.side_length
-
-            right_indices_end = right_start_indices - 2
-            right_indices_start = right_indices_end - self.side_length
-
-            left_remain_input = torch.empty(
-                inp.size(0), self.side_length, inp.size(2)).to(mask.device)
-            right_remain_input = torch.empty(
-                inp.size(0), self.side_length, inp.size(2)).to(mask.device)
-            for batch_index in range(len(mask)):
-                left_remain_input[batch_index] = inp[batch_index, left_indices_start[batch_index].item(
-                ):left_indices_end[batch_index].item()]
-
-                right_remain_input[batch_index] = inp[batch_index, right_indices_start[batch_index].item(
-                ):right_indices_end[batch_index].item()]
-
-            left_output = self.forward_step(left_input, 'left')
-            left_remain_output = self.forward_step(left_remain_input, 'right')
-            left_combined_output = torch.cat(
-                (left_output, left_remain_output), dim=1)
-            left_final = self.final_layer(left_combined_output)
-
-            right_output = self.forward_step(right_input, 'right')
-            right_remain_output = self.forward_step(right_remain_input, 'left')
-            right_combined_output = torch.cat(
-                (right_output, right_remain_output), dim=1)
-            right_final = self.final_layer(right_combined_output)
-
-            # for batch_index in range(len(mask)):
-            # outputs[:, left_indices_start[batch_index] - 1] = left_final
-            # outputs[:, right_indices_end[batch_index] + 1] = right_final
-            outputs[:, l_index] = left_final
-            outputs[:-(1 + l_index)] = right_final
-
-            left_input = torch.cat(
-                (left_input, left_output.unsqueeze(1)), 1)[:, 1:, :]
-
-            right_input = torch.cat(
-                (right_output.unsqueeze(1), right_input), 1)[:, :-1, :]
-
-            # for batch_index in range(inp.size(0)):
-            #     batch_mask = mask[batch_index]
-            #     batch_out = outputs[batch_index]
-            #     batch_mask_sum = torch.sum(batch_mask).int()
-
-            #     if batch_mask_sum == 0:
-            #         continue
-
-            #     # Converts to [1 x CHANNELS x SEQ]
-            #     batch_out_t = batch_out.permute(1, 0).unsqueeze(0)
-
-            #     # Interpolate down to the largest mask that we have in this batch
-            #     batch_out_t = torch.nn.functional.interpolate(
-            #         batch_out_t, size=batch_mask_sum.item())
-
-            #     # Convert back to [SEQ x CHANNELS]
-            #     batch_out = torch.squeeze(batch_out_t, dim=0).permute(1, 0)
-            #     inp[batch_index][batch_mask == 1] = batch_out
-
-        return outputs
-
     def forward_step(self, inp, side):
         """Forward steps for a particular input
 
@@ -444,10 +381,10 @@ class ReconstructionModel(torch.nn.Module):
         """
 
         max_length = max(sizes)
-        print(f"sizes: {len(sizes)}\tpred: {pred.size()}\tmax_length: {max_length}")
+        # print(f"sizes: {len(sizes)}\tpred: {pred.size()}\tmax_length: {max_length}")
 
         resized_pred = torch.zeros((pred.size(0), max_length, pred.size(2))).to(pred.device)
-        print(f"resized_pred: {resized_pred.size()}")
+        # print(f"resized_pred: {resized_pred.size()}")
 
         for batch_index in range(len(sizes)):
             if pred[batch_index].size(0) != sizes[batch_index]:
@@ -461,8 +398,7 @@ class ReconstructionModel(torch.nn.Module):
                 # print(f"resized_pred[batch_index]: {resized_pred[batch_index].size()}")
                 resized_pred[batch_index, 0:size, :] = interpolated_pred
             else:
-                print(f"batch_index: {batch_index}")
-                print('DO NOTHING')
+                # print(f"batch_index: {batch_index}")
                 resized_pred = pred
 
         return resized_pred

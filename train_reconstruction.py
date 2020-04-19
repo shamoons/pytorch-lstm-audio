@@ -70,6 +70,8 @@ def parse_args():
 
     parser.add_argument('--tune', default=0, type=int, help='Minimize samples to this amount for tuning')
 
+    parser.add_argument('--no-val', action='store_true', help='If true, do not use a validation set')
+
     args = parser.parse_args()
 
     return args
@@ -129,9 +131,18 @@ def main():
 
     audio_paths = args.audio_paths.strip().split(',')
 
-    train_set = AudioDataset(audio_paths, train_set=True, feature_dim=args.feature_dim, normalize=False, mask=False, tune=args.tune)
+    train_set = AudioDataset(audio_paths, train_set=True, normalize=False, mask=False, tune=args.tune)
 
-    val_set = AudioDataset(audio_paths, test_set=True, feature_dim=args.feature_dim, normalize=False, mask=False, tune=args.tune)
+    if args.no_val:
+        # No validation, so use the same training set
+        test_set_val = False
+        train_set_val = True
+        print("Not using a validation set.")
+    else:
+        test_set_val = True
+        train_set_val = False
+
+    val_set = AudioDataset(audio_paths, test_set=test_set_val, train_set=train_set_val, normalize=False, mask=False, tune=args.tune)
 
     train_loader = torch.utils.data.DataLoader(
         train_set, shuffle=True, batch_size=args.batch_size, num_workers=args.num_workers, collate_fn=pad_samples_audio, **params)
@@ -195,9 +206,9 @@ def main():
             mask = torch.round(mask)
 
             pred = reconstruct_model(inputs, mask)
-            print(f"\n\npred: {pred.size()}\toutputs: {outputs.size()}")
+            # print(f"\n\npred: {pred.size()}\toutputs: {outputs.size()}")
             pred = reconstruct_model.fit_to_size(pred, sizes=y_lens)
-            print(f"AFTER FIT pred: {pred.size()}")
+            # print(f"AFTER FIT pred: {pred.size()}")
 
             loss, loss_weights = loss_fn(pred, outputs, loss_weights=loss_weights)
 
