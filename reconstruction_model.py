@@ -2,7 +2,7 @@ import torch
 
 
 class ReconstructionModel(torch.nn.Module):
-    def __init__(self, feature_dim = 161, kernel_size = 25, kernel_size_step = -4, final_kernel_size = 25, make_4d=False, dropout=0.01, verbose=False):
+    def __init__(self, feature_dim=161, kernel_size=25, kernel_size_step=-4, final_kernel_size=25, make_4d=False, dropout=0.01, verbose=False):
         super(ReconstructionModel, self).__init__()
         self.make_4d = make_4d
         self.verbose = verbose
@@ -11,7 +11,6 @@ class ReconstructionModel(torch.nn.Module):
 
         kernel_sizes = [kernel_size, kernel_size + kernel_size_step, kernel_size + 2 *
                         kernel_size_step, kernel_size + 3 * kernel_size_step, kernel_size + 4 * kernel_size_step, kernel_size + 5 * kernel_size_step]
-
 
         self.conv1 = self.conv_layer(in_channels=feature_dim, kernel_size=kernel_sizes[0])
         self.conv2 = self.conv_layer(in_channels=feature_dim, kernel_size=kernel_sizes[1])
@@ -84,7 +83,6 @@ class ReconstructionModel(torch.nn.Module):
             ),
             torch.nn.ReLU6()
         )
-
 
     def conv_layer(self, in_channels, kernel_size):
         return torch.nn.Sequential(
@@ -204,30 +202,40 @@ class ReconstructionModel(torch.nn.Module):
 
         return out
 
+    def get_param_size(self):
+        print(self.parameters())
+        params = 0
+        for p in model.parameters():
+            tmp = 1
+            for x in p.size():
+                tmp *= x
+            params += tmp
+        return params
+
     def model_summary(self, model):
         print("model_summary")
         print()
-        print("Layer_name"+"\t"*7+"Number of Parameters")
-        print("="*100)
+        print("Layer_name" + "\t" * 7 + "Number of Parameters")
+        print("=" * 100)
         model_parameters = [layer for layer in model.parameters() if layer.requires_grad]
         layer_name = [child for child in model.children()]
         j = 0
         total_params = 0
-        print("\t"*10)
+        print("\t" * 10)
         for i in layer_name:
             print()
             param = 0
             try:
                 bias = (i.bias is not None)
             except:
-                bias = False  
+                bias = False
             if not bias:
-                param =model_parameters[j].numel()+model_parameters[j+1].numel()
-                j = j+2
+                param = model_parameters[j].numel() + model_parameters[j + 1].numel()
+                j = j + 2
             else:
-                param =model_parameters[j].numel()
-                j = j+1
-            print(str(i)+"\t"*3+str(param))
-            total_params+=param
-        print("="*100)
-        print(f"Total Params:{total_params}")  
+                param = model_parameters[j].numel()
+                j = j + 1
+            print(str(i) + "\t" * 3 + str(param))
+            total_params += param
+        print("=" * 100)
+        print(f"Total Params:{total_params}")
