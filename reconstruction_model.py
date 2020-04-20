@@ -37,18 +37,18 @@ class ReconstructionModel(torch.nn.Module):
 
         for side in self.SIDES:
             self.linear[side] = torch.nn.Sequential(
-                torch.nn.Linear(self.FEATURE_DIM // 16,
-                                (self.FEATURE_DIM // 16 + self.FEATURE_DIM) // 2),
+                torch.nn.Linear(self.FEATURE_DIM // 8,
+                                (self.FEATURE_DIM // 8 + self.FEATURE_DIM) // 2),
                 TaylorActivation(),
                 torch.nn.Linear(
-                    (self.FEATURE_DIM // 16 + self.FEATURE_DIM) // 2, self.FEATURE_DIM),
+                    (self.FEATURE_DIM // 8 + self.FEATURE_DIM) // 2, self.FEATURE_DIM),
                 TaylorActivation()
             )
 
             self.downscale_time_conv[side] = torch.nn.Sequential(
                 torch.nn.Conv1d(
-                    in_channels=self.FEATURE_DIM // 16,
-                    out_channels=self.FEATURE_DIM // 16,
+                    in_channels=self.FEATURE_DIM // 8,
+                    out_channels=self.FEATURE_DIM // 8,
                     kernel_size=2,
                     stride=1,
                     dilation=1,
@@ -56,8 +56,8 @@ class ReconstructionModel(torch.nn.Module):
                 ),
                 TaylorActivation(),
                 torch.nn.Conv1d(
-                    in_channels=self.FEATURE_DIM // 16,
-                    out_channels=self.FEATURE_DIM // 16,
+                    in_channels=self.FEATURE_DIM // 8,
+                    out_channels=self.FEATURE_DIM // 8,
                     kernel_size=2,
                     stride=1,
                     dilation=2,
@@ -65,8 +65,8 @@ class ReconstructionModel(torch.nn.Module):
                 ),
                 TaylorActivation(),
                 torch.nn.Conv1d(
-                    in_channels=self.FEATURE_DIM // 16,
-                    out_channels=self.FEATURE_DIM // 16,
+                    in_channels=self.FEATURE_DIM // 8,
+                    out_channels=self.FEATURE_DIM // 8,
                     kernel_size=2,
                     stride=1,
                     dilation=4,
@@ -74,8 +74,8 @@ class ReconstructionModel(torch.nn.Module):
                 ),
                 TaylorActivation(),
                 torch.nn.Conv1d(
-                    in_channels=self.FEATURE_DIM // 16,
-                    out_channels=self.FEATURE_DIM // 16,
+                    in_channels=self.FEATURE_DIM // 8,
+                    out_channels=self.FEATURE_DIM // 8,
                     kernel_size=2,
                     stride=1,
                     dilation=8,
@@ -83,8 +83,8 @@ class ReconstructionModel(torch.nn.Module):
                 ),
                 TaylorActivation(),
                 torch.nn.Conv1d(
-                    in_channels=self.FEATURE_DIM // 16,
-                    out_channels=self.FEATURE_DIM // 16,
+                    in_channels=self.FEATURE_DIM // 8,
+                    out_channels=self.FEATURE_DIM // 8,
                     kernel_size=2,
                     stride=1,
                     dilation=16,
@@ -96,7 +96,7 @@ class ReconstructionModel(torch.nn.Module):
 
     def autoencoder1(self, inputs):
         out_summed = torch.zeros((inputs.size(0), inputs.size(
-            1) // 16, inputs.size(2))).to(inputs.device)
+            1) // 8, inputs.size(2))).to(inputs.device)
 
         for key in self.autoencoder1_layer:
             out = self.autoencoder1_layer[key](inputs)
@@ -125,6 +125,14 @@ class ReconstructionModel(torch.nn.Module):
         return torch.nn.Sequential(
             torch.nn.Conv1d(
                 in_channels=in_channels,
+                out_channels=in_channels,
+                kernel_size=kernel_size,
+                stride=1,
+                padding=kernel_size // 2
+            ),
+            TaylorActivation(),
+            torch.nn.Conv1d(
+                in_channels=in_channels,
                 out_channels=in_channels // 2,
                 kernel_size=kernel_size,
                 stride=1,
@@ -142,14 +150,6 @@ class ReconstructionModel(torch.nn.Module):
             torch.nn.Conv1d(
                 in_channels=in_channels // 4,
                 out_channels=in_channels // 8,
-                kernel_size=kernel_size,
-                stride=1,
-                padding=kernel_size // 2
-            ),
-            TaylorActivation(),
-            torch.nn.Conv1d(
-                in_channels=in_channels // 8,
-                out_channels=in_channels // 16,
                 kernel_size=kernel_size,
                 stride=1,
                 padding=kernel_size // 2
@@ -378,32 +378,36 @@ class ReconstructionModel(torch.nn.Module):
         # print(f"\n\nmax_length: {max_length}")
 
         resized_pred = torch.zeros((pred.size(0), max_length, pred.size(2))).to(pred.device)
+        # print(f"RESIZED ({resized_pred.size()})")
 
         # print(f"PRED ({pred.size()})")
         # print(torch.mean(pred, dim=2))
         for batch_index in range(len(sizes)):
-
+            size = sizes[batch_index]
             first_nonzero_index = (torch.mean(pred[batch_index], dim=1) == -1).nonzero()
             if first_nonzero_index.size(0) == 0:
                 # No need to rescale
                 pred_part = pred[batch_index]
             else:
                 first_nonzero_index = first_nonzero_index.flatten()[0]
+
+                if first_nonzero_index == 0:
+                    # If the first element is -1, it means there was no prediction, maybe due to no masking?
+                    continue
+
                 pred_part = pred[batch_index][0:first_nonzero_index]
-            # print(f"\tBatch: {batch_index}\tpred_part: {pred_part.size()}")
+            # print(f"\tBatch: {batch_index}\tpred_part: {pred_part.size()}\tsizes[batch_index]: {sizes[batch_index]}\tfirst_nonzero_index: {first_nonzero_index}")
             if pred_part.size(0) != sizes[batch_index]:
                 # If our prediction is larger or smaller than the requested size, we need to interpolate
                 pred_t = pred_part.unsqueeze(0).permute(0, 2, 1)  # Convert to BATCH x CHANNELS x SEQ_LEN
-                size = sizes[batch_index]
 
                 # print(f"pred_t: {pred_t.size()}\t: size: {size}")
-                interpolated_pred = torch.nn.functional.interpolate(pred_t, size=size).permute(0, 2, 1).squeeze(0)
+                pred_part = torch.nn.functional.interpolate(pred_t, size=size).permute(0, 2, 1).squeeze(0)
                 # print(f"interpolated_pred: {interpolated_pred.size()}")
-                # print(f"resized_pred[batch_index]: {resized_pred[batch_index].size()}")
-                resized_pred[batch_index, 0: size, :] = interpolated_pred
-            else:
-                resized_pred[batch_index] = pred_part
-        # print(f"RESIZED ({resized_pred.size()})")
+            # print(f"resized_pred[batch_index]: {resized_pred[batch_index].size()}")
+
+            resized_pred[batch_index, 0:size] = pred_part
+
         # print(torch.mean(resized_pred, dim=2))
 
         return resized_pred

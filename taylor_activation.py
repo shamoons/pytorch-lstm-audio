@@ -1,6 +1,7 @@
 import torch
 import math
 
+
 class TaylorActivation(torch.nn.Module):
     '''
     Implementation of taylor polynomial activation function
@@ -26,7 +27,7 @@ class TaylorActivation(torch.nn.Module):
         '''
         super(TaylorActivation, self).__init__()
         # self.in_features = in_features
-        
+
         self.beta = torch.nn.Parameter(torch.Tensor([beta]))
 
         # initialize alpha
@@ -54,7 +55,7 @@ class TaylorActivation(torch.nn.Module):
         # print(f"PRE val: {val}")
 
         for d in range(len(self.alphas)):
-            val += (self.alphas[d] / math.factorial(d)) * (x - self.beta) ** d
+            val += self.alphas[d] * (x - self.beta) ** d
 
         # print(f"min: {val.min()}\tmean: {val.mean()}\tmax: {val.max()}")
 

@@ -24,9 +24,6 @@ def parse_args():
     parser.add_argument(
         '--mask_wandb', help='Path for the trained masking model', required=True)
 
-    parser.add_argument('--feature_dim', help='Feature dimension',
-                        type=int, default=161)
-
     parser.add_argument('--base_lr',
                         help='Base learning rate', type=float, default=0.004)
 
