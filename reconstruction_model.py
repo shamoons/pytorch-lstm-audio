@@ -413,41 +413,10 @@ class ReconstructionModel(torch.nn.Module):
         return resized_pred
 
     def get_param_size(self):
-        print(self.parameters())
         params = 0
-        for p in model.parameters():
+        for p in self.parameters():
             tmp = 1
             for x in p.size():
                 tmp *= x
             params += tmp
         return params
-
-    def model_summary(self, model):
-        print("model_summary")
-        print()
-        print("Layer_name" + "\t" * 7 + "Number of Parameters")
-        print("=" * 100)
-        model_parameters = [
-            layer for layer in model.parameters() if layer.requires_grad]
-        layer_name = [child for child in model.children()]
-        j = 0
-        total_params = 0
-        print("\t" * 10)
-        for i in layer_name:
-            print()
-            param = 0
-            try:
-                bias = (i.bias is not None)
-            except:
-                bias = False
-            if not bias:
-                param = model_parameters[j].numel(
-                ) + model_parameters[j + 1].numel()
-                j = j + 2
-            else:
-                param = model_parameters[j].numel()
-                j = j + 1
-            print(str(i) + "\t" * 3 + str(param))
-            total_params += param
-        print("=" * 100)
-        print(f"Total Params:{total_params}")

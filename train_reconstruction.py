@@ -184,6 +184,7 @@ def main():
     print(f"Training Samples: {len(train_set)}")
     print(f"Validation Samples: {len(val_set)}")
     print(f"Number of parameters: {reconstruct_model.get_param_size()}")
+    quit()
 
     loss_weights = 0
     for epoch in range(args.epochs):
