@@ -1,0 +1,44 @@
+program: train_reconstruction.py
+command:
+  - ${env}
+  - python
+  - ${program}
+  - "--epochs=15"
+  - "--audio_paths=data/dev-noise-subtractive-250ms-1,data/dev-noise-subtractive-250ms-1-gaussian"
+  - "--mask_wandb=3payol87"
+  - "--tune=512"
+  - "--batch_size=24"
+  - "--no-val"
+  - ${args}
+method: bayes
+metric:
+  name: val_loss
+  goal: minimize
+parameters:
+  base_lr:
+    distribution: q_uniform
+    min: 1e-6
+    max: 1e-2
+    q: 1e-6
+  weight_decay:
+    distribution: q_uniform
+    min: 0
+    max: 1e-2
+    q: 1e-6
+  dropout:
+    distribution: q_uniform
+    min: 0
+    max: 0.75
+    q: 0.01
+  side_length:
+    distribution: int_uniform
+    min: 36
+    max: 56
+  learning-anneal:
+    distribution: q_uniform
+    min: 1
+    max: 2
+    q: 0.01
+  kernel_size_step:
+    distribution: categorical
+    values: [-4, -2]
