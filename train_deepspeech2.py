@@ -286,8 +286,8 @@ def main():
         print("Shuffling batches for the following epochs")
         train_sampler.shuffle(start_epoch)
 
-    reconstruct_model = ReconstructionModel(feature_dim=161, make_4d=True)
-    mask_model = load_masking_model(args.mask_wandb, device, make_4d=True)
+    reconstruct_model = ReconstructionModel(feature_dim=161)
+    mask_model = load_masking_model(args.mask_wandb, device)
 
     # if args.initialize_baseline:
     #     print('Initializing Baseline:', args.initialize_baseline)
@@ -326,25 +326,58 @@ def main():
             if args.cuda:
                 inputs = inputs.cuda()
 
-            # print('Input', inputs.size(), inputs.min(), inputs.mean(), inputs.max())
-            mask = mask_model(inputs)
+            squeezed_inputs = torch.squeeze(inputs, 1).permute(0, 2, 1)
+            print(f"squeezed_inputs: {squeezed_inputs.size()}")
+            mask = mask_model(squeezed_inputs)
             mask = torch.round(mask)
 
-            expanded_mask = mask_model.expand_mask(mask, seq_length=inputs.size(3))
+            pred = reconstruct_model(squeezed_inputs, mask)
+            
+            print(f"POST INTERPOLATE pred: {pred.size()}")
+            torch.set_printoptions(profile='full', precision=3,
+                           sci_mode=False, linewidth=180)
+            reconstruct_output_list = []
+            for idx, mask_batch in enumerate(mask):
+                mask_sum = torch.sum(mask_batch).int()
+                inps_batch = torch.squeeze(inputs, 1)[idx]
+                pred_batch = pred[idx]
+                pred_t = pred_batch.unsqueeze(0)
 
-            # print('Mask', mask.size(), mask.min(), mask.mean(), mask.max())
-            # print('ExpandedMask', expanded_mask.size(), expanded_mask.min(), expanded_mask.mean(), expanded_mask.max())
-            masked_inputs = inputs * expanded_mask.unsqueeze(2)
+                print(f"pred_batch: {pred_batch.size()}\tpred_t: {pred_t.size()}")
 
-            # print('masked_inputs', masked_inputs.size(), masked_inputs.min(), masked_inputs.mean(), masked_inputs.max())
+                pred_batch = torch.nn.functional.interpolate(pred_t, size=mask_sum.item()).squeeze(0).permute(0, 1)
+                print(f"pred_batch: {pred_batch.size()}")
+
+                reconstruct_output = inps_batch
+                print(f"reconstruct_output unsqueezed: {reconstruct_output.size()}")
+
+                reconstruct_output[mask_batch == 1] = pred_batch
+                # reconstruct_output = reconstruct_output.unsqueeze(1)
+                
+                reconstruct_output_list.append(reconstruct_output)
+            reconstruct_output = torch.stack(reconstruct_output)
+                
+
+
+            # # print('Input', inputs.size(), inputs.min(), inputs.mean(), inputs.max())
+            # mask = mask_model(inputs)
+            # mask = torch.round(mask)
+
+            # expanded_mask = mask_model.expand_mask(mask, seq_length=inputs.size(3))
+
+            # # print('Mask', mask.size(), mask.min(), mask.mean(), mask.max())
+            # # print('ExpandedMask', expanded_mask.size(), expanded_mask.min(), expanded_mask.mean(), expanded_mask.max())
+            # masked_inputs = inputs * expanded_mask.unsqueeze(2)
+
+            # # print('masked_inputs', masked_inputs.size(), masked_inputs.min(), masked_inputs.mean(), masked_inputs.max())
+            # # quit()
+
+            # reconstruct_output = reconstruct_model(masked_inputs)
+            # I, _, L = torch.where(mask == 0)
+            # # print(I, L)
+            # reconstruct_output[I, ..., L] = inputs[I, ..., L]
             # quit()
-
-            reconstruct_output = reconstruct_model(masked_inputs)
-            I, _, L = torch.where(mask == 0)
-            # print(I, L)
-            reconstruct_output[I, ..., L] = inputs[I, ..., L]
-            # quit()
-            # print('reconstruct_output', reconstruct_output.size(), reconstruct_output.min(), reconstruct_output.mean(), reconstruct_output.max())
+            print('reconstruct_output', reconstruct_output.size(), reconstruct_output.min(), reconstruct_output.mean(), reconstruct_output.max())
 
             # reconstruct_output[mask == 0] = inputs[mask == 0]
 

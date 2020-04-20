@@ -13,6 +13,7 @@ import torch.optim as optim
 import wandb
 import json
 import time
+import re
 import numpy as np
 
 
@@ -20,7 +21,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        '--audio_path', help='Path for corrupted audio', required=True)
+        '--audio_paths', help='Path for corrupted audio', required=True)
 
     parser.add_argument('--feature_dim', help='Feature dimension',
                         type=int, default=161)
@@ -43,9 +44,6 @@ def parse_args():
 
     parser.add_argument('--batch_size', help='Batch size',
                         type=int, default=64)
-
-    parser.add_argument('--repeat_sample', help='How many times to sample each file',
-                        type=int, default=1)
 
     parser.add_argument('--num_workers', help='Number of workers for data_loaders',
                         type=int, default=4)
@@ -79,6 +77,13 @@ def initialize(args):
     wandb.save('*.onnx')
     np.random.seed(0)
 
+
+def hamming_distance(inp, target):
+    # For the binary case, hamming is equivalent to L1
+    fn = torch.nn.L1Loss(reduction='mean')
+    return fn(inp, target)
+
+
 def loss_fn(inp, target):
     fn = torch.nn.BCELoss(reduction='mean')
     raw_loss = fn(inp, target)
@@ -87,6 +92,7 @@ def loss_fn(inp, target):
     loss = raw_loss + rounded_loss
 
     return loss
+
 
 def main():
     args = parse_args()
@@ -103,11 +109,10 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     params = {'pin_memory': True} if device == 'cuda' else {}
 
-    train_set = AudioDataset(
-        args.audio_path, train_set=True, feature_dim=args.feature_dim, repeat_sample=args.repeat_sample, normalize=False, mask=True)
+    audio_paths = args.audio_paths.strip().split(',')
+    train_set = AudioDataset(audio_paths, train_set=True, normalize=False, mask=True)
 
-    val_set = AudioDataset(
-        args.audio_path, test_set=True, feature_dim=args.feature_dim, normalize=False, mask=True)
+    val_set = AudioDataset(audio_paths, test_set=True, normalize=False, mask=True)
 
     train_loader = torch.utils.data.DataLoader(
         train_set, shuffle=True, batch_size=args.batch_size, num_workers=args.num_workers, collate_fn=pad_samples, **params)
@@ -116,8 +121,7 @@ def main():
 
     data_loaders = {'train': train_loader, 'val': val_loader}
 
-    model = MaskingModel(feature_dim=args.feature_dim,
-                         verbose=args.verbose, kernel_size=args.kernel_size, kernel_size_step=args.kernel_size_step, final_kernel_size=args.final_kernel_size, device=device)
+    model = MaskingModel(verbose=args.verbose, kernel_size=args.kernel_size, kernel_size_step=args.kernel_size_step, final_kernel_size=args.final_kernel_size, device=device)
 
     if args.continue_from:
         state_dict = torch.load(args.continue_from, map_location=device)
@@ -139,7 +143,8 @@ def main():
     last_val_loss = current_best_validation_loss
 
     saved_onnx = False
-    torch.set_printoptions(profile='full', precision=3, sci_mode=False, linewidth=180)
+    torch.set_printoptions(profile='full', precision=3,
+                           sci_mode=False, linewidth=180)
 
     print(f"Training Samples: {len(train_set)}")
     print(f"Validation Samples: {len(val_set)}")
@@ -161,7 +166,7 @@ def main():
             optimizer.zero_grad()
 
             pred = model(inputs)
-            
+
             loss = loss_fn(pred, outputs)
 
             loss.backward()
@@ -183,12 +188,13 @@ def main():
             # print('\npred\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
             #     torch.mean(pred), torch.std(pred), torch.min(pred), torch.max(pred)))
 
-        print(pred[0])
-        print(outputs[0])
+        # print(pred[0])
+        # print(outputs[0])
 
         model.eval()
         val_running_loss = 0.0
         rounded_val_running_loss = 0.0
+        hamming_distance_running_loss = 0.0
         for _, data in enumerate(data_loaders['val']):
             inputs = data[0]
             outputs = data[1]
@@ -202,7 +208,10 @@ def main():
             loss = loss_fn(pred, outputs)
 
             val_running_loss += loss.data
-            rounded_val_running_loss += loss_fn(torch.round(pred), outputs).data
+            rounded_val_running_loss += loss_fn(
+                torch.round(pred), outputs).data
+            hamming_distance_running_loss = hamming_distance(
+                torch.round(pred), outputs).data
 
             # pred_rounded = torch.tensor(pred)
             # pred_rounded[pred_rounded < 0.5] = 0
@@ -215,16 +224,18 @@ def main():
         train_loss = train_running_loss / len(data_loaders['train'])
         val_loss = val_running_loss / len(data_loaders['val'])
         rounded_val_loss = rounded_val_running_loss / len(data_loaders['val'])
+        hamming_distance_loss = hamming_distance_running_loss / len(data_loaders['val'])
 
         wandb.log({
             "train_loss": train_loss,
             'val_loss': val_loss,
             'epoch': epoch,
             'sec_per_epoch': time_per_epoch,
-            'rounded_val_loss': rounded_val_loss
+            'rounded_val_loss': rounded_val_loss,
+            'hamming_distance': hamming_distance_loss
         })
 
-        print(f"Epoch: {epoch}\tLoss(t): {train_loss:.6g}\tLoss(v): {val_loss:.6g} (best: {current_best_validation_loss:.6g})\tRounded Loss (v): {rounded_val_loss:.6g}\tTime (epoch): {time_per_epoch:d}s")
+        print(f"Epoch: {epoch}\tLoss(t): {train_loss:.6g}\tLoss(v): {val_loss:.6g} (best: {current_best_validation_loss:.6g})\tRounded Loss (v): {rounded_val_loss:.6g}\tHamming Distance (v): {hamming_distance_loss:.6g}\t Time (epoch): {time_per_epoch:d}s")
 
         if val_loss < current_best_validation_loss:
             torch.save(model.state_dict(), path.join(
