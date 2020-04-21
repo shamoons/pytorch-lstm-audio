@@ -276,7 +276,7 @@ def main():
 
     train_sampler = BucketingSampler(
         train_dataset, batch_size=args.batch_size)
-    print('train_sampler', len(train_sampler), args.batch_size)
+    print('train_sampler', len(train_sampler))
     train_loader = AudioDataLoader(train_dataset,
                                    num_workers=args.num_workers, batch_sampler=train_sampler)
     test_loader = AudioDataLoader(test_dataset, batch_size=args.batch_size,
@@ -286,15 +286,13 @@ def main():
         print("Shuffling batches for the following epochs")
         train_sampler.shuffle(start_epoch)
 
-    reconstruct_model = ReconstructionModel(feature_dim=161)
+    reconstruct_model = ReconstructionModel()
     mask_model = load_masking_model(args.mask_wandb, device)
 
     # if args.initialize_baseline:
     #     print('Initializing Baseline:', args.initialize_baseline)
     #     baseline_state_dict = torch.load(args.initialize_baseline, map_location=device)
     #     baseline_m.load_state_dict(baseline_state_dict)
-
-    # model = torch.nn.Sequential(baseline_m, model)
 
     reconstruct_model = reconstruct_model.to(device)
     mask_model = mask_model.to(device)
@@ -327,37 +325,38 @@ def main():
                 inputs = inputs.cuda()
 
             squeezed_inputs = torch.squeeze(inputs, 1).permute(0, 2, 1)
+
+            torch.set_printoptions(profile='full', precision=3,
+                                   sci_mode=False, linewidth=180)
+
             print(f"squeezed_inputs: {squeezed_inputs.size()}")
             mask = mask_model(squeezed_inputs)
             mask = torch.round(mask)
-
+            print(mask[0], mask[0].size())
             pred = reconstruct_model(squeezed_inputs, mask)
-            
-            print(f"POST INTERPOLATE pred: {pred.size()}")
-            torch.set_printoptions(profile='full', precision=3,
-                           sci_mode=False, linewidth=180)
+
+            pred = reconstruct_model.fit_to_size(pred, sizes=torch.sum(mask, 1).int().tolist())
+
             reconstruct_output_list = []
-            for idx, mask_batch in enumerate(mask):
-                mask_sum = torch.sum(mask_batch).int()
-                inps_batch = torch.squeeze(inputs, 1)[idx]
-                pred_batch = pred[idx]
-                pred_t = pred_batch.unsqueeze(0)
-
-                print(f"pred_batch: {pred_batch.size()}\tpred_t: {pred_t.size()}")
-
-                pred_batch = torch.nn.functional.interpolate(pred_t, size=mask_sum.item()).squeeze(0).permute(0, 1)
+            for batch_index in range(len(mask)):
+                print('\n\n')
+                inps_batch = squeezed_inputs[batch_index].unsqueeze(0)
+                mask_batch = mask[batch_index].unsqueeze(0)
+                pred_batch = pred[batch_index].unsqueeze(0)
                 print(f"pred_batch: {pred_batch.size()}")
+                print(torch.sum(pred_batch, dim=2))
+                print(f"mask_batch: {mask_batch.size()}\t{mask_batch.sum()}")
+                print(mask_batch)
 
                 reconstruct_output = inps_batch
                 print(f"reconstruct_output unsqueezed: {reconstruct_output.size()}")
-
                 reconstruct_output[mask_batch == 1] = pred_batch
                 # reconstruct_output = reconstruct_output.unsqueeze(1)
-                
-                reconstruct_output_list.append(reconstruct_output)
-            reconstruct_output = torch.stack(reconstruct_output)
-                
 
+                reconstruct_output_list.append(reconstruct_output)
+            reconstruct_output = torch.stack(reconstruct_output_list)
+            print(f"reconstruct_output: {reconstruct_output.size()}")
+            quit()
 
             # # print('Input', inputs.size(), inputs.min(), inputs.mean(), inputs.max())
             # mask = mask_model(inputs)
@@ -388,7 +387,7 @@ def main():
 
             out, output_sizes = model(reconstruct_output, input_sizes)
 
-            decoded_output, decoded_offsets = decoder.decode(out, output_sizes)
+            # decoded_output, decoded_offsets = decoder.decode(out, output_sizes)
             # print(json.dumps(decode_results(decoded_output, decoded_offsets)))
 
             out = out.transpose(0, 1)  # TxNxH

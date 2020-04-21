@@ -1,7 +1,7 @@
 import torch
-import numpy as np
-from .utils.model_loader import load_masking_model, load_reconstruction_model
-from .utils.audio_util import convert_to_spectrogram, create_audio_from_spectrogram
+from ..utils.model_loader import load_masking_model, load_reconstruction_model
+from ..utils.audio_util import convert_to_spectrogram, create_audio_from_spectrogram
+
 
 class DeepRestore:
     def __init__(self, mask_wandb, reconstruct_wandb, device):
@@ -9,7 +9,7 @@ class DeepRestore:
 
         self.mask_model = load_masking_model(mask_wandb, device)
         self.reconstruct_model = load_reconstruction_model(reconstruct_wandb, device)
-    
+
     def enhance(self, audio_signal):
         input_spectrogram, n_fft, hop_length = convert_to_spectrogram(audio_signal)
 

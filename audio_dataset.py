@@ -47,33 +47,11 @@ class AudioDataset(Dataset):
             self.clean_file_paths = y_test
             self.corrupted_file_paths = x_test
 
-        #    if not self.mask:
-        #         clean_audio_file_paths = np.array(
-        #             sorted(glob.iglob(clean_base_path + '/**/*.flac', recursive=True)))
-        #         self.clean_file_paths = np.concatenate((self.clean_file_paths, clean_audio_file_paths))
-
-        #         x_train, x_test, y_train, y_test = train_test_split(
-        #             corrupted_audio_file_paths, clean_audio_file_paths, test_size=0.1, random_state=0)
-        #     else:
-        #         np.random.shuffle(corrupted_audio_file_paths)
-        #         cutoff = len(corrupted_audio_file_paths)
-        #         x_train = corrupted_audio_file_paths[0:int(cutoff * 0.9)]
-        #         x_test = corrupted_audio_file_paths[int(cutoff * 0.9):]
-
-        #     if train_set:
-        #         if not self.mask:
-        #             self.clean_file_paths.extend(y_train)
-        #         self.corrupted_file_paths.extend(x_train)
-        #     elif test_set:
-        #         if not self.mask:
-        #             self.clean_file_paths.extend(y_test)
-        #         self.corrupted_file_paths.extend(x_test)
-
         if tune > 0:
             self.corrupted_file_paths = self.corrupted_file_paths[0:tune]
             self.clean_file_paths = self.clean_file_paths[0:tune]
 
-            # print(self.corrupted_file_paths)
+            print(self.corrupted_file_paths)
 
     def __len__(self):
         return min(len(self.corrupted_file_paths), 32e10)

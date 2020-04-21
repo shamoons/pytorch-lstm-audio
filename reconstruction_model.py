@@ -378,10 +378,6 @@ class ReconstructionModel(torch.nn.Module):
         # print(f"\n\nmax_length: {max_length}")
 
         resized_pred = torch.zeros((pred.size(0), max_length, pred.size(2))).to(pred.device)
-        # print(f"RESIZED ({resized_pred.size()})")
-
-        # print(f"PRED ({pred.size()})")
-        # print(torch.mean(pred, dim=2))
         for batch_index in range(len(sizes)):
             size = sizes[batch_index]
             first_nonzero_index = (torch.mean(pred[batch_index], dim=1) == -1).nonzero()
@@ -413,6 +409,11 @@ class ReconstructionModel(torch.nn.Module):
         return resized_pred
 
     def get_param_size(self):
+        """[summary]
+
+        Returns:
+            [type] -- [description]
+        """
         params = 0
         for p in self.parameters():
             tmp = 1

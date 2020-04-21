@@ -10,24 +10,18 @@ from pathlib import Path
 import soundfile as sf
 from utils.audio_util import load_audio_spectrogram, create_audio_from_spectrogram
 import numpy as np
-from utils.model_loader import load_masking_model, load_reconstruction_model
+# from utils.model_loader import load_masking_model, load_reconstruction_model
+from lib.deep_restore import DeepRestore
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument(
-        "--model_path", help="Model to Load", type=str)
-
-    parser.add_argument('--mask_wandb', type=str,
-                        help='Run mask based on a wandb id')
+    parser.add_argument('--mask_wandb', type=str, help='Run mask based on a wandb id')
 
     parser.add_argument('--wandb', type=str, help='Run based on a wandb id')
 
     parser.add_argument("--audio_path", help="Audio file", type=str)
-
-    parser.add_argument('--saved_model_path', help='File of the saved model',
-                        default='saved_models')
 
     args = parser.parse_args()
 
@@ -43,69 +37,82 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     device = torch.device("cpu")  # TODO: Use CUDA when available
-    mask_model = load_masking_model(args.mask_wandb, device)
-    model = load_reconstruction_model(args.wandb, device)
 
-    filename_without_ext = Path(args.audio_path).stem
+    deep_restore = DeepRestore(mask_wandb=args.mask_wandb, reconstruct_wandb=args.wandb, device=device)
 
-    pattern = 'dev-'
-    clean_audio_path = re.sub(f'{pattern}[^/]+/', f'{pattern}clean/', args.audio_path)
-    print(clean_audio_path)
+    audio_signal, samplerate = sf.read(args.audio_path)
 
-    input_spectrogram, samples_length, sample_rate, n_fft, hop_length = load_audio_spectrogram(
-        args.audio_path)
+    enhanced_signal = deep_restore.enhance(audio_signal)
 
-    input_spectrogram = input_spectrogram.view(
-        1, input_spectrogram.size(0), input_spectrogram.size(1))
+    print(audio_signal)
+    print(enhanced_signal)
+    quit()
 
-    print('input_spectrogram\tMean: {:.6f} ± {:.6f}\tMin: {:.6f}\tMax: {:.6f}\tSize: {}'.format(torch.mean(input_spectrogram), torch.std(
-        input_spectrogram), torch.min(input_spectrogram), torch.max(input_spectrogram), input_spectrogram.size()))
+    # mask_model = load_masking_model(args.mask_wandb, device)
+    # model = load_reconstruction_model(args.wandb, device)
 
-    if str(device) == 'cuda':
-        mask_model.cuda()
-        model.cuda()
-        input_spectrogram = input_spectrogram.cuda()
+    # filename_without_ext = Path(args.audio_path).stem
 
-    mask = mask_model(input_spectrogram)
-    mask = torch.round(mask).float()
-    mask_sum = torch.sum(mask).int()
+    # pattern = 'dev-'
+    # clean_audio_path = re.sub(f'{pattern}[^/]+/', f'{pattern}clean/', args.audio_path)
+    # print(clean_audio_path)
 
-    # Model takes data of shape: torch.Size([BATCH_SIZE, SEQUENCE_LENGTH, FEATURE_DIM])
-    pred = model(input_spectrogram, mask)
-    pred = model.fit_to_size(pred, torch.sum(mask, 1).int().tolist())
+    # input_spectrogram, samples_length, sample_rate, n_fft, hop_length = load_audio_spectrogram(
+    #     args.audio_path)
 
-    output = input_spectrogram
-    output[mask == 1] = pred
+    # input_spectrogram = input_spectrogram.view(
+    #     1, input_spectrogram.size(0), input_spectrogram.size(1))
 
-    print('pred\t\tMean: {:.6f} ± {:.6f}\tMin: {:.6f}\tMax: {:.6f}\tSize: {}'.format(
-        torch.mean(pred), torch.std(pred), torch.min(pred), torch.max(pred), pred.size()))
+    # print('input_spectrogram\tMean: {:.6f} ± {:.6f}\tMin: {:.6f}\tMax: {:.6f}\tSize: {}'.format(torch.mean(input_spectrogram), torch.std(
+    #     input_spectrogram), torch.min(input_spectrogram), torch.max(input_spectrogram), input_spectrogram.size()))
 
-    print('spect output\t\tMean: {:.6f} ± {:.6f}\tMin: {:.6f}\tMax: {:.6f}\tSize: {}'.format(
-        torch.mean(output), torch.std(output), torch.min(output), torch.max(output), output.size()))
+    # if str(device) == 'cuda':
+    #     mask_model.cuda()
+    #     model.cuda()
+    #     input_spectrogram = input_spectrogram.cuda()
 
-    # diff = torch.abs(output - input_spectrogram)
+    # mask = mask_model(input_spectrogram)
+    # mask = torch.round(mask).float()
 
-    output = torch.expm1(output)
-    # print('expm1 output\t\tMean: {:.4f} ± {:.4f}\tMin: {:.4f}\tMax: {:.4f}\tSize: {}'.format(
+    # # Model takes data of shape: torch.Size([BATCH_SIZE, SEQUENCE_LENGTH, FEATURE_DIM])
+    # pred = model(input_spectrogram, mask)
+    # pred = model.fit_to_size(pred, torch.sum(mask, 1).int().tolist())
+
+    # output = input_spectrogram
+    # print(f"output: {output.size()}")
+    # print(f"pred: {pred.size()}")
+    # print(f"mask: {mask.size()}")
+    # output[mask == 1] = pred
+
+    # print('pred\t\tMean: {:.6f} ± {:.6f}\tMin: {:.6f}\tMax: {:.6f}\tSize: {}'.format(
+    #     torch.mean(pred), torch.std(pred), torch.min(pred), torch.max(pred), pred.size()))
+
+    # print('spect output\t\tMean: {:.6f} ± {:.6f}\tMin: {:.6f}\tMax: {:.6f}\tSize: {}'.format(
     #     torch.mean(output), torch.std(output), torch.min(output), torch.max(output), output.size()))
 
-    # print('Input')
-    # print(torch.mean(input_spectrogram, 2)[0])
+    # # diff = torch.abs(output - input_spectrogram)
 
-    # print('Output')
-    # output = torch.Tensor(output)
-    # print(torch.mean(output, 2)[0])
+    # output = torch.expm1(output)
+    # # print('expm1 output\t\tMean: {:.4f} ± {:.4f}\tMin: {:.4f}\tMax: {:.4f}\tSize: {}'.format(
+    # #     torch.mean(output), torch.std(output), torch.min(output), torch.max(output), output.size()))
 
-    # print('Diff')
-    # print(torch.mean(diff, 2)[0])
+    # # print('Input')
+    # # print(torch.mean(input_spectrogram, 2)[0])
 
-    np_output = output.view(output.size(1), output.size(2)).detach().numpy()
+    # # print('Output')
+    # # output = torch.Tensor(output)
+    # # print(torch.mean(output, 2)[0])
 
-    # output requires shape of [SEQUENCE_LEN, FEATURE_DIM]
-    audio = create_audio_from_spectrogram(
-        np_output, n_fft=n_fft, hop_length=hop_length, length=samples_length)
+    # # print('Diff')
+    # # print(torch.mean(diff, 2)[0])
 
-    sf.write(filename_without_ext + '.flac', audio, sample_rate)
+    # np_output = output.view(output.size(1), output.size(2)).detach().numpy()
+
+    # # output requires shape of [SEQUENCE_LEN, FEATURE_DIM]
+    # audio = create_audio_from_spectrogram(
+    #     np_output, n_fft=n_fft, hop_length=hop_length, length=samples_length)
+
+    # sf.write(filename_without_ext + '.flac', audio, sample_rate)
 
 
 if __name__ == '__main__':

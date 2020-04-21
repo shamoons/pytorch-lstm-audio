@@ -15,7 +15,7 @@ class TaylorActivation(torch.nn.Module):
         - beta - centering polynomial around point
     '''
 
-    def __init__(self, degree=4, alphas=None, beta=0.0, clip_max=10, clip_min=-10):
+    def __init__(self, degree=8, alphas=None, beta=0.0, clip_max=10, clip_min=-10):
         '''
         Initialization.
         INPUT:
@@ -47,6 +47,8 @@ class TaylorActivation(torch.nn.Module):
         Forward pass of the function.
         Applies the function to the input elementwise.
         '''
+
+        return torch.nn.ReLU()(x)
 
         # Polynomial = self.alphas[0] + self.alphas[1] * (x - self.beta) / 1! + self.alphas[1] * (x - self.beta) ** 2 / 2! ...
         # print(f"\nalphas: {self.alphas}\tbeta: {self.beta}")

@@ -1,6 +1,6 @@
 from audio_dataset import AudioDataset
 from audio_dataset import pad_samples_audio
-from barbar import Bar
+from tqdm import tqdm
 from reconstruction_model import ReconstructionModel
 from utils.model_loader import load_masking_model
 
@@ -24,8 +24,7 @@ def parse_args():
     parser.add_argument(
         '--mask_wandb', help='Path for the trained masking model', required=True)
 
-    parser.add_argument('--base_lr',
-                        help='Base learning rate', type=float, default=0.004)
+    parser.add_argument('--base_lr', help='Base learning rate', type=float, default=0.001)
 
     parser.add_argument('--learning-anneal',
                         default=1.1, type=float,
@@ -184,7 +183,6 @@ def main():
     print(f"Training Samples: {len(train_set)}")
     print(f"Validation Samples: {len(val_set)}")
     print(f"Number of parameters: {reconstruct_model.get_param_size()}")
-    quit()
 
     loss_weights = 0
     for epoch in range(args.epochs):
@@ -193,46 +191,47 @@ def main():
         start_time = time.time()
         train_running_loss = 0.0
         train_count = 0
-        for _, (inputs, outputs, x_lens, y_lens) in enumerate(Bar(data_loaders['train'])):
+        with tqdm(total=len(data_loaders['train'])) as pbar:
+            for loader_idx, (inputs, outputs, x_lens, y_lens) in enumerate(data_loaders['train']):
 
-            if torch.cuda.is_available():
-                inputs = inputs.cuda()
-                outputs = outputs.cuda()
+                if torch.cuda.is_available():
+                    inputs = inputs.cuda()
+                    outputs = outputs.cuda()
 
-            optimizer.zero_grad()
+                optimizer.zero_grad()
 
-            mask = mask_model(inputs)
-            mask = torch.round(mask)
+                mask = mask_model(inputs)
+                mask = torch.round(mask)
 
-            pred = reconstruct_model(inputs, mask)
-            # print(f"\n\npred: {pred.size()}\toutputs: {outputs.size()}")
+                pred = reconstruct_model(inputs, mask)
+                # print(f"\n\npred: {pred.size()}\toutputs: {outputs.size()}")
 
-            pred = reconstruct_model.fit_to_size(pred, sizes=y_lens)
-            # print(f"OUTPUT MEAN ({outputs.size()})")
-            # print(torch.mean(outputs, dim=2))
-            # print(f"AFTER FIT pred: {pred.size()}")
+                pred = reconstruct_model.fit_to_size(pred, sizes=y_lens)
+                # print(f"OUTPUT MEAN ({outputs.size()})")
+                # print(torch.mean(outputs, dim=2))
+                # print(f"AFTER FIT pred: {pred.size()}")
 
-            loss, loss_weights = loss_fn(pred, outputs, loss_weights=loss_weights)
+                loss, loss_weights = loss_fn(pred, outputs, loss_weights=loss_weights)
 
-            loss.backward()
-            optimizer.step()
+                loss.backward()
+                optimizer.step()
 
-            train_running_loss += loss.data
-            train_count += 1
+                train_running_loss += loss.data
+                train_count += 1
 
-            if not saved_onnx:
-                # torch.onnx.export(reconstruct_model, inputs, path.join(
-                #     wandb.run.dir, 'best-model.onnx'), verbose=False)
-                saved_onnx = True
+                if not saved_onnx:
+                    # torch.onnx.export(reconstruct_model, inputs, path.join(wandb.run.dir, 'best-model.onnx'), verbose=False)
+                    saved_onnx = True
 
-            # print('\ninput\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
-            #     torch.mean(inputs), torch.std(inputs), torch.min(inputs), torch.max(inputs)))
+                # print('\ninput\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(torch.mean(inputs), torch.std(inputs), torch.min(inputs), torch.max(inputs)))
 
-            # print('\noutputs\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
-            #     torch.mean(outputs), torch.std(outputs), torch.min(outputs), torch.max(outputs)))
+                # print('\noutputs\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
+                #     torch.mean(outputs), torch.std(outputs), torch.min(outputs), torch.max(outputs)))
 
-            # print('\npred\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
-            #     torch.mean(pred), torch.std(pred), torch.min(pred), torch.max(pred)))
+                # print('\npred\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}'.format(
+                #     torch.mean(pred), torch.std(pred), torch.min(pred), torch.max(pred)))
+                pbar.set_postfix(train_loss=f"{(train_running_loss / train_count).item():.2f}", refresh=False)
+                pbar.update()
 
         reconstruct_model.eval()
         val_running_loss = 0.0
