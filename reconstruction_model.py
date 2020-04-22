@@ -29,8 +29,9 @@ class ReconstructionModel(torch.nn.Module):
         )
 
         self.downscale_time_conv = torch.nn.ModuleList()
+        # self.reduce_width_conv = torch.nn.ModuleDict()
 
-        for i in range(32):
+        for i in range(64):
             self.downscale_time_conv.append(torch.nn.ModuleDict({}))
 
         # self.autoencoder1_layer = torch.nn.ModuleDict({})
@@ -42,12 +43,12 @@ class ReconstructionModel(torch.nn.Module):
 
         for side in self.SIDES:
             self.linear[side] = torch.nn.Sequential(
-                # torch.nn.Linear(self.FEATURE_DIM * 18, self.FEATURE_DIM * 9),
-                # torch.nn.ReLU(),
-                # torch.nn.Linear(self.FEATURE_DIM * 9, self.FEATURE_DIM * 4),
-                # torch.nn.ReLU(),
-                # torch.nn.Linear(self.FEATURE_DIM * 4, self.FEATURE_DIM),
-                # torch.nn.ReLU(),
+                torch.nn.Linear(self.FEATURE_DIM * 18, self.FEATURE_DIM * 9),
+                torch.nn.ReLU(),
+                torch.nn.Linear(self.FEATURE_DIM * 9, self.FEATURE_DIM * 4),
+                torch.nn.ReLU(),
+                torch.nn.Linear(self.FEATURE_DIM * 4, self.FEATURE_DIM),
+                torch.nn.ReLU(),
 
 
                 torch.nn.Linear(self.FEATURE_DIM, self.FEATURE_DIM),
@@ -63,7 +64,22 @@ class ReconstructionModel(torch.nn.Module):
                 # torch.nn.ReLU()
             )
 
-            for i in range(32):
+            # self.reduce_width_conv[side] = torch.nn.Sequential(
+            #     torch.nn.Conv1d(
+            #         in_channels=self.FEATURE_DIM,
+            #         out_channels=self.FEATURE_DIM,
+            #         kernel_size=10
+            #     ),
+            #     torch.nn.ReLU(),
+            #     torch.nn.Conv1d(
+            #         in_channels=self.FEATURE_DIM,
+            #         out_channels=self.FEATURE_DIM,
+            #         kernel_size=9
+            #     ),
+            #     torch.nn.ReLU()
+            # )
+
+            for i in range(64):
                 self.downscale_time_conv[i][side] = self.downscale_conv_layer(in_channels=self.FEATURE_DIM)
 
     def autoencoder1(self, inputs):
@@ -100,7 +116,7 @@ class ReconstructionModel(torch.nn.Module):
                 kernel_size=2,
                 stride=1,
                 dilation=1,
-                padding=0
+                padding=1
             ),
             torch.nn.ReLU(),
             torch.nn.Conv1d(
@@ -109,7 +125,7 @@ class ReconstructionModel(torch.nn.Module):
                 kernel_size=2,
                 stride=1,
                 dilation=2,
-                padding=0
+                padding=1
             ),
             torch.nn.ReLU(),
             torch.nn.Conv1d(
@@ -118,7 +134,7 @@ class ReconstructionModel(torch.nn.Module):
                 kernel_size=2,
                 stride=1,
                 dilation=4,
-                padding=0
+                padding=1
             ),
             torch.nn.ReLU(),
             self.dropout
@@ -257,21 +273,23 @@ class ReconstructionModel(torch.nn.Module):
             [Tensor] -- [description]
         """
         inputs = inp.clone().permute(0, 2, 1)
-
+        print(inputs.size())
         # autoencoded_out1 = self.autoencoder1(inputs)
         # autoencoded_out2 = self.autoencoder2(autoencoded_out1)
         down_out = False
-        for i in range(32):
+        for i in range(64):
             if isinstance(down_out, bool):
                 down_out = self.downscale_time_conv[i][side](inputs)
             else:
                 down_out += self.downscale_time_conv[i][side](inputs)
-
+        print(down_out.size())
+        quit()
+        # reduced_out = self.reduce_width_conv[side](down_out).squeeze()
         # https://discuss.pytorch.org/t/how-to-reshape-tensors/1926/2
-        # flattened_out = down_out.view(down_out.size(0), -1)
-        mean_out = torch.mean(down_out, 2)
+        # reduced_out = down_out.view(down_out.size(0), -1)
+        reduced_out = torch.mean(down_out, 2)
 
-        linear_out = self.linear[side](mean_out)
+        linear_out = self.linear[side](reduced_out)
 
         if self.verbose and side == 'left':
             print(f"\nSIDE: {side}")
@@ -290,8 +308,8 @@ class ReconstructionModel(torch.nn.Module):
             # print('\n flattened_out\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
             #     torch.mean(flattened_out), torch.std(flattened_out), torch.min(flattened_out), torch.max(flattened_out), flattened_out.size()))
 
-            print('\n mean_out\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
-                torch.mean(mean_out), torch.std(mean_out), torch.min(mean_out), torch.max(mean_out), mean_out.size()))
+            print('\n reduced_out\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
+                torch.mean(reduced_out), torch.std(reduced_out), torch.min(reduced_out), torch.max(reduced_out), reduced_out.size()))
 
             print('\n linear_out\tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
                 torch.mean(linear_out), torch.std(linear_out), torch.min(linear_out), torch.max(linear_out), linear_out.size()))
