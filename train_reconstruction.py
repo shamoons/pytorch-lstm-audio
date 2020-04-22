@@ -62,7 +62,7 @@ def parse_args():
     parser.add_argument('--weight_decay', default=1e-5, type=float, help='Weight decay')
 
     parser.add_argument('--dropout', default=0.5, type=float, help='Dropout')
-    parser.add_argument('--side_length', default=48, type=int, help='Side Length')
+    parser.add_argument('--side_length', default=25, type=int, help='Side Length')
 
     parser.add_argument('--tune', default=0, type=int, help='Minimize samples to this amount for tuning')
 

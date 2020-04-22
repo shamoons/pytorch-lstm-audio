@@ -1,6 +1,6 @@
 import torch
-from ..utils.model_loader import load_masking_model, load_reconstruction_model
-from ..utils.audio_util import convert_to_spectrogram, create_audio_from_spectrogram
+from utils.model_loader import load_masking_model, load_reconstruction_model
+from utils.audio_util import convert_to_spectrogram, create_audio_from_spectrogram
 
 
 class DeepRestore:
@@ -14,16 +14,12 @@ class DeepRestore:
         input_spectrogram, n_fft, hop_length = convert_to_spectrogram(audio_signal)
 
         input_spectrogram = input_spectrogram.view(1, input_spectrogram.size(0), input_spectrogram.size(1))
-
         mask = self.mask_model(input_spectrogram)
         mask = torch.round(mask).float()
         mask_sum = torch.sum(mask).int()
 
         pred = self.reconstruct_model(input_spectrogram, mask)
-
-        pred_t = pred.permute(0, 2, 1)
-
-        pred = torch.nn.functional.interpolate(pred_t, size=mask_sum.item()).permute(0, 2, 1)
+        pred = self.reconstruct_model.fit_to_size(pred, [mask_sum])
 
         output = input_spectrogram
         output[mask == 1] = pred
