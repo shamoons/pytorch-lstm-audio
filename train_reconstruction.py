@@ -43,7 +43,7 @@ def parse_args():
                         type=int, default=64)
 
     parser.add_argument('--num_workers', help='Number of workers for data_loaders',
-                        type=int, default=16)
+                        type=int, default=4)
 
     parser.add_argument('--continue-from', default='',
                         help='Continue from checkpoint model')

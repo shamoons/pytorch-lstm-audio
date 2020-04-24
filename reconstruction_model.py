@@ -24,168 +24,153 @@ class ReconstructionModel(torch.nn.Module):
             torch.nn.Linear(self.FEATURE_DIM * 2, self.FEATURE_DIM),
             torch.nn.ReLU(),
 
+
             torch.nn.Linear(self.FEATURE_DIM, self.FEATURE_DIM),
             torch.nn.ReLU6()
         )
 
-        self.downscale_time_conv = torch.nn.ModuleList()
+        self.downscale_time_conv1 = torch.nn.ModuleList([torch.nn.ModuleDict({}) for i in range(128)])
+        # self.downscale_time_conv2 = torch.nn.ModuleList([torch.nn.ModuleDict({}) for i in range(64)])
+        # self.downscale_time_conv3 = torch.nn.ModuleList([torch.nn.ModuleDict({}) for i in range(128)])
         # self.reduce_width_conv = torch.nn.ModuleDict()
 
-        for i in range(128):
-            self.downscale_time_conv.append(torch.nn.ModuleDict({}))
+        # self.feature_reduce1 = torch.nn.Sequential(
+        #     torch.nn.Conv1d(
+        #         in_channels=self.FEATURE_DIM,
+        #         out_channels=self.FEATURE_DIM,
+        #         kernel_size=5,
+        #         stride=1,
+        #         dilation=1,
+        #         padding=2,
+        #         groups=self.FEATURE_DIM
+        #     ),
+        #     torch.nn.ReLU(),
+        #     torch.nn.Conv1d(
+        #         in_channels=self.FEATURE_DIM,
+        #         out_channels=self.FEATURE_DIM // 2,
+        #         kernel_size=5,
+        #         stride=1,
+        #         dilation=1,
+        #         padding=2
+        #     ),
+        #     torch.nn.ReLU(),
+        #     torch.nn.Conv1d(
+        #         in_channels=self.FEATURE_DIM // 2,
+        #         out_channels=self.FEATURE_DIM // 2,
+        #         kernel_size=5,
+        #         stride=1,
+        #         dilation=1,
+        #         padding=2,
+        #         groups=self.FEATURE_DIM // 2
+        #     ),
+        #     torch.nn.ReLU()
+        # )
 
         # self.autoencoder1_layer = torch.nn.ModuleDict({})
         # self.autoencoder2_layer = torch.nn.ModuleDict({})
 
         # for i, kernel_size in enumerate(kernel_sizes):
-            # self.autoencoder1_layer[f"{i}"] = self.conv_layer(in_channels=self.FEATURE_DIM, kernel_size=kernel_size)
-        #     self.autoencoder2_layer[f"{i}"] = self.conv_layer(in_channels=self.FEATURE_DIM // 8, kernel_size=kernel_size, downscale_features=False)
+        #     # out_channels = [self.FEATURE_DIM, self.FEATURE_DIM // 2, self.FEATURE_DIM // 2]
+        #     out_channels = [self.FEATURE_DIM, self.FEATURE_DIM]
+        #     self.autoencoder1_layer[f"{i}"] = self.conv_layer(in_channels=self.FEATURE_DIM, kernel_size=kernel_size, out_channels=out_channels)
 
         for side in self.SIDES:
             self.linear[side] = torch.nn.Sequential(
-                # torch.nn.Linear(self.FEATURE_DIM * 18, self.FEATURE_DIM * 9),
-                # torch.nn.ReLU(),
-                # torch.nn.Linear(self.FEATURE_DIM * 9, self.FEATURE_DIM * 4),
-                # torch.nn.ReLU(),
-                # torch.nn.Linear(self.FEATURE_DIM * 4, self.FEATURE_DIM),
-                # torch.nn.ReLU(),
-
-
                 torch.nn.Linear(self.FEATURE_DIM, self.FEATURE_DIM),
                 torch.nn.ReLU(),
                 torch.nn.Linear(self.FEATURE_DIM, self.FEATURE_DIM),
                 torch.nn.ReLU()
-
-                # torch.nn.Linear(self.FEATURE_DIM // 8,
-                #                 (self.FEATURE_DIM // 8 + self.FEATURE_DIM) // 2),
-                # torch.nn.ReLU(),
-                # torch.nn.Linear(
-                #     (self.FEATURE_DIM // 8 + self.FEATURE_DIM) // 2, self.FEATURE_DIM),
-                # torch.nn.ReLU()
             )
 
-            # self.reduce_width_conv[side] = torch.nn.Sequential(
-            #     torch.nn.Conv1d(
-            #         in_channels=self.FEATURE_DIM,
-            #         out_channels=self.FEATURE_DIM,
-            #         kernel_size=5
-            #     ),
-            #     torch.nn.ReLU(),
-            #     torch.nn.Conv1d(
-            #         in_channels=self.FEATURE_DIM,
-            #         out_channels=self.FEATURE_DIM,
-            #         kernel_size=5
-            #     ),
-            #     torch.nn.ReLU(),
-            #     torch.nn.Conv1d(
-            #         in_channels=self.FEATURE_DIM,
-            #         out_channels=self.FEATURE_DIM,
-            #         kernel_size=5
-            #     ),
-            #     torch.nn.ReLU()
-            # )
+            for i, _ in enumerate(self.downscale_time_conv1):
+                self.downscale_time_conv1[i][side] = self.downscale_conv_layer(in_channels=self.FEATURE_DIM, padding=[0, 0, 0], dilation=[1, 2, 4])
 
-            for i in range(128):
-                self.downscale_time_conv[i][side] = self.downscale_conv_layer(in_channels=self.FEATURE_DIM)
+            # for i, _ in enumerate(self.downscale_time_conv2):
+            #     self.downscale_time_conv2[i][side] = self.downscale_conv_layer(in_channels=self.FEATURE_DIM, padding=[1, 1, 1], dilation=[1, 2, 4])
+
+            # for i, _ in enumerate(self.downscale_time_conv3):
+            #     self.downscale_time_conv3[i][side] = self.downscale_conv_layer(in_channels=self.FEATURE_DIM, padding=[0, 0, 0], dilation=[1, 2, 4])
 
     def autoencoder1(self, inputs):
-        out_summed = torch.zeros((inputs.size(0), inputs.size(1) // 8, inputs.size(2))).to(inputs.device)
+        """Does inception-like parallel convolutions
 
+        Arguments:
+            inputs {[inputs]} -- [description]
+
+        Returns:
+            [type] -- [description]
+        """
+        out_summed = False
         for key in self.autoencoder1_layer:
             out = self.autoencoder1_layer[key](inputs)
-            if self.verbose:
-                print('\n autoencoder1 ({}) \tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
-                    key, torch.mean(out), torch.std(out), torch.min(out), torch.max(out), out.size()))
 
-            out_summed += out
-
-        return out_summed
-
-    def autoencoder2(self, inputs):
-        out_summed = torch.zeros((inputs.size(0), inputs.size(1), inputs.size(2))).to(inputs.device)
-
-        for key in self.autoencoder2_layer:
-            out = self.autoencoder2_layer[key](inputs)
-            if self.verbose:
-                print('\n autoencoder2 ({}) \tMean: {:.4g} ± {:.4g}\tMin: {:.4g}\tMax: {:.4g}\tSize: {}'.format(
-                    key, torch.mean(out), torch.std(out), torch.min(out), torch.max(out), out.size()))
-
-            out_summed += out
+            if isinstance(out_summed, bool):
+                out_summed = out
+            else:
+                out_summed += out
 
         return out_summed
 
-    def downscale_conv_layer(self, in_channels):
+    def downscale_conv_layer(self, in_channels, padding=[0, 0, 0], dilation=[1, 2, 4]):
         return torch.nn.Sequential(
             torch.nn.Conv1d(
                 in_channels=in_channels,
                 out_channels=in_channels,
-                kernel_size=2,
+                kernel_size=3,
                 stride=1,
-                dilation=1,
-                padding=1
+                dilation=dilation[0],
+                padding=padding[0]
             ),
+            torch.nn.BatchNorm1d(num_features=in_channels),
             torch.nn.ReLU(),
             torch.nn.Conv1d(
                 in_channels=in_channels,
                 out_channels=in_channels,
-                kernel_size=2,
+                kernel_size=3,
                 stride=1,
-                dilation=2,
-                padding=1
+                dilation=dilation[1],
+                padding=padding[1]
             ),
+            torch.nn.BatchNorm1d(num_features=in_channels),
             torch.nn.ReLU(),
             torch.nn.Conv1d(
                 in_channels=in_channels,
                 out_channels=in_channels,
-                kernel_size=2,
+                kernel_size=3,
                 stride=1,
-                dilation=4,
-                padding=1
+                dilation=dilation[2],
+                padding=padding[2]
             ),
+            torch.nn.BatchNorm1d(num_features=in_channels),
             torch.nn.ReLU(),
             self.dropout
         )
 
-    def conv_layer(self, in_channels, kernel_size, downscale_features=True):
-        return torch.nn.Sequential(
-            torch.nn.Conv1d(
-                in_channels=in_channels,
-                out_channels=in_channels,
+    def conv_layer(self, in_channels, kernel_size, out_channels=None):
+        if not out_channels:
+            out_channels = [in_channels, in_channels // 2, in_channels // 4, in_channels // 8]
+
+        layer = []
+
+        in_c = in_channels
+
+        for out_channel in out_channels:
+            layer.append(torch.nn.Conv1d(
+                in_channels=in_c,
+                out_channels=out_channel,
                 kernel_size=kernel_size,
                 stride=1,
-                padding=kernel_size // 2
-            ),
-            torch.nn.ReLU(),
-            torch.nn.Conv1d(
-                in_channels=in_channels,
-                out_channels=in_channels // 2 if downscale_features else in_channels,
-                kernel_size=kernel_size,
-                stride=1,
-                padding=kernel_size // 2
-            ),
-            torch.nn.ReLU(),
-            torch.nn.Conv1d(
-                in_channels=in_channels // 2 if downscale_features else in_channels,
-                out_channels=in_channels // 4 if downscale_features else in_channels,
-                kernel_size=kernel_size,
-                stride=1,
-                padding=kernel_size // 2
-            ),
-            torch.nn.ReLU(),
-            torch.nn.Conv1d(
-                in_channels=in_channels // 4 if downscale_features else in_channels,
-                out_channels=in_channels // 8 if downscale_features else in_channels,
-                kernel_size=kernel_size,
-                stride=1,
-                padding=kernel_size // 2
-            ),
-            torch.nn.ReLU(),
-            self.dropout
-        )
+                padding=kernel_size // 2,
+                groups=in_c if in_c == out_channel else 1
+            ))
+
+            layer.append(torch.nn.ReLU())
+
+            in_c = out_channel
+        layer.append(self.dropout)
+        return torch.nn.Sequential(*layer)
 
     def forward(self, x, mask):
-        # if self.make_4d:
-        #     x = x.view(x.size(0), x.size(3), x.size(2))
 
         inp = x
 
@@ -193,8 +178,6 @@ class ReconstructionModel(torch.nn.Module):
 
         # TODO: Consider using the mean mask length
         max_mask_len = torch.max(mask_sums).int().item()
-        # print(f"max_mask_len: {max_mask_len}\tmask_sums: {mask_sums.size()}")
-        # print(mask)
 
         if max_mask_len == 0:
             # Super weird edge case where the entire batch has no mask.
@@ -237,6 +220,7 @@ class ReconstructionModel(torch.nn.Module):
             left_remain_output = self.forward_step(left_remain_input, 'right')
             left_combined_output = torch.cat(
                 (left_output, left_remain_output), dim=1)
+
             left_final = self.final_layer(left_combined_output)
 
             right_output = self.forward_step(right_input, 'right')
@@ -279,16 +263,35 @@ class ReconstructionModel(torch.nn.Module):
             [Tensor] -- [description]
         """
         inputs = inp.clone().permute(0, 2, 1)
+        # print(f"inputs: {inputs.size()}")
+
+        # feature_out1 = self.feature_reduce1(inputs)
 
         # autoencoded_out1 = self.autoencoder1(inputs)
-        # autoencoded_out2 = self.autoencoder2(autoencoded_out1)
+
         down_out = False
-        for i in range(128):
+        down_out2 = False
+        down_out3 = False
+        for i, _ in enumerate(self.downscale_time_conv1):
             if isinstance(down_out, bool):
-                down_out = self.downscale_time_conv[i][side](inputs)
+                down_out = self.downscale_time_conv1[i][side](inputs)
             else:
-                down_out += self.downscale_time_conv[i][side](inputs)
-        # print(down_out.size())
+                down_out += self.downscale_time_conv1[i][side](inputs)
+
+        # for i, _ in enumerate(self.downscale_time_conv2):
+        #     if isinstance(down_out2, bool):
+        #         down_out2 = self.downscale_time_conv2[i][side](down_out)
+        #     else:
+        #         down_out2 += self.downscale_time_conv2[i][side](down_out)
+
+        # for i, _ in enumerate(self.downscale_time_conv3):
+        #     if isinstance(down_out3, bool):
+        #         down_out3 = self.downscale_time_conv3[i][side](down_out2)
+        #     else:
+        #         down_out3 += self.downscale_time_conv3[i][side](down_out2)
+
+        # down_out += inputs
+        # print(down_out3.size())
         # quit()
         # reduced_out = self.reduce_width_conv[side](down_out).squeeze()
         # https://discuss.pytorch.org/t/how-to-reshape-tensors/1926/2

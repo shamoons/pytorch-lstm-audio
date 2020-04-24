@@ -51,7 +51,7 @@ class AudioDataset(Dataset):
             self.corrupted_file_paths = self.corrupted_file_paths[0:tune]
             self.clean_file_paths = self.clean_file_paths[0:tune]
 
-            print(self.corrupted_file_paths)
+            # print(self.corrupted_file_paths)
 
     def __len__(self):
         return min(len(self.corrupted_file_paths), 32e10)
